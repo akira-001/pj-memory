@@ -30,6 +30,13 @@ def main(argv: list[str] | None = None):
     search_parser.add_argument("--top-k", type=int, default=5, help="Number of results")
     search_parser.add_argument("--json", action="store_true", help="JSON output")
 
+    # context-search
+    ctx_parser = subparsers.add_parser("context-search", help="Context-aware memory search")
+    ctx_parser.add_argument("query", type=str, help="Search query")
+    ctx_parser.add_argument("--top-k", type=int, default=3, help="Number of results")
+    ctx_parser.add_argument("--json", action="store_true", help="JSON output")
+    ctx_parser.add_argument("--keywords", nargs="*", type=str, help="Session keywords for gate")
+
     # status
     subparsers.add_parser("status", help="Show index statistics")
 
@@ -55,6 +62,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "search":
         from .search_cmd import run_search
         run_search(query=args.query, top_k=args.top_k, json_output=args.json)
+    elif args.command == "context-search":
+        from .context_search_cmd import run_context_search
+        run_context_search(query=args.query, top_k=args.top_k, json_output=args.json, keywords=args.keywords)
     elif args.command == "status":
         from .index_cmd import run_status
         run_status()
