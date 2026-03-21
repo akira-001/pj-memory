@@ -41,6 +41,9 @@ Repository = "https://github.com/akira/cognitive-memory"
 [tool.hatch.version]
 path = "src/cognitive_memory/_version.py"
 
+[tool.hatch.build.targets.sdist]
+include = ["src/cognitive_memory/**/*"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/cognitive_memory"]
 

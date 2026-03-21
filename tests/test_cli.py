@@ -93,3 +93,64 @@ class TestSearchCommand:
         data = json.loads(lines[0])
         assert "results" in data
         assert "status" in data
+
+
+class TestSignalsCli:
+    """Tests for cogmem signals CLI."""
+
+    def test_signals_no_logs(self, tmp_path, monkeypatch):
+        """cogmem signals works with empty logs."""
+        logs = tmp_path / "memory" / "logs"
+        logs.mkdir(parents=True)
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text(f'[cogmem]\nlogs_dir = "{logs}"\n')
+        monkeypatch.setenv("COGMEM_CONFIG", str(toml))
+        # Should not raise
+        cli_main(["signals"])
+
+
+class TestInitExtended:
+    """Tests for extended cogmem init."""
+
+    def test_init_creates_identity_dir(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        assert (tmp_path / "identity" / "agent.md").exists()
+        assert (tmp_path / "identity" / "user.md").exists()
+
+    def test_init_creates_knowledge_dir(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        assert (tmp_path / "memory" / "knowledge" / "summary.md").exists()
+        assert (tmp_path / "memory" / "knowledge" / "error-patterns.md").exists()
+
+    def test_init_creates_claude_md(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        claude_md = tmp_path / "CLAUDE.md"
+        assert claude_md.exists()
+        assert "Cognitive Memory Agent" in claude_md.read_text()
+
+    def test_init_appends_to_existing_claude_md(self, tmp_path):
+        """Existing CLAUDE.md gets cogmem section appended."""
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# My Project\n\nExisting content.\n")
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        content = claude_md.read_text()
+        assert "My Project" in content
+        assert "Cognitive Memory Agent" in content
+
+    def test_init_skips_duplicate_claude_md(self, tmp_path):
+        """Already has cogmem section -- does not duplicate."""
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Cognitive Memory Agent\n\nExisting cogmem.\n")
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        content = claude_md.read_text()
+        assert content.count("Cognitive Memory Agent") == 1
+
+    def test_init_creates_contexts_dir(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path))
+        assert (tmp_path / "memory" / "contexts").is_dir()

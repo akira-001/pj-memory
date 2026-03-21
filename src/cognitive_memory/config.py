@@ -28,6 +28,26 @@ _DEFAULTS = {
     "embedding_model": "zylonai/multilingual-e5-large",
     "embedding_url": "http://localhost:11434/api/embed",
     "embedding_timeout": 10,
+    # Identity
+    "identity_agent": "identity/agent.md",
+    "identity_user": "identity/user.md",
+    # Knowledge
+    "knowledge_summary": "memory/knowledge/summary.md",
+    "knowledge_error_patterns": "memory/knowledge/error-patterns.md",
+    # Session
+    "contexts_dir": "memory/contexts",
+    "recent_logs": 2,
+    "prefer_compact": True,
+    "token_budget": 6000,
+    # Crystallization
+    "pattern_threshold": 3,
+    "error_threshold": 5,
+    "log_days_threshold": 10,
+    "checkpoint_interval_days": 21,
+    "last_checkpoint": "",
+    "checkpoint_count": 0,
+    # Metrics
+    "total_sessions": 0,
 }
 
 
@@ -51,6 +71,31 @@ class CogMemConfig:
     embedding_url: str = _DEFAULTS["embedding_url"]
     embedding_timeout: int = _DEFAULTS["embedding_timeout"]
 
+    # Identity paths (relative to base_dir)
+    identity_agent: str = _DEFAULTS["identity_agent"]
+    identity_user: str = _DEFAULTS["identity_user"]
+
+    # Knowledge paths
+    knowledge_summary: str = _DEFAULTS["knowledge_summary"]
+    knowledge_error_patterns: str = _DEFAULTS["knowledge_error_patterns"]
+
+    # Session
+    contexts_dir: str = _DEFAULTS["contexts_dir"]
+    recent_logs: int = _DEFAULTS["recent_logs"]
+    prefer_compact: bool = _DEFAULTS["prefer_compact"]
+    token_budget: int = _DEFAULTS["token_budget"]
+
+    # Crystallization
+    pattern_threshold: int = _DEFAULTS["pattern_threshold"]
+    error_threshold: int = _DEFAULTS["error_threshold"]
+    log_days_threshold: int = _DEFAULTS["log_days_threshold"]
+    checkpoint_interval_days: int = _DEFAULTS["checkpoint_interval_days"]
+    last_checkpoint: str = _DEFAULTS["last_checkpoint"]
+    checkpoint_count: int = _DEFAULTS["checkpoint_count"]
+
+    # Metrics
+    total_sessions: int = _DEFAULTS["total_sessions"]
+
     # Resolved base directory (set by from_toml / find_and_load)
     _base_dir: str = field(default=".", repr=False)
 
@@ -68,6 +113,41 @@ class CogMemConfig:
             return p
         return Path(self._base_dir) / self.db_path
 
+    @property
+    def contexts_path(self) -> Path:
+        p = Path(self.contexts_dir)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.contexts_dir
+
+    @property
+    def identity_agent_path(self) -> Path:
+        p = Path(self.identity_agent)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.identity_agent
+
+    @property
+    def identity_user_path(self) -> Path:
+        p = Path(self.identity_user)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.identity_user
+
+    @property
+    def knowledge_summary_path(self) -> Path:
+        p = Path(self.knowledge_summary)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.knowledge_summary
+
+    @property
+    def knowledge_error_patterns_path(self) -> Path:
+        p = Path(self.knowledge_error_patterns)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.knowledge_error_patterns
+
     @classmethod
     def from_toml(cls, path: str | Path) -> CogMemConfig:
         """Load config from a TOML file."""
@@ -83,6 +163,11 @@ class CogMemConfig:
         section = data.get("cogmem", {})
         scoring = section.get("scoring", {})
         embedding = section.get("embedding", {})
+        identity = section.get("identity", {})
+        knowledge = section.get("knowledge", {})
+        session = section.get("session", {})
+        crystallization = section.get("crystallization", {})
+        metrics = section.get("metrics", {})
 
         return cls(
             logs_dir=section.get("logs_dir", _DEFAULTS["logs_dir"]),
@@ -101,6 +186,39 @@ class CogMemConfig:
             embedding_url=embedding.get("url", _DEFAULTS["embedding_url"]),
             embedding_timeout=embedding.get(
                 "timeout", _DEFAULTS["embedding_timeout"]
+            ),
+            identity_agent=identity.get("agent", _DEFAULTS["identity_agent"]),
+            identity_user=identity.get("user", _DEFAULTS["identity_user"]),
+            knowledge_summary=knowledge.get(
+                "summary", _DEFAULTS["knowledge_summary"]
+            ),
+            knowledge_error_patterns=knowledge.get(
+                "error_patterns", _DEFAULTS["knowledge_error_patterns"]
+            ),
+            contexts_dir=session.get("contexts_dir", _DEFAULTS["contexts_dir"]),
+            recent_logs=session.get("recent_logs", _DEFAULTS["recent_logs"]),
+            prefer_compact=session.get("prefer_compact", _DEFAULTS["prefer_compact"]),
+            token_budget=session.get("token_budget", _DEFAULTS["token_budget"]),
+            pattern_threshold=crystallization.get(
+                "pattern_threshold", _DEFAULTS["pattern_threshold"]
+            ),
+            error_threshold=crystallization.get(
+                "error_threshold", _DEFAULTS["error_threshold"]
+            ),
+            log_days_threshold=crystallization.get(
+                "log_days_threshold", _DEFAULTS["log_days_threshold"]
+            ),
+            checkpoint_interval_days=crystallization.get(
+                "checkpoint_interval_days", _DEFAULTS["checkpoint_interval_days"]
+            ),
+            last_checkpoint=crystallization.get(
+                "last_checkpoint", _DEFAULTS["last_checkpoint"]
+            ),
+            checkpoint_count=crystallization.get(
+                "checkpoint_count", _DEFAULTS["checkpoint_count"]
+            ),
+            total_sessions=metrics.get(
+                "total_sessions", _DEFAULTS["total_sessions"]
             ),
             _base_dir=str(p.parent),
         )

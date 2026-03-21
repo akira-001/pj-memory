@@ -108,3 +108,31 @@ This is a real entry with enough content to pass the noise filter."""
         entries = list(parse_entries(md, "2026-01-01"))
         assert len(entries) == 1
         assert entries[0].arousal == 0.8
+
+
+class TestCategoryExtraction:
+    """Tests for category tag extraction."""
+
+    def test_extracts_insight_category(self):
+        md = "### [INSIGHT][TECH] Discovery\n*Arousal: 0.8 | Emotion: Insight*\nSome insight content here.\n---"
+        entries = list(parse_entries(md, "2026-03-21"))
+        assert len(entries) == 1
+        assert entries[0].category == "INSIGHT"
+
+    def test_extracts_error_category(self):
+        md = "### [ERROR] Wrong assumption\n*Arousal: 0.7 | Emotion: Conflict*\nAssumption was wrong.\n---"
+        entries = list(parse_entries(md, "2026-03-21"))
+        assert len(entries) == 1
+        assert entries[0].category == "ERROR"
+
+    def test_no_category_tag(self):
+        md = "### Plain title without tags\n*Arousal: 0.5 | Emotion: Neutral*\nSome content that is long enough.\n---"
+        entries = list(parse_entries(md, "2026-03-21"))
+        assert len(entries) == 1
+        assert entries[0].category is None
+
+    def test_multiple_tags_uses_first(self):
+        md = "### [PATTERN][MARKET] Recurring theme\n*Arousal: 0.7 | Emotion: Recognition*\nThis theme keeps coming up again.\n---"
+        entries = list(parse_entries(md, "2026-03-21"))
+        assert len(entries) == 1
+        assert entries[0].category == "PATTERN"

@@ -31,6 +31,9 @@ def main(argv: list[str] | None = None):
     # status
     subparsers.add_parser("status", help="Show index statistics")
 
+    # signals
+    subparsers.add_parser("signals", help="Check crystallization signals")
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -49,3 +52,6 @@ def main(argv: list[str] | None = None):
     elif args.command == "status":
         from .index_cmd import run_status
         run_status()
+    elif args.command == "signals":
+        from .signals_cmd import run_signals
+        run_signals()

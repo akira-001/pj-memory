@@ -13,6 +13,7 @@ class MemoryEntry:
     date: str
     content: str
     arousal: float = 0.5
+    category: Optional[str] = None
 
 
 @dataclass

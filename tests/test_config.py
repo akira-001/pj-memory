@@ -117,3 +117,42 @@ class TestFindAndLoad:
         monkeypatch.setenv("COGMEM_CONFIG", str(toml_file))
         cfg = CogMemConfig.find_and_load(start_dir=tmp_path)
         assert cfg.logs_dir == "from_env"
+
+
+class TestConfigNewSections:
+    """Tests for v0.2.0 config extensions."""
+
+    def test_parse_identity_section(self, tmp_path):
+        """New [cogmem.identity] section is parsed."""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem.identity]\nagent = "custom/agent.md"\nuser = "custom/user.md"\n')
+        config = CogMemConfig.from_toml(toml)
+        assert config.identity_agent == "custom/agent.md"
+        assert config.identity_user == "custom/user.md"
+
+    def test_parse_crystallization_section(self, tmp_path):
+        """New [cogmem.crystallization] section is parsed."""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem.crystallization]\npattern_threshold = 5\nerror_threshold = 10\nlast_checkpoint = "2026-03-15"\n')
+        config = CogMemConfig.from_toml(toml)
+        assert config.pattern_threshold == 5
+        assert config.error_threshold == 10
+        assert config.last_checkpoint == "2026-03-15"
+
+    def test_missing_new_sections_use_defaults(self, tmp_path):
+        """Missing new sections fall back to defaults (backward compat)."""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem]\nlogs_dir = "logs"\n')
+        config = CogMemConfig.from_toml(toml)
+        assert config.identity_agent == "identity/agent.md"
+        assert config.pattern_threshold == 3
+        assert config.total_sessions == 0
+
+    def test_path_properties(self, tmp_path):
+        """New path properties resolve relative to base dir."""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem]\n')
+        config = CogMemConfig.from_toml(toml)
+        assert config.identity_agent_path == tmp_path / "identity" / "agent.md"
+        assert config.knowledge_summary_path == tmp_path / "memory" / "knowledge" / "summary.md"
+        assert config.contexts_path == tmp_path / "memory" / "contexts"

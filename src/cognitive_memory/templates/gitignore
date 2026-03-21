@@ -1,0 +1,4 @@
+# Cognitive Memory
+*.db
+*.db-shm
+*.db-wal

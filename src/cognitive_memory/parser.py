@@ -44,4 +44,7 @@ def parse_entries(
             arousal = float(m.group(1)) if m else 0.5
         except (ValueError, AttributeError):
             arousal = 0.5
-        yield MemoryEntry(date=date, content=e_clean, arousal=arousal)
+        # Extract category from header like ### [INSIGHT][TECH] or ### [INSIGHT]
+        cat_match = re.search(r"\[([A-Z]+)\]", e_clean)
+        category = cat_match.group(1) if cat_match else None
+        yield MemoryEntry(date=date, content=e_clean, arousal=arousal, category=category)
