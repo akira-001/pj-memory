@@ -11,6 +11,7 @@ Unlike traditional vector databases that treat all memories equally, Cognitive M
 - **Emotion-gated recall**: Arousal scores modulate memory persistence
 - **Adaptive forgetting**: High-arousal memories decay slower (configurable half-life)
 - **Adaptive search gate**: Skips trivial queries (greetings, acknowledgments)
+- **Contextual search**: Topic-aware search with session caching and flashback filtering
 - **FailOpen design**: Falls back to keyword search when embeddings are unavailable
 - **Zero required dependencies**: Core uses only Python stdlib (sqlite3, urllib)
 - **Pluggable embeddings**: Ollama (built-in), OpenAI, or any custom provider
@@ -59,6 +60,22 @@ This means your agent naturally "forgets" noise while retaining the moments that
 
 Not every user message needs memory retrieval. Greetings ("hello"), acknowledgments ("ok"), and trivial messages are automatically detected and skipped, saving unnecessary embedding API calls and reducing noise in results.
 
+### 4. Contextual Search (v0.3.1)
+
+While basic search runs on-demand, **contextual search** automatically detects when past memories are relevant to the current conversation — and surfaces them as "flashbacks."
+
+```
+User: "Let's revisit the pricing strategy"
+Agent: [answers the question]
+💭 Related past record: 2026-03-15 [DECISION] Pricing reversed after heated debate
+```
+
+How it works:
+- **Topic detection**: Recognizes when new topics are introduced ("regarding...", "what about...", design/analysis keywords)
+- **Session caching**: Avoids redundant embedding calls within the same conversation (cosine similarity > 0.9 = cache hit)
+- **Flashback filtering**: Only surfaces results that pass both similarity (≥ 0.65) and emotional significance (arousal ≥ 0.5) thresholds
+- **Performance budget**: < 200ms warm, < 1ms for gate-skipped queries
+
 ### The Result
 
 | Aspect | Without Cognitive Memory | With Cognitive Memory |
@@ -67,6 +84,7 @@ Not every user message needs memory retrieval. Greetings ("hello"), acknowledgme
 | Over time | Old memories never decay, search gets noisier | Natural forgetting keeps results relevant |
 | Agent personality | Generic, robotic responses | Remembers what mattered, feels more human |
 | Wasted searches | Every message triggers vector search | Trivial messages are skipped automatically |
+| Contextual recall | Manual search only | Past memories surface automatically when relevant |
 
 ## Install
 
@@ -146,6 +164,7 @@ cogmem init                        # Initialize project
 cogmem index                       # Build/update index
 cogmem search "past decisions"     # Search memories
 cogmem signals                     # Check crystallization signals
+cogmem context-search "query"      # Context-aware search with flashback filtering
 cogmem status                      # Show statistics
 cogmem migrate                     # Upgrade from older versions
 ```
@@ -161,6 +180,26 @@ with MemoryStore(config) as store:
     result = store.search("past competition analysis")
     for r in result.results:
         print(f"{r.date} [{r.score:.2f}] {r.content[:80]}")
+```
+
+### Context-Aware Search (v0.3.1)
+
+```python
+from cognitive_memory import MemoryStore, SearchCache, CogMemConfig
+
+config = CogMemConfig.from_toml("cogmem.toml")
+cache = SearchCache(max_size=20, sim_threshold=0.9)
+
+with MemoryStore(config) as store:
+    store.index_dir()
+    # Context search with caching and flashback filtering
+    result = store.context_search(
+        "pricing strategy discussion",
+        cache=cache,  # Reuse across calls to avoid redundant embeds
+        session_keywords=["pricing", "LTV"],
+    )
+    for r in result.results:
+        print(f"💭 {r.date} [{r.score:.2f}] {r.content[:80]}")
 ```
 
 ### Convenience API
@@ -207,6 +246,13 @@ provider = "ollama"
 model = "zylonai/multilingual-e5-large"
 url = "http://localhost:11434/api/embed"
 timeout = 10
+
+[cogmem.context_search]
+enabled = true
+flashback_sim = 0.65        # Minimum cosine similarity for flashback
+flashback_arousal = 0.5     # Minimum arousal for flashback
+cache_max_size = 20         # Session cache capacity
+cache_sim_threshold = 0.9   # Cache hit similarity threshold
 ```
 
 ### Upgrading from v0.2.0–0.2.1
