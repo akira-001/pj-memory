@@ -6,14 +6,19 @@ import re
 import sys
 from pathlib import Path
 
+_SCAFFOLD_DIR = Path(__file__).resolve().parent.parent / "templates"
+
 
 def run_migrate(target_dir: str = "."):
     target = Path(target_dir).resolve()
     changes = []
 
+    identity_dir = target / "identity"
+    identity_dir.mkdir(parents=True, exist_ok=True)
+
     # 1. Rename identity/agent.md → identity/soul.md
-    agent_md = target / "identity" / "agent.md"
-    soul_md = target / "identity" / "soul.md"
+    agent_md = identity_dir / "agent.md"
+    soul_md = identity_dir / "soul.md"
 
     if agent_md.exists() and not soul_md.exists():
         agent_md.rename(soul_md)
@@ -25,7 +30,15 @@ def run_migrate(target_dir: str = "."):
             file=sys.stderr,
         )
 
-    # 2. Update cogmem.toml: agent = → soul =
+    # 2. Create identity/agents.md if missing
+    agents_md = identity_dir / "agents.md"
+    if not agents_md.exists():
+        template = _SCAFFOLD_DIR / "agents.md"
+        if template.exists():
+            agents_md.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+            changes.append(f"Created {agents_md}")
+
+    # 3. Update cogmem.toml: agent = → soul =
     toml_path = target / "cogmem.toml"
     if toml_path.exists():
         content = toml_path.read_text(encoding="utf-8")
@@ -40,21 +53,34 @@ def run_migrate(target_dir: str = "."):
                 toml_path.write_text(updated, encoding="utf-8")
                 changes.append(f"Updated {toml_path}: agent → soul")
 
-    # 3. Update CLAUDE.md: @identity/agent.md → @identity/soul.md
+    # 4. Update CLAUDE.md: @identity/agent.md → @identity/soul.md
     claude_md = target / "CLAUDE.md"
     if claude_md.exists():
         content = claude_md.read_text(encoding="utf-8")
-        if "@identity/agent.md" in content:
-            updated = content.replace("@identity/agent.md", "@identity/soul.md")
-            # Also add @identity/soul.md if not present
-            if "@identity/soul.md" not in content:
-                claude_md.write_text(updated, encoding="utf-8")
-                changes.append(f"Updated {claude_md}: @identity/agent.md → @identity/soul.md")
+        updated = content
+
+        # Replace agent.md reference with soul.md
+        if "@identity/agent.md" in updated:
+            if "@identity/soul.md" not in updated:
+                updated = updated.replace("@identity/agent.md", "@identity/soul.md")
             else:
-                # Remove duplicate agent.md reference
-                updated = content.replace("@identity/agent.md\n", "")
-                claude_md.write_text(updated, encoding="utf-8")
-                changes.append(f"Updated {claude_md}: removed @identity/agent.md")
+                updated = updated.replace("@identity/agent.md\n", "")
+
+        # Add @identity/agents.md reference if missing
+        if "@identity/agents.md" not in updated:
+            # Insert before @identity/soul.md
+            if "@identity/soul.md" in updated:
+                updated = updated.replace(
+                    "@identity/soul.md",
+                    "@identity/agents.md\n\n## Agent Identity\n\n@identity/soul.md",
+                )
+            else:
+                # Append after the title
+                updated = updated + "\n@identity/agents.md\n"
+
+        if updated != content:
+            claude_md.write_text(updated, encoding="utf-8")
+            changes.append(f"Updated {claude_md}")
 
     if changes:
         print("Migration complete:")

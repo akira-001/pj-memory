@@ -31,7 +31,7 @@ def run_init(target_dir: str = "."):
     identity_dir = target / "identity"
     identity_dir.mkdir(parents=True, exist_ok=True)
 
-    for fname in ("soul.md", "user.md"):
+    for fname in ("agents.md", "soul.md", "user.md"):
         dest = identity_dir / fname
         if not dest.exists():
             template = (_SCAFFOLD_DIR / fname).read_text(encoding="utf-8")

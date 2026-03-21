@@ -120,6 +120,7 @@ class TestInitExtended:
     def test_init_creates_identity_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
         run_init(str(tmp_path))
+        assert (tmp_path / "identity" / "agents.md").exists()
         assert (tmp_path / "identity" / "soul.md").exists()
         assert (tmp_path / "identity" / "user.md").exists()
         assert not (tmp_path / "identity" / "agent.md").exists()
@@ -175,6 +176,21 @@ class TestMigrateCommand:
         assert not (identity / "agent.md").exists()
         assert (identity / "soul.md").read_text() == "# Old Agent"
 
+    def test_migrate_creates_agents_md(self, tmp_path):
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        agents_md = tmp_path / "identity" / "agents.md"
+        assert agents_md.exists()
+        assert "Session Init" in agents_md.read_text()
+
+    def test_migrate_skips_existing_agents_md(self, tmp_path):
+        identity = tmp_path / "identity"
+        identity.mkdir()
+        (identity / "agents.md").write_text("# Custom Rules")
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        assert (identity / "agents.md").read_text() == "# Custom Rules"
+
     def test_migrate_updates_toml(self, tmp_path):
         toml = tmp_path / "cogmem.toml"
         toml.write_text('[cogmem.identity]\nagent = "identity/agent.md"\nuser = "identity/user.md"\n')
@@ -184,6 +200,15 @@ class TestMigrateCommand:
         assert 'soul = "identity/soul.md"' in content
         assert "agent" not in content
 
+    def test_migrate_adds_agents_ref_to_claude_md(self, tmp_path):
+        claude = tmp_path / "CLAUDE.md"
+        claude.write_text("# My Project\n\n@identity/soul.md\n@identity/user.md\n")
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        content = claude.read_text()
+        assert "@identity/agents.md" in content
+        assert "@identity/soul.md" in content
+
     def test_migrate_updates_claude_md(self, tmp_path):
         claude = tmp_path / "CLAUDE.md"
         claude.write_text("@identity/agent.md\n@identity/user.md\n")
@@ -191,9 +216,13 @@ class TestMigrateCommand:
         run_migrate(str(tmp_path))
         content = claude.read_text()
         assert "@identity/soul.md" in content
+        assert "@identity/agents.md" in content
         assert "@identity/agent.md" not in content
 
     def test_migrate_noop_when_up_to_date(self, tmp_path, capsys):
+        identity = tmp_path / "identity"
+        identity.mkdir()
+        (identity / "agents.md").write_text("# Rules")
         from cognitive_memory.cli.migrate_cmd import run_migrate
         run_migrate(str(tmp_path))
         assert "up to date" in capsys.readouterr().out
@@ -213,3 +242,4 @@ class TestMigrateCommand:
         (identity / "agent.md").write_text("# Agent")
         cli_main(["migrate", "--dir", str(tmp_path)])
         assert (identity / "soul.md").exists()
+        assert (identity / "agents.md").exists()
