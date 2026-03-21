@@ -56,12 +56,19 @@ def filter_flashbacks(
 ) -> List[SearchResult]:
     """Filter search results for flashback candidates.
 
-    Keep results where cosine_sim >= sim_threshold AND arousal >= arousal_threshold.
-    Skip results where cosine_sim is None (grep results).
+    Semantic results (cosine_sim is not None): require both
+    cosine_sim >= sim_threshold AND arousal >= arousal_threshold.
+
+    Grep results (cosine_sim is None): filter by arousal only, since
+    no embedding similarity is available. This ensures high-arousal
+    grep hits still surface as flashbacks when semantic search is degraded.
     """
     filtered: List[SearchResult] = []
     for r in results:
         if r.cosine_sim is None:
+            # Grep results: filter by arousal only
+            if r.arousal >= arousal_threshold:
+                filtered.append(r)
             continue
         if r.cosine_sim >= sim_threshold and r.arousal >= arousal_threshold:
             filtered.append(r)

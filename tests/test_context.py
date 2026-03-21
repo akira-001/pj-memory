@@ -140,9 +140,17 @@ class TestFilterFlashbacks:
         filtered = filter_flashbacks([])
         assert filtered == []
 
-    def test_grep_results_skipped(self):
+    def test_grep_results_arousal_only(self):
+        # Grep results with high arousal should pass (arousal-only gating)
         results = [self._result(cosine_sim=None, arousal=0.9, source="grep")]
         filtered = filter_flashbacks(results)
+        assert len(filtered) == 1
+        assert filtered[0].source == "grep"
+
+    def test_grep_results_low_arousal_filtered(self):
+        # Grep results with low arousal should be filtered out
+        results = [self._result(cosine_sim=None, arousal=0.3, source="grep")]
+        filtered = filter_flashbacks(results)  # default arousal_threshold=0.5
         assert len(filtered) == 0
 
     def test_custom_thresholds(self):

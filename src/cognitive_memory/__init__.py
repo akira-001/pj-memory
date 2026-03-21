@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ._version import __version__
 from .config import CogMemConfig
+from .context import SearchCache, filter_flashbacks
 from .store import MemoryStore
 from .types import MemoryEntry, SearchResponse, SearchResult
 
@@ -21,7 +22,9 @@ __all__ = [
     "CogMemConfig",
     "MemoryEntry",
     "MemoryStore",
+    "SearchCache",
     "SearchResponse",
     "SearchResult",
+    "filter_flashbacks",
     "search",
 ]

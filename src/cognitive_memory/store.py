@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from .config import CogMemConfig
-from .gate import should_search
+from .context import SearchCache, filter_flashbacks
+from .gate import should_context_search, should_search
 from .parser import parse_entries
 from .scoring import normalize
 from .search import grep_search, merge_and_dedup, semantic_search
@@ -199,6 +200,89 @@ class MemoryStore:
         return SearchResponse(
             results=grep_results, status=f"degraded ({status_reason})"
         )
+
+    def context_search(
+        self,
+        query: str,
+        cache: Optional[SearchCache] = None,
+        session_keywords: Optional[List[str]] = None,
+        top_k: int = 3,
+    ) -> SearchResponse:
+        """Context-aware search with caching and flashback filtering.
+
+        Args:
+            query: Search query string.
+            cache: Optional session-scoped SearchCache. Create with
+                ``SearchCache(config.context_cache_max_size,
+                config.context_cache_sim_threshold)``.
+                If None, caching is skipped for this call. Pass a persistent
+                cache object across calls to benefit from cross-call deduplication.
+            session_keywords: Optional keywords that force the gate to pass
+                even for short or low-entropy queries.
+            top_k: Maximum results to return before flashback filtering.
+        """
+        # 1. Disabled check
+        if not self.config.context_search_enabled:
+            return SearchResponse(status="disabled")
+
+        # 2. Gate check
+        if not should_context_search(query, session_keywords):
+            return SearchResponse(status="skipped_by_gate")
+
+        # 3. Embed query
+        query_vec = self.embedder.embed(query)
+        if query_vec is None:
+            # Ollama down — fall back to grep only
+            grep_results = grep_search(
+                query, self.config.logs_path, self.config, top_k
+            )
+            return SearchResponse(
+                results=grep_results, status="degraded (ollama_unavailable)"
+            )
+
+        # 4. Cache check
+        if cache is not None:
+            cached = cache.get(query_vec)
+            if cached is not None:
+                status = cached.status
+                if "(cached)" not in status:
+                    status = status + " (cached)"
+                return SearchResponse(results=cached.results, status=status)
+
+        # 5. Full search pipeline (bypass search() gate since we already gated above)
+        sem_results, sem_status = semantic_search(
+            query_vec, self.config.database_path, self.config, top_k
+        )
+        if sem_status == "ok":
+            grep_results = grep_search(
+                query, self.config.logs_path, self.config, top_k
+            )
+            merged = merge_and_dedup(grep_results, sem_results, top_k)
+            response = SearchResponse(results=merged, status="ok")
+        else:
+            # Semantic partially failed — fall back to grep
+            grep_results = grep_search(
+                query, self.config.logs_path, self.config, top_k
+            )
+            response = SearchResponse(
+                results=grep_results, status="degraded ({})".format(sem_status)
+            )
+
+        # 6. Apply flashback filtering
+        filtered = filter_flashbacks(
+            response.results,
+            self.config.context_flashback_sim,
+            self.config.context_flashback_arousal,
+        )
+
+        filtered_response = SearchResponse(results=filtered, status=response.status)
+
+        # 7. Store in cache
+        if cache is not None:
+            cache.put(query_vec, filtered_response)
+
+        # 8. Return
+        return filtered_response
 
     def status(self) -> dict:
         """Return index statistics."""

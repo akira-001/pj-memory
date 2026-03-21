@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from cognitive_memory.config import CogMemConfig
+from cognitive_memory.context import SearchCache
 from cognitive_memory.store import MemoryStore
 
 
@@ -121,3 +122,100 @@ class TestStatus:
             assert stats["total_entries"] == 3
             assert stats["indexed_files"] == 1
             assert stats["db_size_bytes"] > 0
+
+
+class TestContextSearch:
+    def test_basic_context_search(self, sample_log_file, config_with_tmp, mock_embedder):
+        """Normal context search returns filtered results."""
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            store.index_dir(force=True)
+            response = store.context_search("テスト洞察エントリについて検索する")
+            assert response.status in ("ok", "degraded (no_index)")
+            # With mock embedder and flashback filtering, results may vary
+            # but the method should complete without error
+
+    def test_cache_hit_skips_db_scan(self, sample_log_file, config_with_tmp, mock_embedder):
+        """When cache has a match, DB scan is skipped."""
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            store.index_dir(force=True)
+            cache = SearchCache(max_size=10, sim_threshold=0.9)
+            # First call populates cache
+            r1 = store.context_search("テスト洞察エントリについて検索する", cache=cache)
+            # Second call with identical query should hit cache
+            r2 = store.context_search("テスト洞察エントリについて検索する", cache=cache)
+            assert "(cached)" in r2.status
+
+    def test_flashback_filter_applied(self, sample_log_file, config_with_tmp, mock_embedder):
+        """Low-score results are filtered out by flashback thresholds."""
+        # Set very high thresholds so everything gets filtered
+        config_with_tmp.context_flashback_sim = 0.99
+        config_with_tmp.context_flashback_arousal = 0.99
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            store.index_dir(force=True)
+            response = store.context_search("テスト洞察エントリについて検索する")
+            # With extremely high thresholds, all results should be filtered out
+            assert len(response.results) == 0
+
+    def test_gate_skip(self, config_with_tmp, mock_embedder):
+        """Short/trivial queries are skipped by gate."""
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            response = store.context_search("はい")
+            assert response.status == "skipped_by_gate"
+            assert response.results == []
+
+    def test_disabled_via_config(self, config_with_tmp, mock_embedder):
+        """context_search_enabled=False returns disabled status."""
+        config_with_tmp.context_search_enabled = False
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            response = store.context_search("テスト洞察エントリについて検索する")
+            assert response.status == "disabled"
+            assert response.results == []
+
+    def test_failopen_on_embed_failure(self, sample_log_file, config_with_tmp, failing_embedder):
+        """Ollama failure falls back to grep."""
+        with MemoryStore(config_with_tmp, embedder=failing_embedder) as store:
+            response = store.context_search("テスト 洞察 エントリについて検索")
+            assert "degraded" in response.status
+            assert "ollama_unavailable" in response.status
+
+    def test_session_keywords_trigger(self, sample_log_file, config_with_tmp, mock_embedder):
+        """session_keywords cause gate to pass for otherwise short queries."""
+        with MemoryStore(config_with_tmp, embedder=mock_embedder) as store:
+            store.index_dir(force=True)
+            # "メモリ" alone is too short (4 chars < 6), but keyword match forces gate open
+            response = store.context_search(
+                "メモリ",
+                session_keywords=["メモリ"],
+            )
+            assert response.status != "skipped_by_gate"
+
+    def test_degraded_semantic_grep_fallback(self, sample_log_file, config_with_tmp, mock_embedder):
+        """When semantic returns no_index, grep results that pass arousal threshold are returned."""
+        # Point db_path to a path that does NOT exist so semantic_search returns no_index.
+        # Use a separate path that is never created (no __enter__ / _init_db call).
+        # Log files exist (from sample_log_file fixture), so grep can find matches.
+        import tempfile, os
+        from pathlib import Path
+
+        # Build a config with a db_path that will never be created
+        nonexistent_db = Path(tempfile.mkdtemp()) / "no_such_vectors.db"
+        config_no_db = CogMemConfig(
+            logs_dir=str(config_with_tmp.logs_path),
+            db_path=str(nonexistent_db),
+            _base_dir="",
+        )
+        config_no_db.context_flashback_arousal = 0.5  # grep entries have arousal 0.6-0.8
+        config_no_db.context_flashback_sim = 0.65
+
+        store = MemoryStore(config_no_db, embedder=mock_embedder)
+        response = store.context_search("テスト 洞察 エントリについて検索する")
+        store.close()
+
+        # Status should reflect degraded semantic path
+        assert "degraded" in response.status
+        assert "no_index" in response.status
+        # Grep results with arousal >= 0.5 should pass the arousal-only filter
+        assert len(response.results) > 0
+        # All returned results must be from grep (no vectors.db)
+        for r in response.results:
+            assert r.source == "grep"
