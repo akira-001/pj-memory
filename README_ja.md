@@ -72,8 +72,30 @@ half_life = base_half_life * (1 + arousal)
 
 ```bash
 pip install cogmem-agent
-cogmem init        # cogmem.toml, identity/, memory/, CLAUDE.md をスキャフォールド
+cogmem init        # プロジェクト構造をスキャフォールド（下記参照）
 ```
+
+### プロジェクト構造
+
+`cogmem init` で以下の構造が生成されます:
+
+```
+your-project/
+├── CLAUDE.md                    # エントリポイント — @参照のみ（16行）
+├── cogmem.toml                  # 設定ファイル
+├── identity/
+│   ├── agents.md                # 行動ルール（Session Init, Live Logging, Wrap 等）
+│   ├── soul.md                  # エージェントの人格（役割、価値観、思考スタイル）
+│   └── user.md                  # ユーザープロファイル（会話から自動更新）
+└── memory/
+    ├── logs/                    # セッションログ（YYYY-MM-DD.md）
+    ├── contexts/                # デイリーコンテキストファイル
+    └── knowledge/
+        ├── summary.md           # 結晶化された知識
+        └── error-patterns.md    # 繰り返すエラーパターン
+```
+
+CLAUDE.md は最小限 — identity と knowledge ファイルへの `@参照` のみ。すべての行動プロトコルは `identity/agents.md` にあるため、フレームワークに触れずにカスタマイズできます。
 
 ### エンベディングのセットアップ（推奨）
 
@@ -125,6 +147,7 @@ cogmem index                       # インデックスの構築・更新
 cogmem search "過去の意思決定"       # 記憶を検索
 cogmem signals                     # 結晶化シグナルのチェック
 cogmem status                      # 統計情報を表示
+cogmem migrate                     # 旧バージョンからのアップグレード
 ```
 
 ### Python API
@@ -169,6 +192,10 @@ half_life = base_half_life * (1 + arousal)
 logs_dir = "memory/logs"
 db_path = "memory/vectors.db"
 
+[cogmem.identity]
+soul = "identity/soul.md"
+user = "identity/user.md"
+
 [cogmem.scoring]
 sim_weight = 0.7
 arousal_weight = 0.3
@@ -181,6 +208,18 @@ model = "zylonai/multilingual-e5-large"
 url = "http://localhost:11434/api/embed"
 timeout = 10
 ```
+
+### v0.2.0〜0.2.1 からのアップグレード
+
+```bash
+pip install --upgrade cogmem-agent
+cogmem migrate
+```
+
+`cogmem migrate` が自動で実行する内容:
+- `identity/agent.md` → `identity/soul.md` にリネーム
+- `identity/agents.md`（行動プロトコル）を新規生成
+- `cogmem.toml` と `CLAUDE.md` の参照を更新
 
 ## カスタムエンベディングプロバイダー
 

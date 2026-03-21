@@ -72,8 +72,30 @@ Not every user message needs memory retrieval. Greetings ("hello"), acknowledgme
 
 ```bash
 pip install cogmem-agent
-cogmem init        # Scaffolds cogmem.toml, identity/, memory/, and CLAUDE.md
+cogmem init        # Scaffolds project structure (see below)
 ```
+
+### Project Structure
+
+`cogmem init` generates the following structure:
+
+```
+your-project/
+├── CLAUDE.md                    # Entry point — @references only (16 lines)
+├── cogmem.toml                  # Configuration
+├── identity/
+│   ├── agents.md                # Behavior rules (Session Init, Live Logging, Wrap, etc.)
+│   ├── soul.md                  # Agent personality (role, values, thinking style)
+│   └── user.md                  # User profile (auto-updated from conversations)
+└── memory/
+    ├── logs/                    # Session logs (YYYY-MM-DD.md)
+    ├── contexts/                # Daily context files
+    └── knowledge/
+        ├── summary.md           # Crystallized knowledge
+        └── error-patterns.md    # Recurring error patterns
+```
+
+CLAUDE.md is kept minimal — it only contains `@` references to the identity and knowledge files. All behavioral protocols live in `identity/agents.md`, making it easy to customize without touching the framework.
 
 ### Embedding Setup (recommended)
 
@@ -125,6 +147,7 @@ cogmem index                       # Build/update index
 cogmem search "past decisions"     # Search memories
 cogmem signals                     # Check crystallization signals
 cogmem status                      # Show statistics
+cogmem migrate                     # Upgrade from older versions
 ```
 
 ### Python API
@@ -169,6 +192,10 @@ High-arousal memories (insights, conflicts, surprises) decay slower — just lik
 logs_dir = "memory/logs"
 db_path = "memory/vectors.db"
 
+[cogmem.identity]
+soul = "identity/soul.md"
+user = "identity/user.md"
+
 [cogmem.scoring]
 sim_weight = 0.7
 arousal_weight = 0.3
@@ -181,6 +208,18 @@ model = "zylonai/multilingual-e5-large"
 url = "http://localhost:11434/api/embed"
 timeout = 10
 ```
+
+### Upgrading from v0.2.0–0.2.1
+
+```bash
+pip install --upgrade cogmem-agent
+cogmem migrate
+```
+
+`cogmem migrate` automatically:
+- Renames `identity/agent.md` → `identity/soul.md`
+- Creates `identity/agents.md` (behavioral protocols)
+- Updates `cogmem.toml` and `CLAUDE.md` references
 
 ## Custom Embedding Provider
 
