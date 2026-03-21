@@ -1,5 +1,7 @@
 # Cognitive Memory
 
+[日本語](README_ja.md)
+
 Human-like cognitive memory for AI agents — emotion-gated recall with adaptive forgetting.
 
 Unlike traditional vector databases that treat all memories equally, Cognitive Memory models how humans actually remember: emotionally significant experiences persist longer, while routine information naturally fades. This makes AI agents feel more natural and context-aware.
@@ -13,11 +15,104 @@ Unlike traditional vector databases that treat all memories equally, Cognitive M
 - **Zero required dependencies**: Core uses only Python stdlib (sqlite3, urllib)
 - **Pluggable embeddings**: Ollama (built-in), OpenAI, or any custom provider
 
+## Why Cognitive Memory?
+
+Traditional RAG and vector databases retrieve memories by semantic similarity alone. Every memory is treated equally — a casual greeting and a critical business decision have the same weight. This leads to noisy, context-poor recall that makes AI agents feel mechanical.
+
+Cognitive Memory changes this by modeling three aspects of human cognition:
+
+### 1. Emotion-Gated Recall
+
+Each memory entry carries an **arousal score** (0.0–1.0) that reflects emotional intensity — surprise, insight, conflict, determination. High-arousal memories are weighted more heavily in search results.
+
+| Query | Traditional Vector DB | Cognitive Memory |
+|-------|----------------------|-----------------|
+| "past pricing decisions" | Returns all mentions of "pricing" ranked by text similarity | Prioritizes the heated debate where pricing strategy was reversed (arousal: 0.9) over routine price update logs (arousal: 0.2) |
+
+**What triggers high arousal?** Conversations with emotional or cognitive significance:
+
+| Conversation | Arousal | Why it matters |
+|---|---|---|
+| "Wait, that assumption is wrong!" | 0.9 | Direction change — a premise collapsed |
+| "I see, so that's how it works!" | 0.8 | Aha moment — cognitive breakthrough |
+| "Let's stop this approach. Because..." | 0.7 | Rejection decision — a turning point |
+| "This is the third time this topic came up" | 0.7 | Pattern recognition — metacognition |
+| "Phase 1 complete" | 0.6 | Milestone — phase transition |
+| "We need to investigate..." | 0.4 | Open question emerged |
+
+These are remembered. Meanwhile, greetings ("hello"), acknowledgments ("ok"), and navigation ("let's move on") score near 0 and are skipped entirely by the adaptive search gate.
+
+### 2. Adaptive Forgetting
+
+Memories decay over time — but not uniformly. The decay half-life adapts to arousal:
+
+```
+half_life = base_half_life * (1 + arousal)
+```
+
+- A routine status update (arousal: 0.2) has a half-life of **72 days** and fades quickly
+- A critical pivot decision (arousal: 0.9) has a half-life of **114 days** and persists far longer
+
+This means your agent naturally "forgets" noise while retaining the moments that matter — just like human memory.
+
+### 3. Adaptive Search Gate
+
+Not every user message needs memory retrieval. Greetings ("hello"), acknowledgments ("ok"), and trivial messages are automatically detected and skipped, saving unnecessary embedding API calls and reducing noise in results.
+
+### The Result
+
+| Aspect | Without Cognitive Memory | With Cognitive Memory |
+|--------|------------------------|----------------------|
+| Recall quality | All memories ranked equally by text similarity | Important memories surface first, noise fades |
+| Over time | Old memories never decay, search gets noisier | Natural forgetting keeps results relevant |
+| Agent personality | Generic, robotic responses | Remembers what mattered, feels more human |
+| Wasted searches | Every message triggers vector search | Trivial messages are skipped automatically |
+
 ## Install
 
 ```bash
-pip install cognitive-memory
+pip install cogmem-agent
 ```
+
+### Embedding Setup (recommended)
+
+Cognitive Memory uses [Ollama](https://ollama.com/) for local embeddings. Without it, the library falls back to keyword search only.
+
+```bash
+# 1. Install Ollama (macOS)
+brew install ollama
+
+# 2. Start the server
+ollama serve
+
+# 3. Download the embedding model (~2.2 GB)
+ollama pull zylonai/multilingual-e5-large
+```
+
+> Other platforms: see [ollama.com/download](https://ollama.com/download)
+>
+> You can also use OpenAI or any custom embedding provider — see [Embedding Providers](docs/embedding-providers.md).
+
+### With vs Without Ollama
+
+Cognitive Memory works in two modes depending on whether an embedding provider is available:
+
+With Ollama, search upgrades from exact keyword matching to semantic understanding. All core Cognitive Memory features become available: related concept discovery, cross-lingual search, typo tolerance, emotion-based ranking, and adaptive forgetting. It runs entirely locally with no additional cost or privacy risk — just ~2.2 GB of disk space.
+
+| | Without Ollama (keyword mode) | With Ollama (semantic mode) |
+|---|---|---|
+| **Search method** | Exact keyword matching (grep) | Vector similarity + emotion scoring |
+| **"pricing strategy"** | Matches only entries containing the exact words "pricing" and "strategy" | Also finds entries about "LTV:CAC optimization", "revenue model", "cost structure" |
+| **Cross-lingual** | Japanese query only matches Japanese text | "価格戦略" finds both Japanese and English entries about pricing |
+| **Typos / synonyms** | "competetor analysis" returns nothing | Understands intent, returns competitor-related entries |
+| **Scoring** | Binary match (found or not) | `(0.7 * cosine_sim + 0.3 * arousal) * time_decay` — nuanced ranking |
+| **Adaptive forgetting** | Not available (all matches are equal) | Old low-arousal entries naturally fade from results |
+| **Latency** | < 1ms | ~15ms (local, no network roundtrip) |
+| **Privacy** | Local | Local — no data leaves your machine |
+| **Cost** | Free | Free (Ollama is open-source) |
+| **Disk usage** | 0 | ~2.2 GB (model weight) |
+
+**Recommendation**: Install Ollama to unlock the full cognitive memory experience. The keyword fallback is designed as a safety net, not as the primary mode of operation.
 
 ## Quick Start
 
@@ -100,6 +195,19 @@ store = MemoryStore(config, embedder=MyEmbedder())
 - [Quick Start](docs/quickstart.md)
 - [Log Format](docs/log-format.md)
 - [Embedding Providers](docs/embedding-providers.md)
+
+## References
+
+### Papers
+
+- [NFD: Nurture-First Development](https://arxiv.org/abs/2603.10808) — Architectural framework for AI agent personality development through experiential layers and crystallization
+- [A-MEM: Agentic Memory for LLM Agents](https://arxiv.org/abs/2502.12110) — Atomic note-based memory structuring for autonomous agents
+
+### Projects
+
+- [memory-lancedb-pro](https://github.com/mem0ai/memory-lancedb-pro) — Adaptive gate and time decay pipeline design reference
+- [memU](https://github.com/NevaMind-AI/memU) — Experiential layer implementation reference
+- [A-mem](https://github.com/WujiangXu/A-mem) — Atomic notes implementation reference
 
 ## License
 
