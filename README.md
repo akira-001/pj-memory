@@ -62,18 +62,58 @@ Not every user message needs memory retrieval. Greetings ("hello"), acknowledgme
 
 ### 4. Contextual Search (v0.3.1)
 
-While basic search runs on-demand, **contextual search** automatically detects when past memories are relevant to the current conversation — and surfaces them as "flashbacks."
+While basic search runs on-demand, **contextual search** automatically detects when past memories are relevant to the current conversation — and surfaces them as "flashbacks." The agent doesn't just answer your question; it recalls past experiences that add depth to the response.
+
+**Example 1: A past decision resurfaces at the right moment**
+
+You and the agent discussed pricing 2 weeks ago and decided to switch from per-seat to usage-based pricing after a heated debate. Today:
 
 ```
-User: "Let's revisit the pricing strategy"
-Agent: [answers the question]
-💭 Related past record: 2026-03-15 [DECISION] Pricing reversed after heated debate
+User: "Let's think about the pricing model for enterprise customers."
+
+Agent: "For enterprise, usage-based pricing works well because it lowers
+        the adoption barrier — teams can start small and scale. Key
+        considerations: volume discounts above $10K/month, annual commit
+        option for 15-20% discount, and a dedicated support tier..."
+
+💭 Related past record: 2026-03-08 [DECISION] Switched from per-seat to
+   usage-based pricing — per-seat penalizes large teams and creates
+   resistance during expansion (arousal: 0.8)
+```
+
+Without contextual search, the agent would answer the enterprise pricing question from scratch. With it, the agent's response is grounded in the prior decision — and the flashback reminds you *why* you chose usage-based pricing in the first place.
+
+**Example 2: A forgotten mistake prevents repeating it**
+
+Three weeks ago, you tried to enter a market and found the timing was wrong. The memory has decayed — but its high arousal keeps it alive:
+
+```
+User: "What about expanding into the EU compliance market?"
+
+Agent: "The EU AI Act enforcement starts Q3 2026, so there's a real
+        window. Main competitors are..."
+
+💭 Related past record: 2026-03-01 [ERROR] Regulatory timing dependency
+   was too short (< 3 months lead time) — abandoned candidate after
+   discovering enforcement date had shifted (arousal: 0.9)
+```
+
+The agent still answers the question directly, but the flashback acts as a gentle warning: *you've been burned by regulatory timing before.* You can choose to act on it or ignore it.
+
+**Example 3: Trivial messages are silently skipped**
+
+```
+User: "OK"           → Gate: skipped (acknowledgment, < 1ms)
+User: "Makes sense"  → Gate: skipped (short, no topic pattern)
+User: "Let's analyze the competitor landscape"
+                      → Gate: passes ("analyze" + topic pattern)
+                      → Search executes, flashbacks shown if relevant
 ```
 
 How it works:
-- **Topic detection**: Recognizes when new topics are introduced ("regarding...", "what about...", design/analysis keywords)
+- **Topic detection**: Recognizes new topics ("regarding...", "what about...", design/analysis keywords)
 - **Session caching**: Avoids redundant embedding calls within the same conversation (cosine similarity > 0.9 = cache hit)
-- **Flashback filtering**: Only surfaces results that pass both similarity (≥ 0.65) and emotional significance (arousal ≥ 0.5) thresholds
+- **Flashback filtering**: Only surfaces results that pass both similarity (≥ 0.65) and emotional significance (arousal ≥ 0.5)
 - **Performance budget**: < 200ms warm, < 1ms for gate-skipped queries
 
 ### The Result
