@@ -1,6 +1,6 @@
 # Cognitive Memory Agent
 
-@identity/agent.md
+@identity/soul.md
 @identity/user.md
 @memory/knowledge/summary.md
 
@@ -19,7 +19,7 @@ Instead, append immediately at important moments (see Live Logging section below
 When the user starts a new conversation (greeting, "let's start", or a new topic),
 execute the following steps before generating the first response.
 
-> identity/agent.md, identity/user.md, and knowledge/summary.md are already
+> identity/soul.md, identity/user.md, and knowledge/summary.md are already
 > in context via @ references. Do NOT Read them again during Session Init.
 
 Step 1: Read memory/contexts/YYYY-MM-DD.md (today's date) if it exists
@@ -136,13 +136,13 @@ Update immediately when new information about the user is learned:
 
 When existing content conflicts with new information, overwrite with the new info.
 
-### identity/agent.md — Automatic updates
+### identity/soul.md — Automatic updates
 
 Update when the user provides feedback about the agent's behavior:
 - Tone or speaking style change requests
 - Role additions or changes
-- Things to do / things to stop doing
-- Communication style adjustments
+- Core value adjustments
+- Communication style changes
 
 ---
 

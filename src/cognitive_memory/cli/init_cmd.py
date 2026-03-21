@@ -31,7 +31,7 @@ def run_init(target_dir: str = "."):
     identity_dir = target / "identity"
     identity_dir.mkdir(parents=True, exist_ok=True)
 
-    for fname in ("agent.md", "user.md"):
+    for fname in ("soul.md", "user.md"):
         dest = identity_dir / fname
         if not dest.exists():
             template = (_SCAFFOLD_DIR / fname).read_text(encoding="utf-8")
@@ -124,7 +124,7 @@ def run_init(target_dir: str = "."):
     print()
     print("Setup complete! Next steps:")
     print()
-    print("  1. Edit identity/agent.md to customize your agent's personality")
+    print("  1. Edit identity/soul.md to define your agent's personality")
     print("  2. Start Claude Code — CLAUDE.md will be loaded automatically")
     print("  3. Your agent now has cognitive memory!")
     print()

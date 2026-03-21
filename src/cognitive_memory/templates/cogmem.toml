@@ -4,7 +4,7 @@ contexts_dir = "memory/contexts"
 db_path = "memory/vectors.db"
 
 [cogmem.identity]
-agent = "identity/agent.md"
+soul = "identity/soul.md"
 user = "identity/user.md"
 
 [cogmem.knowledge]

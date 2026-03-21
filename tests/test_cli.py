@@ -120,8 +120,9 @@ class TestInitExtended:
     def test_init_creates_identity_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
         run_init(str(tmp_path))
-        assert (tmp_path / "identity" / "agent.md").exists()
+        assert (tmp_path / "identity" / "soul.md").exists()
         assert (tmp_path / "identity" / "user.md").exists()
+        assert not (tmp_path / "identity" / "agent.md").exists()
 
     def test_init_creates_knowledge_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init

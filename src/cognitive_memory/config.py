@@ -29,7 +29,7 @@ _DEFAULTS = {
     "embedding_url": "http://localhost:11434/api/embed",
     "embedding_timeout": 10,
     # Identity
-    "identity_agent": "identity/agent.md",
+    "identity_soul": "identity/soul.md",
     "identity_user": "identity/user.md",
     # Knowledge
     "knowledge_summary": "memory/knowledge/summary.md",
@@ -72,7 +72,7 @@ class CogMemConfig:
     embedding_timeout: int = _DEFAULTS["embedding_timeout"]
 
     # Identity paths (relative to base_dir)
-    identity_agent: str = _DEFAULTS["identity_agent"]
+    identity_soul: str = _DEFAULTS["identity_soul"]
     identity_user: str = _DEFAULTS["identity_user"]
 
     # Knowledge paths
@@ -121,11 +121,11 @@ class CogMemConfig:
         return Path(self._base_dir) / self.contexts_dir
 
     @property
-    def identity_agent_path(self) -> Path:
-        p = Path(self.identity_agent)
+    def identity_soul_path(self) -> Path:
+        p = Path(self.identity_soul)
         if p.is_absolute():
             return p
-        return Path(self._base_dir) / self.identity_agent
+        return Path(self._base_dir) / self.identity_soul
 
     @property
     def identity_user_path(self) -> Path:
@@ -187,7 +187,7 @@ class CogMemConfig:
             embedding_timeout=embedding.get(
                 "timeout", _DEFAULTS["embedding_timeout"]
             ),
-            identity_agent=identity.get("agent", _DEFAULTS["identity_agent"]),
+            identity_soul=identity.get("soul", _DEFAULTS["identity_soul"]),
             identity_user=identity.get("user", _DEFAULTS["identity_user"]),
             knowledge_summary=knowledge.get(
                 "summary", _DEFAULTS["knowledge_summary"]

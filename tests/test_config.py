@@ -125,9 +125,9 @@ class TestConfigNewSections:
     def test_parse_identity_section(self, tmp_path):
         """New [cogmem.identity] section is parsed."""
         toml = tmp_path / "cogmem.toml"
-        toml.write_text('[cogmem.identity]\nagent = "custom/agent.md"\nuser = "custom/user.md"\n')
+        toml.write_text('[cogmem.identity]\nsoul = "custom/soul.md"\nuser = "custom/user.md"\n')
         config = CogMemConfig.from_toml(toml)
-        assert config.identity_agent == "custom/agent.md"
+        assert config.identity_soul == "custom/soul.md"
         assert config.identity_user == "custom/user.md"
 
     def test_parse_crystallization_section(self, tmp_path):
@@ -144,7 +144,7 @@ class TestConfigNewSections:
         toml = tmp_path / "cogmem.toml"
         toml.write_text('[cogmem]\nlogs_dir = "logs"\n')
         config = CogMemConfig.from_toml(toml)
-        assert config.identity_agent == "identity/agent.md"
+        assert config.identity_soul == "identity/soul.md"
         assert config.pattern_threshold == 3
         assert config.total_sessions == 0
 
@@ -153,6 +153,6 @@ class TestConfigNewSections:
         toml = tmp_path / "cogmem.toml"
         toml.write_text('[cogmem]\n')
         config = CogMemConfig.from_toml(toml)
-        assert config.identity_agent_path == tmp_path / "identity" / "agent.md"
+        assert config.identity_soul_path == tmp_path / "identity" / "soul.md"
         assert config.knowledge_summary_path == tmp_path / "memory" / "knowledge" / "summary.md"
         assert config.contexts_path == tmp_path / "memory" / "contexts"
