@@ -148,6 +148,21 @@ class CogMemConfig:
             return p
         return Path(self._base_dir) / self.knowledge_error_patterns
 
+    @staticmethod
+    def _resolve_identity_soul(identity: dict) -> str:
+        """Resolve soul path with backward compat for 'agent' key."""
+        if "soul" in identity:
+            return identity["soul"]
+        if "agent" in identity:
+            print(
+                "WARNING: [cogmem.identity] agent= is deprecated. "
+                "Rename to soul= and run 'cogmem migrate'. "
+                "See https://pypi.org/project/cogmem-agent/",
+                file=sys.stderr,
+            )
+            return identity["agent"]
+        return _DEFAULTS["identity_soul"]
+
     @classmethod
     def from_toml(cls, path: str | Path) -> CogMemConfig:
         """Load config from a TOML file."""
@@ -187,7 +202,7 @@ class CogMemConfig:
             embedding_timeout=embedding.get(
                 "timeout", _DEFAULTS["embedding_timeout"]
             ),
-            identity_soul=identity.get("soul", _DEFAULTS["identity_soul"]),
+            identity_soul=cls._resolve_identity_soul(identity),
             identity_user=identity.get("user", _DEFAULTS["identity_user"]),
             knowledge_summary=knowledge.get(
                 "summary", _DEFAULTS["knowledge_summary"]

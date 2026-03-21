@@ -160,3 +160,56 @@ class TestInitExtended:
         from cognitive_memory.cli.init_cmd import run_init
         run_init(str(tmp_path))
         assert (tmp_path / "memory" / "contexts").is_dir()
+
+
+class TestMigrateCommand:
+    """Tests for cogmem migrate."""
+
+    def test_migrate_renames_agent_to_soul(self, tmp_path):
+        identity = tmp_path / "identity"
+        identity.mkdir()
+        (identity / "agent.md").write_text("# Old Agent")
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        assert (identity / "soul.md").exists()
+        assert not (identity / "agent.md").exists()
+        assert (identity / "soul.md").read_text() == "# Old Agent"
+
+    def test_migrate_updates_toml(self, tmp_path):
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem.identity]\nagent = "identity/agent.md"\nuser = "identity/user.md"\n')
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        content = toml.read_text()
+        assert 'soul = "identity/soul.md"' in content
+        assert "agent" not in content
+
+    def test_migrate_updates_claude_md(self, tmp_path):
+        claude = tmp_path / "CLAUDE.md"
+        claude.write_text("@identity/agent.md\n@identity/user.md\n")
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        content = claude.read_text()
+        assert "@identity/soul.md" in content
+        assert "@identity/agent.md" not in content
+
+    def test_migrate_noop_when_up_to_date(self, tmp_path, capsys):
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        assert "up to date" in capsys.readouterr().out
+
+    def test_migrate_warns_both_exist(self, tmp_path, capsys):
+        identity = tmp_path / "identity"
+        identity.mkdir()
+        (identity / "agent.md").write_text("# Old")
+        (identity / "soul.md").write_text("# New")
+        from cognitive_memory.cli.migrate_cmd import run_migrate
+        run_migrate(str(tmp_path))
+        assert "Both" in capsys.readouterr().err
+
+    def test_migrate_via_cli(self, tmp_path):
+        identity = tmp_path / "identity"
+        identity.mkdir()
+        (identity / "agent.md").write_text("# Agent")
+        cli_main(["migrate", "--dir", str(tmp_path)])
+        assert (identity / "soul.md").exists()

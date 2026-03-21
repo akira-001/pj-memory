@@ -130,6 +130,14 @@ class TestConfigNewSections:
         assert config.identity_soul == "custom/soul.md"
         assert config.identity_user == "custom/user.md"
 
+    def test_backward_compat_agent_key(self, tmp_path, capsys):
+        """Old agent= key is accepted with deprecation warning."""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('[cogmem.identity]\nagent = "identity/agent.md"\n')
+        config = CogMemConfig.from_toml(toml)
+        assert config.identity_soul == "identity/agent.md"
+        assert "deprecated" in capsys.readouterr().err.lower()
+
     def test_parse_crystallization_section(self, tmp_path):
         """New [cogmem.crystallization] section is parsed."""
         toml = tmp_path / "cogmem.toml"
