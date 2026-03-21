@@ -9,6 +9,12 @@ _SCAFFOLD_DIR = Path(__file__).resolve().parent.parent / "templates"
 
 
 def run_init(target_dir: str = "."):
+    if not _SCAFFOLD_DIR.is_dir():
+        raise RuntimeError(
+            f"cogmem templates directory not found at {_SCAFFOLD_DIR}. "
+            "The package may be installed incorrectly."
+        )
+
     target = Path(target_dir).resolve()
     target.mkdir(parents=True, exist_ok=True)
 
@@ -88,10 +94,11 @@ def run_init(target_dir: str = "."):
         if gitignore.exists():
             existing = gitignore.read_text(encoding="utf-8")
             # Collect lines from template that are missing in existing
+            existing_lines = {l.strip() for l in existing.splitlines()}
             missing_lines = []
             for line in template_content.splitlines():
                 stripped = line.strip()
-                if stripped and not stripped.startswith("#") and stripped not in existing:
+                if stripped and not stripped.startswith("#") and stripped not in existing_lines:
                     missing_lines.append(line)
             if missing_lines:
                 with open(gitignore, "a", encoding="utf-8") as f:

@@ -231,7 +231,7 @@ class CogMemConfig:
             return cls.from_toml(env_path)
 
         d = Path(start_dir) if start_dir else Path.cwd()
-        while True:
+        for _ in range(64):  # depth limit to avoid hangs on network mounts
             candidate = d / "cogmem.toml"
             if candidate.exists():
                 return cls.from_toml(candidate)

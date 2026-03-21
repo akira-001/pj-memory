@@ -104,6 +104,25 @@ class TestCheckSignals:
         assert result.log_days == 1
 
 
+    def test_logs_path_is_file(self, tmp_path):
+        """When logs_path is a file (not dir), returns zeros without error."""
+        logs_file = tmp_path / "memory" / "logs"
+        logs_file.parent.mkdir(parents=True)
+        logs_file.write_text("not a directory")
+        config = CogMemConfig(logs_dir=str(logs_file), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        result = check_signals(config)
+        assert result.should_crystallize is False
+        assert result.log_days == 0
+        assert result.pattern_count == 0
+
+    def test_logs_path_nonexistent(self, tmp_path):
+        """When logs_path doesn't exist, returns zeros without error."""
+        config = CogMemConfig(logs_dir=str(tmp_path / "nonexistent"), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        result = check_signals(config)
+        assert result.should_crystallize is False
+        assert result.log_days == 0
+
+
 class TestCrystallizationSignalsDict:
     """Tests for to_dict serialization."""
 

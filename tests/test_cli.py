@@ -51,6 +51,14 @@ class TestInitCommand:
         assert (tmp_path / "cogmem.toml").exists()
 
 
+    def test_init_missing_templates_raises(self, tmp_path, monkeypatch):
+        """Raises RuntimeError when templates directory is missing."""
+        import cognitive_memory.cli.init_cmd as init_mod
+        monkeypatch.setattr(init_mod, "_SCAFFOLD_DIR", tmp_path / "nonexistent")
+        with pytest.raises(RuntimeError, match="templates directory not found"):
+            init_mod.run_init(str(tmp_path / "out"))
+
+
 class TestSearchCommand:
     def test_search_json_output(self, tmp_path, monkeypatch, capsys, mock_embedder):
         # Set up a minimal project
@@ -87,10 +95,7 @@ class TestSearchCommand:
         cli_main(["search", "テスト洞察エントリの検索", "--json"])
 
         captured = capsys.readouterr()
-        # Find the JSON line in output
-        lines = [l for l in captured.out.strip().split("\n") if l.startswith("{")]
-        assert len(lines) == 1
-        data = json.loads(lines[0])
+        data = json.loads(captured.out.strip())
         assert "results" in data
         assert "status" in data
 
