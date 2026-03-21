@@ -1,0 +1,16 @@
+[cogmem]
+logs_dir = "memory/logs"
+db_path = "memory/vectors.db"
+handover_delimiter = "## 引き継ぎ"
+
+[cogmem.scoring]
+sim_weight = 0.7
+arousal_weight = 0.3
+base_half_life = 60.0
+decay_floor = 0.3
+
+[cogmem.embedding]
+provider = "ollama"
+model = "zylonai/multilingual-e5-large"
+url = "http://localhost:11434/api/embed"
+timeout = 10

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cognitive-memory"
+dynamic = ["version"]
+description = "Human-like cognitive memory for AI agents — emotion-gated recall with adaptive forgetting"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "Akira Honjo" }]
+keywords = ["ai", "agent", "memory", "cognitive", "semantic-search", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "tomli>=1.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+cogmem = "cognitive_memory.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/akira/cognitive-memory"
+Repository = "https://github.com/akira/cognitive-memory"
+
+[tool.hatch.version]
+path = "src/cognitive_memory/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cognitive_memory"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires Ollama running",
+]
