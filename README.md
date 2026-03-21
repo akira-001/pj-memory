@@ -72,6 +72,7 @@ Not every user message needs memory retrieval. Greetings ("hello"), acknowledgme
 
 ```bash
 pip install cogmem-agent
+cogmem init        # Scaffolds cogmem.toml, identity/, memory/, and CLAUDE.md
 ```
 
 ### Embedding Setup (recommended)
@@ -122,6 +123,7 @@ With Ollama, search upgrades from exact keyword matching to semantic understandi
 cogmem init                        # Initialize project
 cogmem index                       # Build/update index
 cogmem search "past decisions"     # Search memories
+cogmem signals                     # Check crystallization signals
 cogmem status                      # Show statistics
 ```
 
