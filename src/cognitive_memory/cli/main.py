@@ -16,6 +16,8 @@ def main(argv: list[str] | None = None):
     # init
     init_parser = subparsers.add_parser("init", help="Initialize a new project")
     init_parser.add_argument("--dir", type=str, default=".", help="Target directory")
+    init_parser.add_argument("--lang", type=str, choices=["en", "ja"], default=None,
+                             help="Language for templates (en/ja). Prompts interactively if omitted.")
 
     # index
     index_parser = subparsers.add_parser("index", help="Build/update the memory index")
@@ -46,7 +48,7 @@ def main(argv: list[str] | None = None):
 
     if args.command == "init":
         from .init_cmd import run_init
-        run_init(args.dir)
+        run_init(args.dir, lang=args.lang)
     elif args.command == "index":
         from .index_cmd import run_index
         run_index(all_files=args.all, single_file=args.file)

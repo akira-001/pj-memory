@@ -12,7 +12,7 @@ class TestInitCommand:
     def test_init_creates_scaffold(self, tmp_path):
         target = tmp_path / "my_project"
         target.mkdir()
-        cli_main(["init", "--dir", str(target)])
+        cli_main(["init", "--lang", "en", "--dir", str(target)])
 
         assert (target / "cogmem.toml").exists()
         assert (target / "memory" / "logs" / ".gitkeep").exists()
@@ -28,7 +28,7 @@ class TestInitCommand:
         toml_path = target / "cogmem.toml"
         toml_path.write_text("# existing config\n")
 
-        cli_main(["init", "--dir", str(target)])
+        cli_main(["init", "--lang", "en", "--dir", str(target)])
 
         # Original content should be preserved
         assert toml_path.read_text() == "# existing config\n"
@@ -39,7 +39,7 @@ class TestInitCommand:
         gitignore = target / ".gitignore"
         gitignore.write_text("node_modules/\n")
 
-        cli_main(["init", "--dir", str(target)])
+        cli_main(["init", "--lang", "en", "--dir", str(target)])
 
         content = gitignore.read_text()
         assert "node_modules/" in content
@@ -47,7 +47,7 @@ class TestInitCommand:
 
     def test_init_default_dir(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        cli_main(["init"])
+        cli_main(["init", "--lang", "en"])
         assert (tmp_path / "cogmem.toml").exists()
 
 
@@ -63,7 +63,7 @@ class TestSearchCommand:
     def test_search_json_output(self, tmp_path, monkeypatch, capsys, mock_embedder):
         # Set up a minimal project
         monkeypatch.chdir(tmp_path)
-        cli_main(["init"])
+        cli_main(["init", "--lang", "en"])
 
         # Create a sample log
         log_file = tmp_path / "memory" / "logs" / "2026-03-21.md"
@@ -119,7 +119,7 @@ class TestInitExtended:
 
     def test_init_creates_identity_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         assert (tmp_path / "identity" / "agents.md").exists()
         assert (tmp_path / "identity" / "soul.md").exists()
         assert (tmp_path / "identity" / "user.md").exists()
@@ -127,13 +127,13 @@ class TestInitExtended:
 
     def test_init_creates_knowledge_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         assert (tmp_path / "memory" / "knowledge" / "summary.md").exists()
         assert (tmp_path / "memory" / "knowledge" / "error-patterns.md").exists()
 
     def test_init_creates_claude_md(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         claude_md = tmp_path / "CLAUDE.md"
         assert claude_md.exists()
         assert "Cognitive Memory Agent" in claude_md.read_text()
@@ -143,7 +143,7 @@ class TestInitExtended:
         claude_md = tmp_path / "CLAUDE.md"
         claude_md.write_text("# My Project\n\nExisting content.\n")
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         content = claude_md.read_text()
         assert "My Project" in content
         assert "Cognitive Memory Agent" in content
@@ -153,14 +153,46 @@ class TestInitExtended:
         claude_md = tmp_path / "CLAUDE.md"
         claude_md.write_text("# Cognitive Memory Agent\n\nExisting cogmem.\n")
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         content = claude_md.read_text()
         assert content.count("Cognitive Memory Agent") == 1
 
     def test_init_creates_contexts_dir(self, tmp_path):
         from cognitive_memory.cli.init_cmd import run_init
-        run_init(str(tmp_path))
+        run_init(str(tmp_path), lang="en")
         assert (tmp_path / "memory" / "contexts").is_dir()
+
+    def test_init_ja_creates_japanese_templates(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path), lang="ja")
+        # soul.md should be in Japanese
+        soul = (tmp_path / "identity" / "soul.md").read_text()
+        assert "エージェント" in soul
+        # agents.md should be in Japanese
+        agents = (tmp_path / "identity" / "agents.md").read_text()
+        assert "行動ルール" in agents
+        # user.md should be in Japanese
+        user = (tmp_path / "identity" / "user.md").read_text()
+        assert "ユーザープロファイル" in user
+        # CLAUDE.md should be in Japanese
+        claude = (tmp_path / "CLAUDE.md").read_text()
+        assert "行動ルール" in claude
+        # knowledge files should be in Japanese
+        summary = (tmp_path / "memory" / "knowledge" / "summary.md").read_text()
+        assert "知識サマリー" in summary
+
+    def test_init_ja_via_cli(self, tmp_path):
+        target = tmp_path / "ja_project"
+        target.mkdir()
+        cli_main(["init", "--lang", "ja", "--dir", str(target)])
+        soul = (target / "identity" / "soul.md").read_text()
+        assert "エージェント" in soul
+
+    def test_init_en_creates_english_templates(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path), lang="en")
+        soul = (tmp_path / "identity" / "soul.md").read_text()
+        assert "Agent Identity" in soul
 
 
 class TestMigrateCommand:
