@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.resources
 import sys
 from pathlib import Path
+
+_SCAFFOLD_DIR = Path(__file__).resolve().parent.parent / "scaffold"
 
 
 def run_init(target_dir: str = "."):
@@ -16,8 +17,7 @@ def run_init(target_dir: str = "."):
     if toml_path.exists():
         print(f"cogmem.toml already exists at {toml_path}", file=sys.stderr)
     else:
-        scaffold = importlib.resources.files("cognitive_memory.scaffold")
-        template = (scaffold / "cogmem.toml").read_text(encoding="utf-8")
+        template = (_SCAFFOLD_DIR / "cogmem.toml").read_text(encoding="utf-8")
         toml_path.write_text(template, encoding="utf-8")
         print(f"Created {toml_path}")
 

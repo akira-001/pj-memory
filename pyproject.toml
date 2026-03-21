@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cognitive-memory"
+name = "cogmem-agent"
 dynamic = ["version"]
 description = "Human-like cognitive memory for AI agents — emotion-gated recall with adaptive forgetting"
 readme = "README.md"

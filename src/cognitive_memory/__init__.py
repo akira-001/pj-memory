@@ -1,5 +1,7 @@
 """Cognitive Memory — human-like cognitive memory for AI agents."""
 
+from __future__ import annotations
+
 from ._version import __version__
 from .config import CogMemConfig
 from .store import MemoryStore
