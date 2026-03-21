@@ -46,6 +46,12 @@ _DEFAULTS = {
     "checkpoint_interval_days": 21,
     "last_checkpoint": "",
     "checkpoint_count": 0,
+    # Context Search
+    "context_search_enabled": True,
+    "context_flashback_sim": 0.65,
+    "context_flashback_arousal": 0.5,
+    "context_cache_max_size": 20,
+    "context_cache_sim_threshold": 0.9,
     # Metrics
     "total_sessions": 0,
 }
@@ -92,6 +98,13 @@ class CogMemConfig:
     checkpoint_interval_days: int = _DEFAULTS["checkpoint_interval_days"]
     last_checkpoint: str = _DEFAULTS["last_checkpoint"]
     checkpoint_count: int = _DEFAULTS["checkpoint_count"]
+
+    # Context Search
+    context_search_enabled: bool = _DEFAULTS["context_search_enabled"]
+    context_flashback_sim: float = _DEFAULTS["context_flashback_sim"]
+    context_flashback_arousal: float = _DEFAULTS["context_flashback_arousal"]
+    context_cache_max_size: int = _DEFAULTS["context_cache_max_size"]
+    context_cache_sim_threshold: float = _DEFAULTS["context_cache_sim_threshold"]
 
     # Metrics
     total_sessions: int = _DEFAULTS["total_sessions"]
@@ -182,6 +195,7 @@ class CogMemConfig:
         knowledge = section.get("knowledge", {})
         session = section.get("session", {})
         crystallization = section.get("crystallization", {})
+        context_search = section.get("context_search", {})
         metrics = section.get("metrics", {})
 
         return cls(
@@ -231,6 +245,21 @@ class CogMemConfig:
             ),
             checkpoint_count=crystallization.get(
                 "checkpoint_count", _DEFAULTS["checkpoint_count"]
+            ),
+            context_search_enabled=context_search.get(
+                "enabled", _DEFAULTS["context_search_enabled"]
+            ),
+            context_flashback_sim=context_search.get(
+                "flashback_sim", _DEFAULTS["context_flashback_sim"]
+            ),
+            context_flashback_arousal=context_search.get(
+                "flashback_arousal", _DEFAULTS["context_flashback_arousal"]
+            ),
+            context_cache_max_size=context_search.get(
+                "cache_max_size", _DEFAULTS["context_cache_max_size"]
+            ),
+            context_cache_sim_threshold=context_search.get(
+                "cache_sim_threshold", _DEFAULTS["context_cache_sim_threshold"]
             ),
             total_sessions=metrics.get(
                 "total_sessions", _DEFAULTS["total_sessions"]

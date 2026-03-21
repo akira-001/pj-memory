@@ -164,3 +164,42 @@ class TestConfigNewSections:
         assert config.identity_soul_path == tmp_path / "identity" / "soul.md"
         assert config.knowledge_summary_path == tmp_path / "memory" / "knowledge" / "summary.md"
         assert config.contexts_path == tmp_path / "memory" / "contexts"
+
+
+class TestContextSearchConfig:
+    def test_defaults(self):
+        """Default context_search values are correct."""
+        cfg = CogMemConfig()
+        assert cfg.context_search_enabled is True
+        assert cfg.context_flashback_sim == 0.65
+        assert cfg.context_flashback_arousal == 0.5
+        assert cfg.context_cache_max_size == 20
+        assert cfg.context_cache_sim_threshold == 0.9
+
+    def test_from_toml_context_search(self, tmp_path):
+        """TOML [cogmem.context_search] section is parsed."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text(
+            """
+[cogmem.context_search]
+enabled = false
+flashback_sim = 0.7
+flashback_arousal = 0.6
+cache_max_size = 10
+cache_sim_threshold = 0.95
+"""
+        )
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.context_search_enabled is False
+        assert cfg.context_flashback_sim == 0.7
+        assert cfg.context_flashback_arousal == 0.6
+        assert cfg.context_cache_max_size == 10
+        assert cfg.context_cache_sim_threshold == 0.95
+
+    def test_missing_context_search_uses_defaults(self, tmp_path):
+        """Missing [cogmem.context_search] falls back to defaults."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.context_search_enabled is True
+        assert cfg.context_flashback_sim == 0.65
