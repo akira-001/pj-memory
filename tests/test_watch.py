@@ -154,3 +154,34 @@ def test_watch_git_not_found(tmp_path, monkeypatch):
     import pytest
     with pytest.raises(SystemExit):
         run_watch()
+
+
+def test_full_watch_with_auto_log(tmp_path, monkeypatch):
+    """cogmem watch --auto-log should append entries to session log."""
+    import subprocess as sp
+    monkeypatch.chdir(tmp_path)
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
+
+    (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+    logs_dir = tmp_path / "memory" / "logs"
+    logs_dir.mkdir(parents=True)
+
+    # Create commits with fix pattern
+    for i in range(4):
+        (tmp_path / "a.txt").write_text(f"v{i}")
+        sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        sp.run(["git", "commit", "-m", f"fix: issue {i}"], cwd=tmp_path, capture_output=True)
+
+    # Create existing log file
+    from datetime import date
+    log_file = logs_dir / f"{date.today().isoformat()}.md"
+    log_file.write_text("# Session Log\n\n## ログエントリ\n")
+
+    from cognitive_memory.cli.watch_cmd import run_watch
+    run_watch(since="today", auto_log=True)
+
+    content = log_file.read_text()
+    assert "[PATTERN]" in content
+    assert "auto-detected" in content
