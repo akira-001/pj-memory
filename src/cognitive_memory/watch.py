@@ -52,7 +52,7 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
     }
 
 
-def detect_log_gaps(commit_count: int, log_entry_count: int) -> dict:
+def detect_log_gaps(commit_count: int, log_entry_count: int) -> dict[str, Any]:
     """Detect if session has too few log entries relative to commits.
 
     Heuristic: expect at least 1 log entry per 4 commits.
