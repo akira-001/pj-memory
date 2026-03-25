@@ -2,47 +2,147 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
+from pathlib import Path
 from typing import List, Optional
 
 from ...config import CogMemConfig
 from ...skills.store import SkillsStore
 from ...skills.audit import SkillAuditor
 
+# Common locations for .claude/skills/
+_CLAUDE_SKILLS_DIRS = [
+    Path.home() / ".claude" / "skills",
+]
+
+
+def _scan_claude_skills() -> dict[str, dict]:
+    """Scan .claude/skills/ directories for user's own skill metadata.
+
+    Excludes: agency-* (marketplace), symlinks (gstack/superpowers), learned/, __pycache__
+    """
+    skills = {}
+    for skills_dir in _CLAUDE_SKILLS_DIRS:
+        if not skills_dir.exists():
+            continue
+        for entry in skills_dir.iterdir():
+            if not entry.is_dir() or entry.name.startswith("."):
+                continue
+            # Skip marketplace/framework skills
+            if entry.name.startswith("agency-") or entry.is_symlink():
+                continue
+            if entry.name in ("learned", "gstack", "__pycache__"):
+                continue
+            skill_file = entry / "SKILL.md"
+            if not skill_file.exists():
+                continue
+            try:
+                text = skill_file.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            # Parse YAML frontmatter
+            fm_match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+            if not fm_match:
+                continue
+            fm = fm_match.group(1)
+            name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
+            desc_match = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
+            if name_match:
+                skill_name = name_match.group(1).strip()
+                skills[skill_name] = {
+                    "name": skill_name,
+                    "description": desc_match.group(1).strip() if desc_match else "",
+                    "path": str(skill_file),
+                }
+    return skills
+
+
+def _get_event_stats(config: CogMemConfig) -> dict[str, dict]:
+    """Get per-skill event stats from skill_session_events table."""
+    db_path = Path(config._base_dir) / "memory" / "skills.db"
+    if not db_path.exists():
+        return {}
+    stats: dict[str, dict] = {}
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT skill_name, event_type, COUNT(*) as cnt, "
+            "MAX(timestamp) as last_ts "
+            "FROM skill_session_events "
+            "GROUP BY skill_name, event_type"
+        ).fetchall()
+        for r in rows:
+            name = r["skill_name"]
+            if name not in stats:
+                stats[name] = {"total_events": 0, "last_used": None, "events_by_type": {}}
+            stats[name]["total_events"] += r["cnt"]
+            stats[name]["events_by_type"][r["event_type"]] = r["cnt"]
+            if stats[name]["last_used"] is None or r["last_ts"] > stats[name]["last_used"]:
+                stats[name]["last_used"] = r["last_ts"]
+        conn.close()
+    except sqlite3.Error:
+        pass
+    return stats
+
 
 def get_skills_list(config: CogMemConfig) -> list:
-    """Get all skills as flat list with trend info.
+    """Get all skills: .claude/skills/ (with event stats) + cogmem DB skills (with execution stats).
 
-    Returns list of dicts:
-        {id, name, category, effectiveness, total_executions, last_used_at, trend}
-    trend: "up" | "down" | "flat" | "new" based on skill_usage_log last 5 entries
+    Both sources shown together, sorted by total_executions descending.
     """
-    store = SkillsStore(config)
-    all_skills = store.load_all_skills()
+    # 1. .claude/skills/ with session event stats
+    claude_skills = _scan_claude_skills()
+    event_stats = _get_event_stats(config)
 
     result = []
-    for category, skills in all_skills.items():
+    for skill_name, meta in claude_skills.items():
+        events = event_stats.get(skill_name, {})
+        result.append({
+            "id": skill_name,
+            "name": skill_name,
+            "summary": meta["description"],
+            "description": meta["description"],
+            "category": "—",
+            "effectiveness": 0.0,
+            "total_executions": 0,
+            "total_events": events.get("total_events", 0),
+            "last_used_at": events.get("last_used"),
+            "trend": "new",
+            "version": 1,
+            "improvements": 0,
+            "source": "skill",
+        })
+
+    # 2. cogmem DB skills with execution stats
+    store = SkillsStore(config)
+    all_db_skills = store.load_all_skills()
+    for category, skills in all_db_skills.items():
         for skill in skills:
             usage_log = store.get_recent_usage_log(skill.id, 5)
-            effs = [
-                e["effectiveness"]
-                for e in usage_log
-                if e["effectiveness"] is not None
-            ]
-            trend = _determine_trend(effs)
-
+            effs = [e["effectiveness"] for e in usage_log if e["effectiveness"] is not None]
+            short_name = skill.name.split(" ")[0] if skill.name else skill.id
+            summary = skill.description
+            if ":" in summary:
+                summary = summary.split(":", 1)[1].strip()
             result.append({
                 "id": skill.id,
-                "name": skill.name,
+                "name": short_name,
+                "summary": summary,
                 "description": skill.description,
                 "category": skill.category,
                 "effectiveness": skill.usage_stats.average_effectiveness,
                 "total_executions": skill.usage_stats.total_executions,
+                "total_events": 0,
                 "last_used_at": skill.usage_stats.last_used_at,
-                "trend": trend,
+                "trend": _determine_trend(effs),
+                "version": skill.version,
+                "improvements": len(skill.improvement_history),
+                "source": "cogmem",
             })
 
-    result.sort(key=lambda s: (s["category"], s["name"]))
+    result.sort(key=lambda s: s["total_executions"], reverse=True)
     return result
 
 

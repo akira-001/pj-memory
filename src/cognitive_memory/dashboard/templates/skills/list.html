@@ -57,6 +57,8 @@
                 <th>{{ t('skills.category', lang) }}</th>
                 <th>{{ t('skills.effectiveness', lang) }}</th>
                 <th>{{ t('skills.executions', lang) }}</th>
+                <th>{{ t('skills.events', lang) }}</th>
+                <th>{{ t('skills.version', lang) }}</th>
                 <th>{{ t('skills.last_used', lang) }}</th>
                 <th>{{ t('skills.trend', lang) }}</th>
             </tr>
@@ -66,20 +68,37 @@
             <tr hx-get="/skills/api/detail/{{ skill.id }}" hx-target="#skill-modal" hx-swap="innerHTML" style="cursor: pointer;">
                 <td>
                     <div style="font-weight: 500;">{{ skill.name }}</div>
-                    {% if skill.description %}
-                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.description[:50] }}{% if skill.description|length > 50 %}...{% endif %}</div>
+                    {% if skill.summary %}
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.summary[:80] }}{% if skill.summary|length > 80 %}...{% endif %}</div>
                     {% endif %}
                 </td>
                 <td>
                     <span class="badge badge-skill">{{ skill.category }}</span>
                 </td>
                 <td>
+                    {% if skill.effectiveness > 0 %}
                     <div class="eff-bar">
                         <div class="eff-bar-fill" style="width: {{ (skill.effectiveness * 100)|round }}%; background: {% if skill.effectiveness >= 0.7 %}var(--success){% elif skill.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
                     </div>
                     <span style="margin-left: 0.5rem; font-size: 0.8125rem;">{{ "%.2f"|format(skill.effectiveness) }}</span>
+                    {% else %}
+                    <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
                 </td>
                 <td>{{ skill.total_executions }}</td>
+                <td>
+                    {% if skill.total_events > 0 %}
+                        {{ skill.total_events }}
+                    {% else %}
+                        <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td>
+                    v{{ skill.version }}
+                    {% if skill.improvements > 0 %}
+                    <span style="font-size: 0.6875rem; color: var(--success);">(+{{ skill.improvements }})</span>
+                    {% endif %}
+                </td>
                 <td style="color: var(--text-dim); font-size: 0.8125rem;">
                     {% if skill.last_used_at %}
                         {{ skill.last_used_at[:10] }}

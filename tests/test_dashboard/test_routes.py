@@ -36,7 +36,7 @@ class TestSkillsList:
 
     def test_skills_shows_skill_name(self, client):
         resp = client.get("/skills")
-        assert "Test Skill" in resp.text
+        assert "Test" in resp.text  # short name extracted from "Test Skill"
 
     def test_skill_detail_returns_200(self, client):
         resp = client.get("/skills/test-skill-001")
