@@ -107,7 +107,7 @@ class CogMemConfig:
     context_cache_sim_threshold: float = _DEFAULTS["context_cache_sim_threshold"]
 
     # Skills
-    skills_auto_improve: bool = True
+    skills_auto_improve: str = "auto"  # "auto" | "ask" | "off"
 
     # Metrics
     total_sessions: int = _DEFAULTS["total_sessions"]
@@ -268,7 +268,7 @@ class CogMemConfig:
             total_sessions=metrics.get(
                 "total_sessions", _DEFAULTS["total_sessions"]
             ),
-            skills_auto_improve=skills.get("auto_improve", True),
+            skills_auto_improve=str(skills.get("auto_improve", "auto")),
             _base_dir=str(p.parent),
         )
 
