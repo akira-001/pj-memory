@@ -51,6 +51,10 @@ def run_skills(args):
         run_skills_review(skills_manager, args)
     elif args.skills_command == "ingest":
         run_skills_ingest(skills_manager, args)
+    elif args.skills_command == "track":
+        run_skills_track(skills_manager, args)
+    elif args.skills_command == "track-summary":
+        run_skills_track_summary(skills_manager, args)
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)
@@ -552,6 +556,52 @@ def run_skills_ingest(skills_manager: SkillsManager, args):
         print(f"Effectiveness: {result['metrics']['effectiveness']:.3f}")
         print(f"Error Rate: {result['metrics']['error_rate']:.3f}")
         print(f"Execution Time: {result['metrics']['execution_time']:.0f}ms")
+
+
+def run_skills_track(skills_manager: SkillsManager, args):
+    """Track a skill usage event during a session."""
+    from datetime import date as date_mod
+
+    session_date = args.date or date_mod.today().isoformat()
+
+    try:
+        skills_manager.store.track_event(
+            session_date=session_date,
+            skill_name=args.skill_name,
+            event_type=args.event,
+            description=args.description,
+            step_ref=args.step,
+        )
+        print(f"Tracked: {args.event} for {args.skill_name}")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+def run_skills_track_summary(skills_manager: SkillsManager, args):
+    """Summarize tracked events for a session."""
+    from datetime import date as date_mod
+
+    session_date = args.date or date_mod.today().isoformat()
+    summary = skills_manager.store.get_track_summary(session_date)
+
+    if args.json:
+        print(json.dumps(summary, indent=2, default=str))
+    else:
+        if not summary["skills_used"] and not summary["skills_ok"]:
+            print(f"No skill events tracked for {session_date}.")
+            return
+
+        if summary["skills_used"]:
+            print(f"\nSkills needing improvement:")
+            for s in summary["skills_used"]:
+                print(f"  [{s['skill_name']}] {s['reason']}")
+                for e in s["events"]:
+                    step = f" ({e['step_ref']})" if e["step_ref"] else ""
+                    print(f"    - {e['event_type']}{step}: {e['description']}")
+
+        if summary["skills_ok"]:
+            print(f"\nSkills OK (no issues): {', '.join(summary['skills_ok'])}")
 
 
 def _display_width(s: str) -> int:

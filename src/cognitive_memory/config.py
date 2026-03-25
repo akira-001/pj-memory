@@ -106,6 +106,9 @@ class CogMemConfig:
     context_cache_max_size: int = _DEFAULTS["context_cache_max_size"]
     context_cache_sim_threshold: float = _DEFAULTS["context_cache_sim_threshold"]
 
+    # Skills
+    skills_auto_improve: bool = True
+
     # Metrics
     total_sessions: int = _DEFAULTS["total_sessions"]
 
@@ -197,6 +200,7 @@ class CogMemConfig:
         crystallization = section.get("crystallization", {})
         context_search = section.get("context_search", {})
         metrics = section.get("metrics", {})
+        skills = section.get("skills", {})
 
         return cls(
             logs_dir=section.get("logs_dir", _DEFAULTS["logs_dir"]),
@@ -264,6 +268,7 @@ class CogMemConfig:
             total_sessions=metrics.get(
                 "total_sessions", _DEFAULTS["total_sessions"]
             ),
+            skills_auto_improve=skills.get("auto_improve", True),
             _base_dir=str(p.parent),
         )
 

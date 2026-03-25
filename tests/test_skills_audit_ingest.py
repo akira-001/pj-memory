@@ -361,3 +361,83 @@ class TestBenchmarkIngestor:
         ingestor = BenchmarkIngestor(store)
         result = ingestor.ingest(str(workspace), "test")
         assert "error" in result
+
+
+# --- Skill Session Event Tracking tests ---
+
+
+class TestSkillTracking:
+    def test_track_event_inserts(self, store):
+        store.track_event("2026-03-25", "morning-briefing", "extra_step",
+                          "Added weather API fallback", "Step 3")
+        events = store.get_session_events("2026-03-25")
+        assert len(events) == 1
+        assert events[0]["skill_name"] == "morning-briefing"
+        assert events[0]["event_type"] == "extra_step"
+        assert events[0]["step_ref"] == "Step 3"
+
+    def test_track_event_invalid_type(self, store):
+        with pytest.raises(ValueError, match="Invalid event_type"):
+            store.track_event("2026-03-25", "test", "invalid_type", "desc")
+
+    def test_track_event_no_step_ref(self, store):
+        store.track_event("2026-03-25", "recall", "user_correction",
+                          "Calendar name was wrong")
+        events = store.get_session_events("2026-03-25")
+        assert events[0]["step_ref"] is None
+
+    def test_get_session_events_filters_by_date(self, store):
+        store.track_event("2026-03-25", "skill-a", "extra_step", "desc1")
+        store.track_event("2026-03-26", "skill-b", "extra_step", "desc2")
+        events = store.get_session_events("2026-03-25")
+        assert len(events) == 1
+        assert events[0]["skill_name"] == "skill-a"
+
+    def test_track_summary_no_events(self, store):
+        summary = store.get_track_summary("2026-03-25")
+        assert summary["skills_used"] == []
+        assert summary["skills_ok"] == []
+
+    def test_track_summary_user_correction_triggers_improve(self, store):
+        store.track_event("2026-03-25", "schedule-registration",
+                          "user_correction", "Calendar name wrong")
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["needs_improvement"] is True
+        assert "user_correction" in summary["skills_used"][0]["reason"]
+
+    def test_track_summary_error_recovery_triggers_improve(self, store):
+        store.track_event("2026-03-25", "cron-automation",
+                          "error_recovery", "pm2 not running")
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["needs_improvement"] is True
+
+    def test_track_summary_single_extra_step_ok(self, store):
+        """One extra_step should NOT trigger improvement."""
+        store.track_event("2026-03-25", "paper-summary",
+                          "extra_step", "Added related work section")
+        summary = store.get_track_summary("2026-03-25")
+        assert summary["skills_used"] == []
+        assert "paper-summary" in summary["skills_ok"]
+
+    def test_track_summary_two_extra_steps_triggers(self, store):
+        """Two extra_steps SHOULD trigger improvement."""
+        store.track_event("2026-03-25", "paper-summary",
+                          "extra_step", "Added related work", "Step 3")
+        store.track_event("2026-03-25", "paper-summary",
+                          "extra_step", "Added limitations", "Step 4")
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert "extra_step" in summary["skills_used"][0]["reason"]
+
+    def test_track_summary_mixed_skills(self, store):
+        """Multiple skills: one needs improvement, one is OK."""
+        store.track_event("2026-03-25", "skill-bad",
+                          "user_correction", "Wrong output")
+        store.track_event("2026-03-25", "skill-good",
+                          "extra_step", "Minor addition")
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["skill_name"] == "skill-bad"
+        assert "skill-good" in summary["skills_ok"]

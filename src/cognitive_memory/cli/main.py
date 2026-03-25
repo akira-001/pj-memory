@@ -121,6 +121,21 @@ def main(argv: list[str] | None = None):
     skills_ingest_parser.add_argument("--skill-name", type=str, required=True, help="Skill name to update")
     skills_ingest_parser.add_argument("--json", action="store_true", help="JSON output")
 
+    # skills track
+    skills_track_parser = skills_subparsers.add_parser("track", help="Track a skill usage event during a session")
+    skills_track_parser.add_argument("skill_name", type=str, help="Skill name (directory name)")
+    skills_track_parser.add_argument("--event", type=str, required=True,
+                                     choices=["extra_step", "skipped_step", "error_recovery", "user_correction"],
+                                     help="Event type")
+    skills_track_parser.add_argument("--description", type=str, required=True, help="What happened")
+    skills_track_parser.add_argument("--step", type=str, default=None, help="Step reference (e.g. 'Step 3')")
+    skills_track_parser.add_argument("--date", type=str, default=None, help="Session date (default: today)")
+
+    # skills track-summary
+    skills_ts_parser = skills_subparsers.add_parser("track-summary", help="Summarize tracked events for a session")
+    skills_ts_parser.add_argument("--date", type=str, default=None, help="Session date (default: today)")
+    skills_ts_parser.add_argument("--json", action="store_true", help="JSON output")
+
     args = parser.parse_args(argv)
 
     if args.command is None:

@@ -101,6 +101,18 @@ class SkillsStore:
                 )
             """)
 
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS skill_session_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_date TEXT NOT NULL,
+                    skill_name TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    step_ref TEXT,
+                    timestamp TEXT NOT NULL
+                )
+            """)
+
     def save_skill(self, skill: Skill) -> None:
         """Save skill to both file system and database."""
         # Save to file system
@@ -457,6 +469,102 @@ class SkillsStore:
                 (skill_id, limit),
             ).fetchall()
             return [dict(r) for r in rows]
+
+    # --- Skill Session Event Tracking ---
+
+    VALID_EVENT_TYPES = {"extra_step", "skipped_step", "error_recovery", "user_correction"}
+
+    def track_event(
+        self,
+        session_date: str,
+        skill_name: str,
+        event_type: str,
+        description: str,
+        step_ref: Optional[str] = None,
+    ) -> None:
+        """Record a skill usage event during a session."""
+        if event_type not in self.VALID_EVENT_TYPES:
+            raise ValueError(
+                f"Invalid event_type '{event_type}'. "
+                f"Must be one of: {', '.join(sorted(self.VALID_EVENT_TYPES))}"
+            )
+        from datetime import datetime
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO skill_session_events "
+                "(session_date, skill_name, event_type, description, step_ref, timestamp) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (session_date, skill_name, event_type, description, step_ref,
+                 datetime.now().isoformat()),
+            )
+
+    def get_session_events(self, session_date: str) -> List[dict]:
+        """Get all skill events for a session date."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT skill_name, event_type, description, step_ref, timestamp "
+                "FROM skill_session_events "
+                "WHERE session_date = ? "
+                "ORDER BY timestamp ASC",
+                (session_date,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_track_summary(self, session_date: str) -> dict:
+        """Get track summary with improvement recommendations for a session."""
+        events = self.get_session_events(session_date)
+
+        # Group events by skill
+        skills_events: dict = {}
+        for e in events:
+            name = e["skill_name"]
+            if name not in skills_events:
+                skills_events[name] = []
+            skills_events[name].append(e)
+
+        skills_used = []
+        skills_ok = []
+
+        for skill_name, skill_events in skills_events.items():
+            needs, reason = self._needs_improvement(skill_events)
+            entry = {
+                "skill_name": skill_name,
+                "events": skill_events,
+                "needs_improvement": needs,
+                "reason": reason,
+            }
+            if needs:
+                skills_used.append(entry)
+            else:
+                skills_ok.append(skill_name)
+
+        return {
+            "date": session_date,
+            "skills_used": skills_used,
+            "skills_ok": skills_ok,
+        }
+
+    @staticmethod
+    def _needs_improvement(events: List[dict]) -> Tuple[bool, str]:
+        """Determine if a skill needs improvement based on session events."""
+        corrections = [e for e in events if e["event_type"] == "user_correction"]
+        errors = [e for e in events if e["event_type"] == "error_recovery"]
+        extras = [e for e in events if e["event_type"] == "extra_step"]
+        skipped = [e for e in events if e["event_type"] == "skipped_step"]
+
+        reasons = []
+        if corrections:
+            reasons.append(f"{len(corrections)} user_correction(s)")
+        if errors:
+            reasons.append(f"{len(errors)} error_recovery(s)")
+        if len(extras) >= 2:
+            reasons.append(f"{len(extras)} extra_step(s)")
+        if len(skipped) >= 2:
+            reasons.append(f"{len(skipped)} skipped_step(s)")
+
+        return (len(reasons) > 0, ", ".join(reasons))
 
     def _skill_from_dict(self, data: dict) -> Skill:
         """Convert dictionary to Skill object."""
