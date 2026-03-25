@@ -17,9 +17,13 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
             "entries": [{"category": str, "title": str, "content": str, "arousal": float}, ...],
         }
     """
+    import re as _re
+    from collections import Counter
+
     fix_count = 0
     revert_count = 0
     entries: list[dict[str, Any]] = []
+    skill_signals: list[dict[str, Any]] = []
 
     fix_messages: list[str] = []
     for line in log_lines:
@@ -45,10 +49,24 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
             "arousal": 0.7,
         })
 
+        # Skill creation signals: group fix commits by common words
+        word_counts: Counter[str] = Counter()
+        for msg in fix_messages:
+            words = _re.findall(r"[a-zA-Z]{3,}", msg.lower())
+            word_counts.update(words)
+        common = [w for w, c in word_counts.items() if c >= 3 and w not in ("fix", "the", "for")]
+        if common:
+            skill_signals.append({
+                "pattern": f"Repeated fixes related to: {', '.join(common[:3])}",
+                "fix_count": fix_count,
+                "suggestion": f"Consider creating a skill for {common[0]} handling",
+            })
+
     return {
         "fix_count": fix_count,
         "revert_count": revert_count,
         "entries": entries,
+        "skill_signals": skill_signals,
     }
 
 

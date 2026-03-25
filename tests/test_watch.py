@@ -123,6 +123,20 @@ def test_watch_cli_json_output(tmp_path, monkeypatch, capsys):
     assert len(output["entries"]) >= 1
 
 
+def test_detect_skill_creation_signal():
+    """3+ fix commits with similar file patterns should suggest new skill."""
+    log_lines = [
+        "abc1234 fix: skills table column missing",
+        "def5678 fix: skills sort order wrong",
+        "ghi9012 fix: skills matching false positive",
+        "jkl3456 feat: add dashboard",
+    ]
+    result = analyze_git_history(log_lines)
+    signals = result.get("skill_signals", [])
+    assert len(signals) >= 1
+    assert "skill" in signals[0]["pattern"].lower() or "fix" in signals[0]["pattern"].lower()
+
+
 def test_watch_git_not_found(tmp_path, monkeypatch):
     """Should exit gracefully when git is not available."""
     import subprocess as sp
