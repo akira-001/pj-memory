@@ -33,8 +33,8 @@ def should_search(query: str) -> bool:
 
     cjk_count = len(re.findall(r"[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]", q))
     if cjk_count > 0:
-        return len(q) >= 6
-    return len(q) >= 15
+        return cjk_count >= 2
+    return len(q) >= 4
 
 
 TOPIC_PATTERNS: List[str] = [

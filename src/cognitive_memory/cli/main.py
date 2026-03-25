@@ -47,6 +47,65 @@ def main(argv: list[str] | None = None):
     migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions")
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
 
+    # skills subcommand group
+    skills_parser = subparsers.add_parser("skills", help="Manage skills (Memento-Skills)")
+    skills_subparsers = skills_parser.add_subparsers(dest="skills_command")
+
+    # skills list
+    skills_list_parser = skills_subparsers.add_parser("list", help="List all skills")
+    skills_list_parser.add_argument("--category", type=str, help="Filter by category")
+    skills_list_parser.add_argument("--top", type=int, default=10, help="Show top N skills")
+    skills_list_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills search
+    skills_search_parser = skills_subparsers.add_parser("search", help="Search skills")
+    skills_search_parser.add_argument("query", type=str, help="Search query")
+    skills_search_parser.add_argument("--top-k", type=int, default=5, help="Number of results")
+    skills_search_parser.add_argument("--category", type=str, help="Filter by category")
+    skills_search_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills show
+    skills_show_parser = skills_subparsers.add_parser("show", help="Show skill details")
+    skills_show_parser.add_argument("skill_id", type=str, help="Skill ID")
+    skills_show_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills stats
+    skills_stats_parser = skills_subparsers.add_parser("stats", help="Show skills statistics")
+    skills_stats_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills create
+    skills_create_parser = skills_subparsers.add_parser("create", help="Create new skill")
+    skills_create_parser.add_argument("context", type=str, help="Context for skill creation")
+    skills_create_parser.add_argument("--effectiveness", type=float, default=0.5, help="Initial effectiveness (0-1)")
+    skills_create_parser.add_argument("--user-satisfaction", type=float, default=0.5, help="Initial user satisfaction (0-1)")
+    skills_create_parser.add_argument("--feedback", type=str, default="", help="User feedback")
+
+    # skills delete
+    skills_delete_parser = skills_subparsers.add_parser("delete", help="Delete a skill")
+    skills_delete_parser.add_argument("skill_id", type=str, help="Skill ID to delete")
+
+    # skills learn
+    skills_learn_parser = skills_subparsers.add_parser("learn", help="Execute learning loop")
+    skills_learn_parser.add_argument("context", type=str, help="Context for learning")
+    skills_learn_parser.add_argument("--effectiveness", type=float, required=True, help="Effectiveness score (0-1)")
+    skills_learn_parser.add_argument("--user-satisfaction", type=float, required=True, help="User satisfaction (0-1)")
+    skills_learn_parser.add_argument("--execution-time", type=float, default=1000, help="Execution time in ms")
+    skills_learn_parser.add_argument("--error-rate", type=float, default=0.0, help="Error rate (0-1)")
+    skills_learn_parser.add_argument("--feedback", type=str, default="", help="User feedback")
+    skills_learn_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills export
+    skills_export_parser = skills_subparsers.add_parser("export", help="Export skills to .claude/skills/ markdown files")
+    skills_export_parser.add_argument("--output-dir", type=str, default=None, help="Output directory (default: .claude/skills/)")
+    skills_export_parser.add_argument("--force", action="store_true", help="Overwrite existing files")
+    skills_export_parser.add_argument("--quiet", action="store_true", help="Suppress per-file output")
+
+    # skills import
+    skills_import_parser = skills_subparsers.add_parser("import", help="Import skills from .claude/skills/ markdown files")
+    skills_import_parser.add_argument("source_dir", type=str, help="Directory containing skill markdown files")
+    skills_import_parser.add_argument("--force", action="store_true", help="Overwrite existing skills in DB")
+    skills_import_parser.add_argument("--quiet", action="store_true", help="Suppress per-file output")
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -74,3 +133,6 @@ def main(argv: list[str] | None = None):
     elif args.command == "migrate":
         from .migrate_cmd import run_migrate
         run_migrate(args.dir)
+    elif args.command == "skills":
+        from .skills_cmd import run_skills
+        run_skills(args)

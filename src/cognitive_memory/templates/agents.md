@@ -36,13 +36,21 @@ Step 3: Run `cogmem index` (differential index update)
          → Skip if Ollama is not running
          → If cogmem is not installed, run `pip install cogmem-agent`
 
-Step 4: Run `cogmem search` with keywords from the current conversation context
+Step 4: Load skill files from `.claude/skills/` and inject relevant skills into context
+         → Extract keywords from user's message / task content
+         → Match against each skill file's "## Triggers" section
+         → Keep matched skill content as working context
+         → Always load generic skills (memory-recall.md) even without a match
+         → Follow procedures and patterns described in matched skills
+         ※ Skills are not just "referenced" — they must be "acted upon"
+
+Step 5: Run `cogmem search` with keywords from the current conversation context
          → Present entries with score >= 0.75 and arousal >= 0.6 as flashbacks
 
-Step 5: Run `cogmem signals` to check crystallization signals
+Step 6: Run `cogmem signals` to check crystallization signals
          → Add notification only if conditions are met
 
-Step 6: Token budget check (target: 6k tokens total)
+Step 7: Token budget check (target: 6k tokens total)
          → Recommend /compact if budget is exceeded
 
 Post-Init response format (add to the beginning only if notifications exist):
@@ -117,6 +125,28 @@ Header is generated only on first creation. Subsequent entries append to "## Log
 | [PATTERN] | Recurring theme, behavior, or thought |
 | [QUESTION] | Unresolved question, needs investigation |
 | [MILESTONE] | Important achievement, completion, phase transition |
+
+---
+
+## Skill Feedback (Post-Skill Learning)
+
+After completing a task that referenced a skill, execute the following:
+
+1. Identify the skill(s) used
+2. Evaluate the result (was it effective? were there gaps in the procedure?)
+3. Run `cogmem skills learn` to execute the learning loop:
+   ```bash
+   cogmem skills learn "task summary" --effectiveness 0.0-1.0 --user-satisfaction 0.0-1.0
+   ```
+4. If the skill's procedure needs improvement, directly update the file in `.claude/skills/`
+
+### When to Provide Feedback
+- After task completion (success or failure)
+- When a skill's procedure didn't match the actual workflow
+- When a new pattern is discovered
+
+### Auto-Generation of New Skills
+When the same type of task is repeated 3+ times, extract the pattern and create a new skill file in `.claude/skills/`.
 
 ---
 

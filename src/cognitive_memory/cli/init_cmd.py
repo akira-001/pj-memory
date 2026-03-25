@@ -19,9 +19,11 @@ _MSG = {
         "step1": "  1. Edit identity/soul.md to define your agent's personality",
         "step2": "  2. Start Claude Code — CLAUDE.md will be loaded automatically",
         "step3": "  3. Your agent now has cognitive memory!",
+        "step4": "  4. Skills in .claude/skills/ will be auto-loaded by the agent",
         "optional": "Optional:",
         "opt1": "  - Install Ollama for semantic search: brew install ollama",
         "opt2": "  - Run: ollama pull zylonai/multilingual-e5-large",
+        "opt3": "  - Export skills from DB: cogmem skills export",
     },
     "ja": {
         "created": "作成しました: {}",
@@ -33,10 +35,60 @@ _MSG = {
         "step1": "  1. identity/soul.md を編集してエージェントの人格を定義してください",
         "step2": "  2. Claude Code を起動 — CLAUDE.md が自動的に読み込まれます",
         "step3": "  3. エージェントに認知的記憶が備わりました！",
+        "step4": "  4. .claude/skills/ のスキルがエージェントに自動読み込みされます",
         "optional": "オプション:",
         "opt1": "  - セマンティック検索用に Ollama をインストール: brew install ollama",
         "opt2": "  - 実行: ollama pull zylonai/multilingual-e5-large",
+        "opt3": "  - スキルをDBからエクスポート: cogmem skills export",
     },
+}
+
+
+_DEFAULT_MEMORY_RECALL_SKILL = {
+    "en": """# Memory Recall Skill
+
+## Triggers
+- User references past conversations ("we talked about", "last time", "remember")
+- Ambiguous references that need context
+
+## Steps
+1. Check the current conversation context for the answer
+2. If not found, search memory with cogmem:
+   ```bash
+   cogmem search "query" --json --top-k 5
+   ```
+3. Integrate results naturally into the conversation
+
+## Expression Rules
+- When searching: "Let me think back..."
+- Forbidden: "Searching", "Checking records", "Looking up history"
+- Respond naturally as if recalling from memory
+
+## Notes
+- Always search before saying "I don't know"
+""",
+    "ja": """# 記憶の検索と文脈把握スキル
+
+## トリガー
+- ユーザーが過去の会話内容を参照した時（「前に話した」「さっきの」等）
+- 曖昧な参照があった時
+
+## 手順
+1. まず現在の会話コンテキストから答えを探す
+2. 見つからない場合、cogmem searchで記憶を検索する:
+   ```bash
+   cogmem search "検索クエリ" --json --top-k 5
+   ```
+3. 検索結果を自然に会話に組み込む
+
+## 表現ルール
+- 検索時: 「少し待って、思い出してみる...」
+- 禁止: 「検索する」「確認する」「履歴を調べる」等のシステム的表現
+- 覚えている体で自然に回答すること
+
+## 注意点
+- 「わからない」と答える前に必ず検索すること
+""",
 }
 
 
@@ -137,6 +189,21 @@ def run_init(target_dir: str = ".", lang: str | None = None):
         gitkeep.touch()
     print(msg["created"].format(str(contexts_dir) + "/"))
 
+    # Create .claude/skills/ directory with sample skill
+    skills_dir = target / ".claude" / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    sample_skill = skills_dir / "memory-recall.md"
+    if not sample_skill.exists():
+        src = tmpl_dir / "skill-memory-recall.md"
+        if not src.exists():
+            src = _SCAFFOLD_DIR / "skill-memory-recall.md"
+        if src.exists():
+            sample_skill.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        else:
+            sample_skill.write_text(_DEFAULT_MEMORY_RECALL_SKILL[lang], encoding="utf-8")
+        print(msg["created"].format(sample_skill))
+    print(msg["created"].format(str(skills_dir) + "/"))
+
     # CLAUDE.md — append mode
     claude_md = target / "CLAUDE.md"
     cogmem_marker = "# Cognitive Memory Agent"
@@ -197,8 +264,10 @@ def run_init(target_dir: str = ".", lang: str | None = None):
     print(msg["step1"])
     print(msg["step2"])
     print(msg["step3"])
+    print(msg["step4"])
     print()
     print(msg["optional"])
     print(msg["opt1"])
     print(msg["opt2"])
+    print(msg["opt3"])
     print()

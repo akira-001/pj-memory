@@ -36,7 +36,7 @@ class TestCJKThreshold:
         assert should_search("セマンティック検索の設計") is True
 
     def test_cjk_below_threshold(self):
-        assert should_search("検索") is False
+        assert should_search("あ") is False
 
 
 class TestASCIIThreshold:
@@ -44,7 +44,7 @@ class TestASCIIThreshold:
         assert should_search("semantic search design") is True
 
     def test_ascii_below_threshold(self):
-        assert should_search("search") is False
+        assert should_search("abc") is False
 
 
 class TestEdgeCases:
@@ -82,7 +82,7 @@ class TestShouldContextSearch:
 
     def test_no_match_returns_false(self):
         """Query matching nothing returns False."""
-        assert should_context_search("hello") is False
+        assert should_context_search("hi") is False
 
     def test_session_keywords_case_insensitive(self):
         """session_keywords matching is case-insensitive."""
@@ -92,4 +92,4 @@ class TestShouldContextSearch:
 
     def test_session_keywords_none(self):
         """None session_keywords doesn't crash."""
-        assert should_context_search("short") is False
+        assert should_context_search("hi") is False
