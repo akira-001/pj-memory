@@ -62,12 +62,63 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
                 "suggestion": f"Consider creating a skill for {common[0]} handling",
             })
 
+    # Workflow pattern detection
+    workflow_patterns = detect_workflow_patterns(log_lines)
+
     return {
         "fix_count": fix_count,
         "revert_count": revert_count,
         "entries": entries,
         "skill_signals": skill_signals,
+        "workflow_patterns": workflow_patterns,
     }
+
+
+def detect_workflow_patterns(
+    log_lines: list[str],
+    threshold: int = 2,
+) -> list[dict[str, Any]]:
+    """Detect repeated workflow patterns from commit message prefixes.
+
+    Groups commits by their conventional commit prefix (e.g., "release:",
+    "session:", "chore:") and flags prefixes that appear >= threshold times.
+    Excludes "fix:" and "feat:" which are already tracked separately.
+
+    Args:
+        log_lines: git log --oneline output lines
+        threshold: minimum occurrences to flag (default: 2)
+
+    Returns:
+        List of {"prefix": str, "count": int, "messages": list[str], "suggestion": str}
+    """
+    EXCLUDED = {"fix:", "fix(", "feat:", "feat(", "修正:", "修正("}
+
+    prefix_groups: dict[str, list[str]] = {}
+    for line in log_lines:
+        msg = line.split(" ", 1)[1] if " " in line else line
+        # Extract conventional commit prefix (word followed by colon)
+        match = re.match(r"^([a-zA-Z\-]+[:(])", msg)
+        if not match:
+            continue
+        prefix = match.group(1)
+        # Normalize: "chore(" -> "chore:"
+        if prefix.endswith("("):
+            prefix = prefix[:-1] + ":"
+        if prefix in EXCLUDED:
+            continue
+        prefix_groups.setdefault(prefix, []).append(msg)
+
+    results: list[dict[str, Any]] = []
+    for prefix, messages in sorted(prefix_groups.items(), key=lambda x: -len(x[1])):
+        if len(messages) >= threshold:
+            results.append({
+                "prefix": prefix,
+                "count": len(messages),
+                "messages": messages,
+                "suggestion": f"Repeated '{prefix}' workflow ({len(messages)} times) — consider creating a skill",
+            })
+
+    return results
 
 
 def detect_log_gaps(commit_count: int, log_entry_count: int) -> dict[str, Any]:

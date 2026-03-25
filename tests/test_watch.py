@@ -1,6 +1,6 @@
 """Tests for cogmem watch — git history pattern detection."""
 from __future__ import annotations
-from cognitive_memory.watch import analyze_git_history, detect_log_gaps
+from cognitive_memory.watch import analyze_git_history, detect_log_gaps, detect_workflow_patterns
 
 
 def test_count_fix_commits():
@@ -154,6 +154,63 @@ def test_watch_git_not_found(tmp_path, monkeypatch):
     import pytest
     with pytest.raises(SystemExit):
         run_watch()
+
+
+def test_detect_repeated_release_workflow():
+    """Repeated release: commits should be detected as a workflow pattern."""
+    log_lines = [
+        "aaa1111 release: cogmem-agent 0.4.0",
+        "bbb2222 feat: add watch module",
+        "ccc3333 release: cogmem-agent 0.5.0",
+        "ddd4444 fix: something",
+        "eee5555 release: cogmem-agent 0.6.0",
+    ]
+    result = detect_workflow_patterns(log_lines, threshold=2)
+    assert len(result) >= 1
+    assert result[0]["prefix"] == "release:"
+    assert result[0]["count"] >= 3
+
+
+def test_detect_repeated_session_commits():
+    """Repeated session: commits should be detected."""
+    log_lines = [
+        "aaa1111 session: 2026-03-25 auto-commit on exit",
+        "bbb2222 session: 2026-03-25 auto-commit on exit",
+        "ccc3333 feat: something",
+    ]
+    result = detect_workflow_patterns(log_lines, threshold=2)
+    assert len(result) >= 1
+    assert result[0]["prefix"] == "session:"
+
+
+def test_no_workflow_below_threshold():
+    """Single occurrence should not trigger."""
+    log_lines = [
+        "aaa1111 release: cogmem-agent 0.4.0",
+        "bbb2222 feat: add feature",
+    ]
+    result = detect_workflow_patterns(log_lines, threshold=2)
+    assert len(result) == 0
+
+
+def test_workflow_patterns_empty_log():
+    """Empty log should return empty list."""
+    result = detect_workflow_patterns([], threshold=2)
+    assert result == []
+
+
+def test_workflow_excludes_common_prefixes():
+    """fix: and feat: should be excluded (already tracked separately)."""
+    log_lines = [
+        "aaa1111 fix: bug 1",
+        "bbb2222 fix: bug 2",
+        "ccc3333 fix: bug 3",
+        "ddd4444 feat: feature 1",
+        "eee5555 feat: feature 2",
+    ]
+    result = detect_workflow_patterns(log_lines, threshold=2)
+    # fix: and feat: are excluded
+    assert not any(p["prefix"] in ("fix:", "feat:") for p in result)
 
 
 def test_full_watch_with_auto_log(tmp_path, monkeypatch):
