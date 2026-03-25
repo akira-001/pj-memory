@@ -75,3 +75,68 @@ def test_log_gaps_zero_commits():
     """Zero commits should not flag a gap."""
     result = detect_log_gaps(commit_count=0, log_entry_count=0)
     assert result["has_gap"] is False
+
+
+def test_watch_cli_text_output(tmp_path, monkeypatch, capsys):
+    """cogmem watch (without --json) should print human-readable summary."""
+    import subprocess as sp
+    monkeypatch.chdir(tmp_path)
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
+    (tmp_path / "a.txt").write_text("a")
+    sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "commit", "-m", "feat: init"], cwd=tmp_path, capture_output=True)
+    (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+    (tmp_path / "memory" / "logs").mkdir(parents=True)
+
+    from cognitive_memory.cli.watch_cmd import run_watch
+    run_watch(since="today")
+    captured = capsys.readouterr()
+    assert "Commits:" in captured.out
+    assert "Fix:" in captured.out
+
+
+def test_watch_cli_json_output(tmp_path, monkeypatch, capsys):
+    """cogmem watch --json should output valid JSON."""
+    import subprocess as sp
+    import json
+    monkeypatch.chdir(tmp_path)
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
+    (tmp_path / "a.txt").write_text("a")
+    sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "commit", "-m", "feat: init"], cwd=tmp_path, capture_output=True)
+    for i in range(3):
+        (tmp_path / "a.txt").write_text(f"fix {i}")
+        sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        sp.run(["git", "commit", "-m", f"fix: issue {i}"], cwd=tmp_path, capture_output=True)
+    (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+    (tmp_path / "memory" / "logs").mkdir(parents=True)
+
+    from cognitive_memory.cli.watch_cmd import run_watch
+    run_watch(since="today", json_output=True)
+    captured = capsys.readouterr()
+    output = json.loads(captured.out)
+    assert output["fix_count"] == 3
+    assert len(output["entries"]) >= 1
+
+
+def test_watch_git_not_found(tmp_path, monkeypatch):
+    """Should exit gracefully when git is not available."""
+    import subprocess as sp
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+    (tmp_path / "memory" / "logs").mkdir(parents=True)
+    original_run = sp.run
+    def mock_run(*args, **kwargs):
+        if args[0][0] == "git":
+            raise FileNotFoundError("git not found")
+        return original_run(*args, **kwargs)
+    monkeypatch.setattr(sp, "run", mock_run)
+
+    from cognitive_memory.cli.watch_cmd import run_watch
+    import pytest
+    with pytest.raises(SystemExit):
+        run_watch()

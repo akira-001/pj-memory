@@ -142,6 +142,12 @@ def main(argv: list[str] | None = None):
     skills_ts_parser.add_argument("--date", type=str, default=None, help="Session date (default: today)")
     skills_ts_parser.add_argument("--json", action="store_true", help="JSON output")
 
+    # watch
+    watch_parser = subparsers.add_parser("watch", help="Detect patterns from git history")
+    watch_parser.add_argument("--since", type=str, default="today", help="Git log --since value")
+    watch_parser.add_argument("--json", action="store_true", help="JSON output")
+    watch_parser.add_argument("--auto-log", action="store_true", help="Auto-append detected patterns to session log")
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -175,3 +181,6 @@ def main(argv: list[str] | None = None):
     elif args.command == "skills":
         from .skills_cmd import run_skills
         run_skills(args)
+    elif args.command == "watch":
+        from .watch_cmd import run_watch
+        run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)
