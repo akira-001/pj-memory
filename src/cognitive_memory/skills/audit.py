@@ -80,34 +80,44 @@ class SkillAuditor:
         return results
 
     def _check_declining_skills(self) -> List[Dict]:
-        """Find skills with declining effectiveness trend."""
+        """Find skills with declining effectiveness trend.
+
+        Requires:
+        - At least 5 data points (avoids noise from small samples)
+        - Monotonic decline across all points
+        - Total drop >= 0.15 (ignores trivial fluctuations like 0.95→0.90→0.85)
+        """
         results = []
         all_skills = self.store.load_all_skills()
         for category_skills in all_skills.values():
             for skill in category_skills:
-                usage_log = self.store.get_recent_usage_log(skill.id, limit=3)
-                if len(usage_log) < 3:
-                    continue
-                # Check if all 3 recent entries show declining effectiveness
+                usage_log = self.store.get_recent_usage_log(skill.id, limit=5)
                 effs = [
                     e["effectiveness"]
                     for e in usage_log
                     if e["effectiveness"] is not None
                 ]
-                if len(effs) < 3:
+                if len(effs) < 5:
                     continue
                 # usage_log is DESC order, so effs[0] is most recent
-                if effs[0] < effs[1] < effs[2]:
-                    results.append({
-                        "type": "improve",
-                        "skill_name": skill.name,
-                        "skill_id": skill.id,
-                        "reason": (
-                            f"declining trend: "
-                            f"{effs[2]:.2f} → {effs[1]:.2f} → {effs[0]:.2f}"
-                        ),
-                        "priority": "medium",
-                    })
+                # Check monotonic decline
+                is_declining = all(effs[i] < effs[i + 1] for i in range(len(effs) - 1))
+                if not is_declining:
+                    continue
+                # Check total drop is significant (>= 0.15)
+                total_drop = effs[-1] - effs[0]  # oldest - newest (positive = decline)
+                if total_drop < 0.15:
+                    continue
+                results.append({
+                    "type": "improve",
+                    "skill_name": skill.name,
+                    "skill_id": skill.id,
+                    "reason": (
+                        f"declining trend over {len(effs)} entries: "
+                        f"{effs[-1]:.2f} → {effs[0]:.2f} (drop: {total_drop:.2f})"
+                    ),
+                    "priority": "high" if total_drop >= 0.3 else "medium",
+                })
         return results
 
     def _check_unmatched_patterns(self) -> List[Dict]:
@@ -175,12 +185,21 @@ class SkillAuditor:
                 else:
                     status = "critical"
 
-                # Detect trend
+                # Detect trend (requires 5+ data points and significant change)
                 trend = "stable"
-                if len(recent_effs) >= 3:
-                    if recent_effs[0] < recent_effs[1] < recent_effs[2]:
+                if len(recent_effs) >= 5:
+                    is_declining = all(
+                        recent_effs[i] < recent_effs[i + 1]
+                        for i in range(len(recent_effs) - 1)
+                    )
+                    is_improving = all(
+                        recent_effs[i] > recent_effs[i + 1]
+                        for i in range(len(recent_effs) - 1)
+                    )
+                    total_change = abs(recent_effs[-1] - recent_effs[0])
+                    if is_declining and total_change >= 0.15:
                         trend = "declining"
-                    elif recent_effs[0] > recent_effs[1] > recent_effs[2]:
+                    elif is_improving and total_change >= 0.15:
                         trend = "improving"
 
                 skill_reports.append({

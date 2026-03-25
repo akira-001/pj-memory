@@ -131,10 +131,12 @@ class TestSkillAuditor:
         )
         store.save_skill(skill)
 
-        # Insert declining usage log entries (newest first in DB)
-        store.log_usage("task", "skill_decline_001", 0.8)  # oldest
+        # Insert declining usage log entries (5+ points, drop >= 0.15)
+        store.log_usage("task", "skill_decline_001", 0.9)  # oldest
+        store.log_usage("task", "skill_decline_001", 0.8)
+        store.log_usage("task", "skill_decline_001", 0.7)
         store.log_usage("task", "skill_decline_001", 0.6)
-        store.log_usage("task", "skill_decline_001", 0.4)  # newest
+        store.log_usage("task", "skill_decline_001", 0.5)  # newest
 
         auditor = SkillAuditor(store)
         result = auditor.audit()
@@ -144,6 +146,36 @@ class TestSkillAuditor:
             if r["type"] == "improve" and "declining" in r.get("reason", "")
         ]
         assert len(decline_recs) == 1
+
+    def test_audit_ignores_minor_decline(self, store):
+        """Small fluctuations (< 0.15 total drop) should not trigger declining."""
+        skill = _make_skill(
+            id="skill_minor_001",
+            usage_stats=UsageStats(
+                total_executions=5,
+                successful_executions=4,
+                average_effectiveness=0.85,
+                last_used_at=datetime.now().isoformat(),
+                frequency=0.5,
+            ),
+        )
+        store.save_skill(skill)
+
+        # Insert slight decline (total drop = 0.10 < 0.15 threshold)
+        store.log_usage("task", "skill_minor_001", 0.95)
+        store.log_usage("task", "skill_minor_001", 0.93)
+        store.log_usage("task", "skill_minor_001", 0.91)
+        store.log_usage("task", "skill_minor_001", 0.89)
+        store.log_usage("task", "skill_minor_001", 0.85)
+
+        auditor = SkillAuditor(store)
+        result = auditor.audit()
+
+        decline_recs = [
+            r for r in result["recommendations"]
+            if r["type"] == "improve" and "declining" in r.get("reason", "")
+        ]
+        assert len(decline_recs) == 0
 
     def test_audit_detects_unmatched_patterns(self, store):
         for _ in range(4):
