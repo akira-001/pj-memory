@@ -50,3 +50,25 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
         "revert_count": revert_count,
         "entries": entries,
     }
+
+
+def detect_log_gaps(commit_count: int, log_entry_count: int) -> dict:
+    """Detect if session has too few log entries relative to commits.
+
+    Heuristic: expect at least 1 log entry per 4 commits.
+    """
+    if commit_count == 0:
+        return {"has_gap": False, "severity": "none", "ratio": 0.0}
+
+    expected_min = max(1, commit_count // 4)
+    has_gap = log_entry_count < expected_min
+    ratio = log_entry_count / commit_count if commit_count > 0 else 1.0
+
+    if has_gap and log_entry_count == 0:
+        severity = "high"
+    elif has_gap:
+        severity = "medium"
+    else:
+        severity = "none"
+
+    return {"has_gap": has_gap, "severity": severity, "ratio": ratio}
