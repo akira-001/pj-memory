@@ -88,11 +88,11 @@ def _get_event_stats(config: CogMemConfig) -> dict[str, dict]:
 
 
 def get_skills_list(config: CogMemConfig) -> list:
-    """Get all skills: .claude/skills/ (with event stats) + cogmem DB skills (with execution stats).
+    """Get skills from .claude/skills/ with session event stats.
 
-    Both sources shown together, sorted by total_executions descending.
+    Shows only user's own skills (from ~/.claude/skills/).
+    cogmem DB skills are not shown (auto-generated, no reliable name mapping).
     """
-    # 1. .claude/skills/ with session event stats
     claude_skills = _scan_claude_skills()
     event_stats = _get_event_stats(config)
 
@@ -104,45 +104,12 @@ def get_skills_list(config: CogMemConfig) -> list:
             "name": skill_name,
             "summary": meta["description"],
             "description": meta["description"],
-            "category": "—",
-            "effectiveness": 0.0,
-            "total_executions": 0,
             "total_events": events.get("total_events", 0),
             "last_used_at": events.get("last_used"),
-            "trend": "new",
-            "version": 1,
-            "improvements": 0,
-            "source": "skill",
+            "events_by_type": events.get("events_by_type", {}),
         })
 
-    # 2. cogmem DB skills with execution stats
-    store = SkillsStore(config)
-    all_db_skills = store.load_all_skills()
-    for category, skills in all_db_skills.items():
-        for skill in skills:
-            usage_log = store.get_recent_usage_log(skill.id, 5)
-            effs = [e["effectiveness"] for e in usage_log if e["effectiveness"] is not None]
-            short_name = skill.name.split(" ")[0] if skill.name else skill.id
-            summary = skill.description
-            if ":" in summary:
-                summary = summary.split(":", 1)[1].strip()
-            result.append({
-                "id": skill.id,
-                "name": short_name,
-                "summary": summary,
-                "description": skill.description,
-                "category": skill.category,
-                "effectiveness": skill.usage_stats.average_effectiveness,
-                "total_executions": skill.usage_stats.total_executions,
-                "total_events": 0,
-                "last_used_at": skill.usage_stats.last_used_at,
-                "trend": _determine_trend(effs),
-                "version": skill.version,
-                "improvements": len(skill.improvement_history),
-                "source": "cogmem",
-            })
-
-    result.sort(key=lambda s: s["total_executions"], reverse=True)
+    result.sort(key=lambda s: s["total_events"], reverse=True)
     return result
 
 
