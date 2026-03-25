@@ -41,7 +41,10 @@
     {% elif query %}
     <div class="empty-state">{{ t('search.no_results', lang) }} {{ t('common.for', lang) }} "{{ query }}"</div>
     {% else %}
-    <div class="empty-state">{{ t('search.enter_query', lang) }}</div>
+    <div class="empty-state">
+        <div style="font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.4;">&#x1F50D;</div>
+        <div>{{ t('search.enter_query', lang) }}</div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

@@ -49,7 +49,8 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.625rem 1.25rem;
+    padding: 0.75rem 1.25rem;
+    min-height: 44px;
     color: var(--text-dim);
     text-decoration: none;
     font-size: 0.875rem;
@@ -119,6 +120,7 @@ body {
     font-size: 1.75rem;
     font-weight: 700;
     margin-top: 0.25rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .stat-sub {
@@ -169,6 +171,7 @@ body {
 .data-table td {
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
 }
 
 .data-table tr:hover td {
@@ -480,7 +483,7 @@ body {
 
 /* Language switch */
 .lang-switch { margin-top: auto; padding: 1rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
-.lang-btn { padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; color: var(--text-dim); text-decoration: none; transition: all 0.15s; }
+.lang-btn { padding: 0.5rem 0.75rem; min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.75rem; color: var(--text-dim); text-decoration: none; transition: all 0.15s; }
 .lang-btn:hover { color: var(--text); background: var(--surface-hover); }
 .lang-btn.active { color: var(--accent); background: rgba(99, 102, 241, 0.1); }
 
