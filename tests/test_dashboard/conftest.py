@@ -147,7 +147,46 @@ def project_dir(tmp_path):
         json.dumps(sample_skill, indent=2), encoding="utf-8"
     )
 
-    # Create skills.db with matching data
+    # --- Create .claude/skills/ with test skills ---
+    claude_skills_dir = tmp_path / ".claude" / "skills"
+
+    # Skill A: high effectiveness, many executions, trending up
+    skill_a_dir = claude_skills_dir / "skill-alpha"
+    skill_a_dir.mkdir(parents=True)
+    (skill_a_dir / "SKILL.md").write_text(
+        "---\nname: skill-alpha\n"
+        "description: Alpha skill for testing dashboard rendering\n---\n# Alpha\n",
+        encoding="utf-8",
+    )
+
+    # Skill B: low effectiveness, few executions, trending down
+    skill_b_dir = claude_skills_dir / "skill-beta"
+    skill_b_dir.mkdir(parents=True)
+    (skill_b_dir / "SKILL.md").write_text(
+        "---\nname: skill-beta\n"
+        "description: Beta skill with low effectiveness\n---\n# Beta\n",
+        encoding="utf-8",
+    )
+
+    # Skill C: no DB match, has events only
+    skill_c_dir = claude_skills_dir / "skill-gamma"
+    skill_c_dir.mkdir(parents=True)
+    (skill_c_dir / "SKILL.md").write_text(
+        "---\nname: skill-gamma\n"
+        "description: Gamma skill with events but no DB entry\n---\n# Gamma\n",
+        encoding="utf-8",
+    )
+
+    # Skill D: exact id match (test-skill-001 from JSON above)
+    skill_d_dir = claude_skills_dir / "test-skill-001"
+    skill_d_dir.mkdir(parents=True)
+    (skill_d_dir / "SKILL.md").write_text(
+        "---\nname: test-skill-001\n"
+        "description: A test skill for dashboard testing\n---\n# Test\n",
+        encoding="utf-8",
+    )
+
+    # --- Create skills.db ---
     skills_db_path = tmp_path / "memory" / "skills.db"
     sconn = sqlite3.connect(str(skills_db_path))
     sconn.execute("""
@@ -173,6 +212,8 @@ def project_dir(tmp_path):
             description TEXT NOT NULL, step_ref TEXT, timestamp TEXT NOT NULL
         )
     """)
+
+    # DB skill matching test-skill-001 (exact id match)
     sconn.execute(
         "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
@@ -184,13 +225,55 @@ def project_dir(tmp_path):
             str(skills_dir / "conversation-skills" / "test-skill-001.json"), None,
         ),
     )
-    # Insert usage log entries for trend testing
+
+    # DB skill matching skill-alpha (via description title match)
+    sconn.execute(
+        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "skill_hash_alpha", "Alpha Skill", "automation-skills",
+            "Alpha skill: for testing dashboard rendering",
+            "alpha trigger",
+            0.92, 25, 23, "2026-03-25T10:00:00",
+            "2026-03-01T00:00:00", "2026-03-25T10:00:00", 3,
+            "path/alpha.json", None,
+        ),
+    )
+
+    # DB skill matching skill-beta (via description title match)
+    sconn.execute(
+        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "skill_hash_beta", "Beta Skill", "meta-skills",
+            "Beta skill: with low effectiveness",
+            "beta trigger",
+            0.35, 5, 2, "2026-03-18T10:00:00",
+            "2026-03-05T00:00:00", "2026-03-18T10:00:00", 1,
+            "path/beta.json", None,
+        ),
+    )
+
+    # Usage log for test-skill-001 (trend: up)
     for i, eff in enumerate([0.6, 0.65, 0.7, 0.75, 0.8]):
         sconn.execute(
             "INSERT INTO skill_usage_log (context, skill_id, effectiveness, timestamp) VALUES (?,?,?,?)",
             (f"test context {i}", "test-skill-001", eff, f"2026-03-{15+i}T10:00:00"),
         )
-    # Insert session events
+
+    # Usage log for alpha (trend: up)
+    for i, eff in enumerate([0.80, 0.84, 0.88, 0.90, 0.92]):
+        sconn.execute(
+            "INSERT INTO skill_usage_log (context, skill_id, effectiveness, timestamp) VALUES (?,?,?,?)",
+            (f"alpha context {i}", "skill_hash_alpha", eff, f"2026-03-{20+i}T10:00:00"),
+        )
+
+    # Usage log for beta (trend: down)
+    for i, eff in enumerate([0.50, 0.45, 0.40, 0.38, 0.35]):
+        sconn.execute(
+            "INSERT INTO skill_usage_log (context, skill_id, effectiveness, timestamp) VALUES (?,?,?,?)",
+            (f"beta context {i}", "skill_hash_beta", eff, f"2026-03-{10+i}T10:00:00"),
+        )
+
+    # Session events for test-skill-001 (skill_name matches DB skill name for detail view)
     sconn.execute(
         "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
         (1, "2026-03-20", "Test Skill", "skill_start", "Started test", None, "2026-03-20T10:00:00"),
@@ -199,10 +282,42 @@ def project_dir(tmp_path):
         "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
         (2, "2026-03-20", "Test Skill", "extra_step", "Added validation", "Step 3", "2026-03-20T10:05:00"),
     )
+    # Also register under the directory name for event stats matching
+    sconn.execute(
+        "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
+        (6, "2026-03-20", "test-skill-001", "skill_start", "Started test", None, "2026-03-20T10:00:00"),
+    )
+    sconn.execute(
+        "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
+        (7, "2026-03-20", "test-skill-001", "extra_step", "Added validation", "Step 3", "2026-03-20T10:05:00"),
+    )
+
+    # Session events for skill-gamma (events but no DB skill)
+    sconn.execute(
+        "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
+        (3, "2026-03-22", "skill-gamma", "skill_start", "Started gamma", None, "2026-03-22T09:00:00"),
+    )
+    sconn.execute(
+        "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
+        (4, "2026-03-22", "skill-gamma", "user_correction", "Wrong output", None, "2026-03-22T09:10:00"),
+    )
+    sconn.execute(
+        "INSERT INTO skill_session_events VALUES (?,?,?,?,?,?,?)",
+        (5, "2026-03-22", "skill-gamma", "skill_end", "Completed gamma", None, "2026-03-22T09:15:00"),
+    )
+
     sconn.commit()
     sconn.close()
 
-    return tmp_path
+    # Register test .claude/skills/ dir for scanning
+    from cognitive_memory.dashboard.services import skills_service
+    skills_service._CLAUDE_SKILLS_DIRS.append(claude_skills_dir)
+
+    yield tmp_path
+
+    # Cleanup: remove added path
+    if claude_skills_dir in skills_service._CLAUDE_SKILLS_DIRS:
+        skills_service._CLAUDE_SKILLS_DIRS.remove(claude_skills_dir)
 
 
 @pytest.fixture

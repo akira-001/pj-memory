@@ -144,136 +144,72 @@ class TestSkillsService:
     def test_trend_flat(self):
         assert _determine_trend([0.7, 0.6, 0.8, 0.5, 0.7]) == "flat"
 
-    def test_get_skills_list_returns_list(self, config):
+    def test_get_skills_list_has_all_4_skills(self, config):
+        """Fixture provides 4 skills from .claude/skills/."""
         skills = get_skills_list(config)
-        assert isinstance(skills, list)
+        names = [s["name"] for s in skills]
+        assert "skill-alpha" in names
+        assert "test-skill-001" in names
+        assert "skill-beta" in names
+        assert "skill-gamma" in names
 
-    def test_get_skills_list_has_required_fields(self, config, project_dir):
-        """Each skill must have all fields needed for the full table."""
-        from cognitive_memory.dashboard.services import skills_service
-        test_dir = project_dir / ".claude" / "skills" / "tdd-test"
-        test_dir.mkdir(parents=True)
-        (test_dir / "SKILL.md").write_text(
-            "---\nname: tdd-test\ndescription: TDD test skill\n---\n",
-            encoding="utf-8",
-        )
-        original = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            skills = get_skills_list(config)
-            tdd = [s for s in skills if s["name"] == "tdd-test"]
-            assert len(tdd) == 1
-            s = tdd[0]
-            required_fields = [
-                "id", "name", "summary", "description",
-                "category", "effectiveness", "total_executions",
-                "total_events", "last_used_at", "trend",
-                "version", "improvements",
-            ]
-            for field in required_fields:
-                assert field in s, f"Missing field: {field}"
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original
+    def test_get_skills_list_has_required_fields(self, config):
+        """Each skill dict must have all fields for the 8-column table."""
+        skills = get_skills_list(config)
+        required = [
+            "id", "name", "summary", "description",
+            "category", "effectiveness", "total_executions",
+            "total_events", "last_used_at", "trend",
+            "version", "improvements",
+        ]
+        for s in skills:
+            for field in required:
+                assert field in s, f"Skill {s.get('name')}: missing field '{field}'"
 
-    def test_get_skills_list_matches_db_by_skill_id(self, config, project_dir):
-        """When .claude/skills/ dir name matches a DB skill id, stats merge."""
-        from cognitive_memory.dashboard.services import skills_service
-        # Create .claude/skills/test-skill-001 matching the DB skill
-        test_dir = project_dir / ".claude" / "skills" / "test-skill-001"
-        test_dir.mkdir(parents=True)
-        (test_dir / "SKILL.md").write_text(
-            "---\nname: test-skill-001\ndescription: A test skill for dashboard testing\n---\n",
-            encoding="utf-8",
-        )
-        original = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            skills = get_skills_list(config)
-            matched = [s for s in skills if s["name"] == "test-skill-001"]
-            assert len(matched) == 1
-            s = matched[0]
-            # DB stats should be merged
-            assert s["effectiveness"] == 0.75
-            assert s["total_executions"] == 10
-            assert s["category"] == "conversation-skills"
-            assert s["version"] == 2
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original
+    def test_skill_alpha_matched_by_title(self, config):
+        """skill-alpha matches DB via description title, gets DB stats."""
+        skills = get_skills_list(config)
+        alpha = [s for s in skills if s["name"] == "skill-alpha"][0]
+        assert alpha["total_executions"] == 25
+        assert alpha["effectiveness"] == 0.92
+        assert alpha["category"] == "automation-skills"
+        assert alpha["version"] == 3
 
-    def test_get_skills_list_matches_db_by_hash_id(self, config, project_dir):
-        """Real-world case: DB skill id is a hash like 'skill_123_abc'.
-        Matching works when DB description title is contained in claude description.
-        """
-        import sqlite3
+    def test_skill_001_matched_by_exact_id(self, config):
+        """test-skill-001 matches DB by exact id, gets DB stats."""
+        skills = get_skills_list(config)
+        s001 = [s for s in skills if s["name"] == "test-skill-001"][0]
+        assert s001["total_executions"] == 10
+        assert s001["effectiveness"] == 0.75
+        assert s001["category"] == "conversation-skills"
+        assert s001["version"] == 2
+        assert s001["total_events"] == 2  # skill_start + extra_step
 
-        from cognitive_memory.dashboard.services import skills_service
+    def test_skill_beta_has_low_effectiveness(self, config):
+        """skill-beta matches DB, has low effectiveness and trend down."""
+        skills = get_skills_list(config)
+        beta = [s for s in skills if s["name"] == "skill-beta"][0]
+        assert beta["total_executions"] == 5
+        assert beta["effectiveness"] == 0.35
+        assert beta["category"] == "meta-skills"
 
-        # Insert a DB skill with hash id — title before colon must appear in claude desc
-        db_path = project_dir / "memory" / "skills.db"
-        conn = sqlite3.connect(str(db_path))
-        conn.execute(
-            "INSERT OR REPLACE INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (
-                "skill_999_hashid", "データ分析スキル", "meta-skills",
-                "データ分析: データを分析して可視化する",
-                "data analysis trigger",
-                0.85, 15, 12, "2026-03-25T10:00:00",
-                "2026-03-01T00:00:00", "2026-03-25T10:00:00", 3,
-                "path/to/skill.json", None,
-            ),
-        )
-        conn.commit()
-        conn.close()
+    def test_skill_gamma_no_db_match(self, config):
+        """skill-gamma has no DB match, only events."""
+        skills = get_skills_list(config)
+        gamma = [s for s in skills if s["name"] == "skill-gamma"][0]
+        assert gamma["total_executions"] == 0
+        assert gamma["effectiveness"] == 0.0
+        assert gamma["category"] == "—"
+        assert gamma["total_events"] == 3
+        assert gamma["trend"] == "new"
 
-        # Create .claude/skills/ with description that CONTAINS the DB title
-        test_dir = project_dir / ".claude" / "skills" / "data-analysis"
-        test_dir.mkdir(parents=True)
-        (test_dir / "SKILL.md").write_text(
-            "---\nname: data-analysis\n"
-            "description: データ分析と可視化を行うスキル\n---\n",
-            encoding="utf-8",
-        )
-
-        original = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            skills = get_skills_list(config)
-            matched = [s for s in skills if s["name"] == "data-analysis"]
-            assert len(matched) == 1
-            s = matched[0]
-            assert s["total_executions"] == 15, f"Expected 15, got {s['total_executions']}"
-            assert s["effectiveness"] == 0.85
-            assert s["category"] == "meta-skills"
-            assert s["version"] == 3
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original
-
-    def test_get_skills_list_sorted_by_executions(self, config, project_dir):
-        """Skills should be sorted by total_executions descending."""
-        from cognitive_memory.dashboard.services import skills_service
-        test_dir = project_dir / ".claude" / "skills" / "test-skill-001"
-        test_dir.mkdir(parents=True)
-        (test_dir / "SKILL.md").write_text(
-            "---\nname: test-skill-001\ndescription: A test skill for dashboard testing\n---\n",
-            encoding="utf-8",
-        )
-        zero_dir = project_dir / ".claude" / "skills" / "zero-skill"
-        zero_dir.mkdir(parents=True)
-        (zero_dir / "SKILL.md").write_text(
-            "---\nname: zero-skill\ndescription: Never used\n---\n",
-            encoding="utf-8",
-        )
-        original = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            skills = get_skills_list(config)
-            # test-skill-001 has 10 executions, zero-skill has 0
-            names = [s["name"] for s in skills]
-            idx_matched = names.index("test-skill-001")
-            idx_zero = names.index("zero-skill")
-            assert idx_matched < idx_zero, "Skills with more executions should come first"
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original
+    def test_sorted_by_executions_desc(self, config):
+        """alpha(25) > 001(10) > beta(5) > gamma(0)."""
+        skills = get_skills_list(config)
+        names = [s["name"] for s in skills]
+        assert names.index("skill-alpha") < names.index("test-skill-001")
+        assert names.index("test-skill-001") < names.index("skill-beta")
+        assert names.index("skill-beta") < names.index("skill-gamma")
 
     def test_get_skill_detail(self, config):
         detail = get_skill_detail(config, "test-skill-001")

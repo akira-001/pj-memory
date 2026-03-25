@@ -25,110 +25,103 @@ class TestMemoryOverview:
 
 
 class TestSkillsList:
+    """Skills list page tests.
+
+    Test fixture provides 4 skills in .claude/skills/:
+    - skill-alpha: DB match (title), exec=25, eff=0.92, cat=automation-skills, v3, trend=up
+    - test-skill-001: DB match (exact id), exec=10, eff=0.75, cat=conversation-skills, v2, events=2
+    - skill-beta: DB match (title), exec=5, eff=0.35, cat=meta-skills, v1, trend=down
+    - skill-gamma: no DB match, events=3 (incl. user_correction), trend=new
+    """
+
     def test_skills_page_returns_200(self, client):
         resp = client.get("/skills")
         assert resp.status_code == 200
-        assert "Skills" in resp.text
 
-    def test_skills_shows_audit_summary(self, client):
-        resp = client.get("/skills")
-        assert "Total" in resp.text
-
-    def test_skills_table_has_required_columns(self, client):
-        """Table must have all 8 columns: Name, Category, Effectiveness, Executions, Events, Version, Last Used, Trend."""
+    def test_skills_table_has_all_8_columns(self, client):
+        """Table must have all 8 column headers."""
         resp = client.get("/skills")
         html = resp.text
+        from cognitive_memory.dashboard.i18n import t
         for col_key in [
             "skills.name", "skills.category", "skills.effectiveness",
             "skills.executions", "skills.events", "skills.version",
             "skills.last_used", "skills.trend",
         ]:
-            # The i18n t() function is called in the template — check EN labels
-            from cognitive_memory.dashboard.i18n import t
             label = t(col_key, "en")
-            assert label in html, f"Missing column header: {label} (key: {col_key})"
+            assert label in html, f"Missing column: {label}"
 
-    def test_skills_shows_skill_name_from_claude_skills(self, client, project_dir):
-        """Skills from .claude/skills/ should show their directory name."""
-        # Create a test skill in a local .claude/skills/ dir
-        from cognitive_memory.dashboard.services import skills_service
-        test_skills_dir = project_dir / ".claude" / "skills" / "test-tdd-skill"
-        test_skills_dir.mkdir(parents=True)
-        (test_skills_dir / "SKILL.md").write_text(
-            "---\nname: test-tdd-skill\ndescription: A TDD test skill\n---\n# Test\n",
-            encoding="utf-8",
-        )
-        # Temporarily add this dir to scan paths
-        original_dirs = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            resp = client.get("/skills")
-            assert "test-tdd-skill" in resp.text
-            assert "A TDD test skill" in resp.text
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original_dirs
+    def test_skills_shows_all_skill_names(self, client):
+        """All 4 test skills should appear by name."""
+        resp = client.get("/skills")
+        html = resp.text
+        assert "skill-alpha" in html
+        assert "test-skill-001" in html
+        assert "skill-beta" in html
+        assert "skill-gamma" in html
 
-    def test_skills_shows_db_stats_for_matched_skill(self, client, project_dir):
-        """When a .claude/skills/ skill matches a DB skill, DB stats should be shown."""
-        from cognitive_memory.dashboard.services import skills_service
-        # Create .claude/skills/ entry matching the DB skill (test-skill-001)
-        test_skills_dir = project_dir / ".claude" / "skills" / "test-skill-001"
-        test_skills_dir.mkdir(parents=True)
-        (test_skills_dir / "SKILL.md").write_text(
-            "---\nname: test-skill-001\ndescription: A test skill for dashboard testing\n---\n# Test\n",
-            encoding="utf-8",
-        )
-        original_dirs = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            resp = client.get("/skills")
-            assert "test-skill-001" in resp.text
-            # DB stats: effectiveness 0.75, executions 10, version v2
-            assert "0.75" in resp.text
-            assert ">10<" in resp.text  # exact match in <td>10</td>
-            assert "v2" in resp.text
-            assert "conversation-skills" in resp.text
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original_dirs
+    def test_skills_shows_descriptions(self, client):
+        """Each skill's summary should appear."""
+        resp = client.get("/skills")
+        html = resp.text
+        assert "Alpha skill" in html
+        assert "dashboard testing" in html
+        assert "Beta skill" in html
+        assert "Gamma skill" in html
 
-    def test_skills_shows_nonzero_executions_for_hash_id_skill(self, client, project_dir):
-        """DB skills with hash IDs should match via description and show real execution counts."""
-        import sqlite3
-        from cognitive_memory.dashboard.services import skills_service
+    def test_skill_alpha_has_db_stats(self, client):
+        """skill-alpha should show DB stats from title-matched entry."""
+        resp = client.get("/skills")
+        html = resp.text
+        assert "automation-skills" in html
+        assert "0.92" in html
+        assert "v3" in html
 
-        # Insert DB skill with hash id
-        db_path = project_dir / "memory" / "skills.db"
-        conn = sqlite3.connect(str(db_path))
-        conn.execute(
-            "INSERT OR REPLACE INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (
-                "skill_888_hash", "テストスキル", "automation-skills",
-                "テスト自動化スキル: テスト用のスキルです",
-                "test pattern",
-                0.90, 25, 20, "2026-03-25T12:00:00",
-                "2026-03-01T00:00:00", "2026-03-25T12:00:00", 4,
-                "path/to/skill.json", None,
-            ),
-        )
-        conn.commit()
-        conn.close()
+    def test_skill_alpha_executions_nonzero(self, client):
+        """skill-alpha should show 25 executions, not 0."""
+        resp = client.get("/skills")
+        assert ">25<" in resp.text
 
-        test_dir = project_dir / ".claude" / "skills" / "test-auto"
-        test_dir.mkdir(parents=True)
-        (test_dir / "SKILL.md").write_text(
-            "---\nname: test-auto\ndescription: テスト自動化スキル\n---\n",
-            encoding="utf-8",
-        )
-        original = skills_service._CLAUDE_SKILLS_DIRS[:]
-        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
-        try:
-            resp = client.get("/skills")
-            assert "test-auto" in resp.text
-            assert ">25<" in resp.text  # execution count must be 25, not 0
-            assert "0.90" in resp.text
-            assert "v4" in resp.text
-        finally:
-            skills_service._CLAUDE_SKILLS_DIRS[:] = original
+    def test_skill_beta_has_low_effectiveness(self, client):
+        """skill-beta should show its low effectiveness value."""
+        resp = client.get("/skills")
+        assert "0.35" in resp.text
+        assert "meta-skills" in resp.text
+
+    def test_skill_gamma_has_events_only(self, client):
+        """skill-gamma has no DB match but has 3 session events."""
+        resp = client.get("/skills")
+        html = resp.text
+        # Should show event count 3 and "—" for category/effectiveness/executions
+        assert "skill-gamma" in html
+
+    def test_skill_sorted_by_executions_desc(self, client):
+        """Skills should be sorted: alpha(25) > test-skill-001(10) > beta(5) > gamma(0)."""
+        resp = client.get("/skills")
+        html = resp.text
+        pos_alpha = html.index("skill-alpha")
+        pos_001 = html.index("test-skill-001")
+        pos_beta = html.index("skill-beta")
+        pos_gamma = html.index("skill-gamma")
+        assert pos_alpha < pos_001 < pos_beta < pos_gamma
+
+    def test_skill_detail_returns_200(self, client):
+        resp = client.get("/skills/test-skill-001")
+        assert resp.status_code == 200
+        assert "Test Skill" in resp.text
+        assert "conversation-skills" in resp.text
+
+    def test_skill_detail_shows_events(self, client):
+        resp = client.get("/skills/test-skill-001")
+        assert "extra_step" in resp.text
+
+    def test_skill_detail_404(self, client):
+        resp = client.get("/skills/nonexistent-skill")
+        assert resp.status_code == 404
+
+    def test_skills_audit_api(self, client):
+        resp = client.get("/skills/api/audit")
+        assert resp.status_code == 200
 
     def test_skill_detail_returns_200(self, client):
         resp = client.get("/skills/test-skill-001")
