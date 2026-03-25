@@ -34,6 +34,7 @@ class SkillAuditor:
         # Always run: fast DB queries
         recommendations.extend(self._check_low_effectiveness())
         recommendations.extend(self._check_declining_skills())
+        recommendations.extend(self._check_never_used_skills())
 
         if not brief:
             recommendations.extend(self._check_unmatched_patterns())
@@ -60,8 +61,9 @@ class SkillAuditor:
         }
 
     def _check_low_effectiveness(self) -> List[Dict]:
-        """Find skills with low effectiveness."""
+        """Find skills with low effectiveness (both used and new)."""
         results = []
+        # Used skills with low effectiveness
         for skill in self.store.get_low_effectiveness_skills(
             threshold=0.5, min_executions=3
         ):
@@ -76,6 +78,23 @@ class SkillAuditor:
                 "priority": "high"
                 if skill["average_effectiveness"] < 0.3
                 else "medium",
+            })
+        # New skills with low initial effectiveness (never or barely used)
+        for skill in self.store.get_low_effectiveness_skills(
+            threshold=0.5, min_executions=0
+        ):
+            # Skip skills already caught above (exec >= 3)
+            if any(r["skill_id"] == skill["id"] for r in results):
+                continue
+            results.append({
+                "type": "improve",
+                "skill_name": skill["name"],
+                "skill_id": skill["id"],
+                "reason": (
+                    f"low initial effectiveness {skill['average_effectiveness']:.2f} "
+                    f"(unused — consider improving content)"
+                ),
+                "priority": "low",
             })
         return results
 
@@ -137,6 +156,31 @@ class SkillAuditor:
                 if pattern["frequency"] < 5
                 else "high",
             })
+        return results
+
+    def _check_never_used_skills(self) -> List[Dict]:
+        """Find skills created 7+ days ago that have never been used."""
+        from datetime import datetime, timedelta
+
+        results = []
+        cutoff = (datetime.now() - timedelta(days=7)).isoformat()
+        all_skills = self.store.load_all_skills()
+        for category_skills in all_skills.values():
+            for skill in category_skills:
+                if (
+                    skill.usage_stats.total_executions == 0
+                    and skill.created_at < cutoff
+                ):
+                    results.append({
+                        "type": "stale",
+                        "skill_name": skill.name,
+                        "skill_id": skill.id,
+                        "reason": (
+                            f"created {skill.created_at[:10]} but never used — "
+                            f"consider removing or improving trigger"
+                        ),
+                        "priority": "low",
+                    })
         return results
 
     def _check_stale_skills(self) -> List[Dict]:
