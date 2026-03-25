@@ -21,7 +21,7 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
             ["git", "log", f"--since={since}", "--oneline"],
             capture_output=True, text=True, cwd=config._base_dir,
         )
-        log_lines = [l for l in result.stdout.strip().split("\n") if l]
+        log_lines = [line for line in result.stdout.strip().split("\n") if line]
     except FileNotFoundError:
         print("git not found", file=sys.stderr)
         sys.exit(1)
@@ -70,4 +70,5 @@ def _append_to_log(config: CogMemConfig, entries: list[dict]):
     if log_file.exists():
         with open(log_file, "a", encoding="utf-8") as f:
             f.write("\n".join(lines))
-    # If log file doesn't exist, skip (Wrap will create it)
+    else:
+        print(f"No session log for today ({log_file}), skipping auto-log.", file=sys.stderr)
