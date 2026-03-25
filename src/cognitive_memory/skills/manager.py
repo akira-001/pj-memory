@@ -26,7 +26,7 @@ class SkillsManager:
     def __init__(self, config: CogMemConfig):
         self.config = config
         self.store = SkillsStore(config)
-        self.evaluator = SkillEvaluator()
+        self.evaluator = SkillEvaluator(embedder=self.store.embedder)
         self.generator = SkillGenerator()
         self.reflection_loop = SkillReflectionLoop(self.store)
 
@@ -72,9 +72,9 @@ class SkillsManager:
         """
         return self.reflection_loop.read_phase(context)
 
-    def select_best_skill(self, applicable_skills: List[Skill], context: str) -> Optional[Skill]:
+    def select_best_skill(self, applicable_skills: List[Skill], context: str, score_map=None) -> Optional[Skill]:
         """Select the best skill for execution."""
-        return self.reflection_loop.select_best_skill(applicable_skills, context)
+        return self.reflection_loop.select_best_skill(applicable_skills, context, score_map)
 
     async def write_phase(
         self,
@@ -130,7 +130,15 @@ class SkillsManager:
         # Read Phase
         read_result = self.read_phase(context)
         applicable_skills = read_result["applicable_skills"]
-        selected_skill = self.select_best_skill(applicable_skills, context)
+        score_map = read_result.get("score_map")
+        selected_skill = self.select_best_skill(applicable_skills, context, score_map)
+
+        # Log usage for pattern detection
+        self.store.log_usage(
+            context=context,
+            skill_id=selected_skill.id if selected_skill else None,
+            effectiveness=performance.effectiveness,
+        )
 
         # Write Phase
         write_result = await self.write_phase(
@@ -143,10 +151,22 @@ class SkillsManager:
         # Reflect Phase
         reflection = self.reflect_phase(write_result, context, performance)
 
+        # Convert write_result to dict for serialization
+        write_phase_dict = {
+            "action": write_result.action,
+            "skill": {
+                "id": write_result.skill.id,
+                "name": write_result.skill.name,
+                "category": write_result.skill.category,
+            } if write_result.skill else None,
+            "improvement_details": write_result.improvement_details,
+            "next_steps": write_result.next_steps,
+        }
+
         return {
             "read_phase": read_result,
             "selected_skill": selected_skill.id if selected_skill else None,
-            "write_phase": write_result,
+            "write_phase": write_phase_dict,
             "reflection": reflection,
             "learning_summary": self._generate_learning_summary(
                 read_result, selected_skill, write_result, reflection

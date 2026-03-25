@@ -133,6 +133,8 @@ pip install cogmem-agent
 cogmem init        # プロジェクト構造をスキャフォールド（下記参照）
 ```
 
+`cogmem init` は [Anthropic 公式 skill-creator プラグイン](https://github.com/anthropics/claude-plugins-official)を自動インストールします。スキルの作成・評価・改善のワークフローが利用可能になります。
+
 ### プロジェクト構造
 
 `cogmem init` で以下の構造が生成されます:

@@ -11,8 +11,8 @@ from .types import Skill, PerformanceMetric, SKILL_CREATION_THRESHOLD
 class SkillEvaluator:
     """Evaluates skill performance and determines improvement opportunities."""
 
-    def __init__(self):
-        pass
+    def __init__(self, embedder=None):
+        self._embedder = embedder
 
     def should_create_new_skill(
         self,
@@ -107,7 +107,19 @@ class SkillEvaluator:
         return sorted(similar_skills, key=lambda s: s.usage_stats.average_effectiveness, reverse=True)
 
     def calculate_context_similarity(self, context1: str, context2: str) -> float:
-        """Calculate similarity between two contexts using word overlap."""
+        """Calculate similarity using vector embeddings (primary) or word overlap (fallback)."""
+        if self._embedder:
+            try:
+                vecs = self._embedder.embed_batch([context1, context2])
+                if vecs and len(vecs) == 2:
+                    from ..scoring import cosine_sim, normalize
+                    v1 = normalize(vecs[0])
+                    v2 = normalize(vecs[1])
+                    return max(0.0, cosine_sim(v1, v2))
+            except Exception:
+                pass
+
+        # Fallback: word overlap (Jaccard)
         words1 = set(context1.lower().split())
         words2 = set(context2.lower().split())
 

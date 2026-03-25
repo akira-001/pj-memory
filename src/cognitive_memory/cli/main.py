@@ -106,6 +106,21 @@ def main(argv: list[str] | None = None):
     skills_import_parser.add_argument("--force", action="store_true", help="Overwrite existing skills in DB")
     skills_import_parser.add_argument("--quiet", action="store_true", help="Suppress per-file output")
 
+    # skills audit
+    skills_audit_parser = skills_subparsers.add_parser("audit", help="Audit skills and recommend improvements")
+    skills_audit_parser.add_argument("--brief", action="store_true", help="Quick check (skip slow scans)")
+    skills_audit_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills review
+    skills_review_parser = skills_subparsers.add_parser("review", help="Full skill health review with recommendations")
+    skills_review_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills ingest
+    skills_ingest_parser = skills_subparsers.add_parser("ingest", help="Ingest skill-creator benchmark results")
+    skills_ingest_parser.add_argument("--benchmark", type=str, required=True, help="Path to benchmark workspace directory")
+    skills_ingest_parser.add_argument("--skill-name", type=str, required=True, help="Skill name to update")
+    skills_ingest_parser.add_argument("--json", action="store_true", help="JSON output")
+
     args = parser.parse_args(argv)
 
     if args.command is None:

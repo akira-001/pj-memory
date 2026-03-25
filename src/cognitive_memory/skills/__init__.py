@@ -16,6 +16,8 @@ from .store import SkillsStore
 from .evaluator import SkillEvaluator
 from .generator import SkillGenerator
 from .reflection import SkillReflectionLoop
+from .audit import SkillAuditor
+from .ingest import BenchmarkIngestor
 
 __all__ = [
     "Skill",
@@ -32,4 +34,6 @@ __all__ = [
     "SkillEvaluator",
     "SkillGenerator",
     "SkillReflectionLoop",
+    "SkillAuditor",
+    "BenchmarkIngestor",
 ]

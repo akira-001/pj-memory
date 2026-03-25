@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from ..config import CogMemConfig
+from ..scoring import cosine_sim, normalize
 from .types import Skill, SkillCategory, SKILL_CATEGORIES
 
 
@@ -18,7 +19,20 @@ class SkillsStore:
         self.config = config
         self.skills_dir = Path(config._base_dir) / "memory" / "skills"
         self.db_path = Path(config._base_dir) / "memory" / "skills.db"
+        self._embedder = None
         self._init_storage()
+
+    @property
+    def embedder(self):
+        """Lazy-init Ollama embedder from config."""
+        if self._embedder is None:
+            from ..embeddings.ollama import OllamaEmbedding
+            self._embedder = OllamaEmbedding(
+                model=self.config.embedding_model,
+                url=self.config.embedding_url,
+                timeout=self.config.embedding_timeout,
+            )
+        return self._embedder
 
     def _init_storage(self) -> None:
         """Initialize skills storage directories and database."""
@@ -51,6 +65,12 @@ class SkillsStore:
                 )
             """)
 
+            # Add embedding column if missing (migration for existing DBs)
+            try:
+                conn.execute("ALTER TABLE skills ADD COLUMN embedding TEXT")
+            except sqlite3.OperationalError:
+                pass  # column already exists
+
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_skills_category
                 ON skills(category)
@@ -63,10 +83,21 @@ class SkillsStore:
 
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS skills_search USING fts5(
-                    skill_id UNINDEXED,
                     name,
                     description,
-                    execution_pattern
+                    execution_pattern,
+                    content='skills',
+                    content_rowid='rowid'
+                )
+            """)
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS skill_usage_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    context TEXT NOT NULL,
+                    skill_id TEXT,
+                    effectiveness REAL,
+                    timestamp TEXT NOT NULL
                 )
             """)
 
@@ -117,14 +148,20 @@ class SkillsStore:
         with open(file_path, 'w') as f:
             json.dump(skill_dict, f, indent=2)
 
+        # Generate embedding for semantic search
+        embed_text = f"{skill.name} {skill.description} {skill.execution_pattern}"
+        vec = self.embedder.embed(embed_text)
+        embedding_json = json.dumps(vec) if vec else None
+
         # Save to database for quick search
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO skills (
                     id, name, category, description, execution_pattern,
                     average_effectiveness, total_executions, successful_executions,
-                    last_used_at, created_at, updated_at, version, file_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    last_used_at, created_at, updated_at, version, file_path,
+                    embedding
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 skill.id,
                 skill.name,
@@ -138,14 +175,13 @@ class SkillsStore:
                 skill.created_at,
                 skill.updated_at,
                 skill.version,
-                str(file_path)
+                str(file_path),
+                embedding_json,
             ))
 
-            # Update FTS index
-            conn.execute("""
-                INSERT OR REPLACE INTO skills_search (skill_id, name, description, execution_pattern)
-                VALUES (?, ?, ?, ?)
-            """, (skill.id, skill.name, skill.description, skill.execution_pattern))
+            # Update FTS index (content-sync triggers handle this automatically
+            # for external content tables, but we rebuild to be safe)
+            conn.execute("INSERT INTO skills_search(skills_search) VALUES('rebuild')")
 
     def load_skill(self, category: SkillCategory, skill_id: str) -> Optional[Skill]:
         """Load skill from file system."""
@@ -198,7 +234,80 @@ class SkillsStore:
         top_k: int = 5,
         min_effectiveness: float = 0.0
     ) -> List[Skill]:
-        """Search skills using FTS and semantic similarity."""
+        """Search skills using vector similarity (primary) with FTS5 fallback."""
+        results = self.search_skills_scored(query, category, top_k, min_effectiveness)
+        return [skill for skill, _score in results]
+
+    def search_skills_scored(
+        self,
+        query: str,
+        category: Optional[SkillCategory] = None,
+        top_k: int = 5,
+        min_effectiveness: float = 0.0
+    ) -> List[Tuple[Skill, float]]:
+        """Search skills returning (skill, similarity_score) pairs."""
+        # Try vector search first
+        results = self._vector_search_scored(query, category, top_k, min_effectiveness)
+        if results:
+            return results
+
+        # Fallback to FTS5 (no scores available, use 0.5 default)
+        fts_skills = self._fts_search(query, category, top_k, min_effectiveness)
+        return [(s, 0.5) for s in fts_skills]
+
+    def _vector_search_scored(
+        self,
+        query: str,
+        category: Optional[SkillCategory],
+        top_k: int,
+        min_effectiveness: float,
+    ) -> List[Tuple[Skill, float]]:
+        """Search skills using Ollama embedding cosine similarity."""
+        query_vec = self.embedder.embed(query)
+        if not query_vec:
+            return []
+        query_vec = normalize(query_vec)
+
+        scored: List[Tuple[float, str, str]] = []
+        with sqlite3.connect(self.db_path) as conn:
+            sql = "SELECT id, category, embedding, average_effectiveness FROM skills"
+            params: list = []
+            conditions = []
+            if category:
+                conditions.append("category = ?")
+                params.append(category)
+            if min_effectiveness > 0:
+                conditions.append("average_effectiveness >= ?")
+                params.append(min_effectiveness)
+            if conditions:
+                sql += " WHERE " + " AND ".join(conditions)
+
+            for row in conn.execute(sql, params):
+                if not row[2]:  # no embedding
+                    continue
+                skill_vec = json.loads(row[2])
+                sim = cosine_sim(query_vec, skill_vec)
+                scored.append((sim, row[0], row[1]))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        results = []
+        for sim, skill_id, skill_category in scored[:top_k]:
+            if sim < 0.3:  # relevance threshold
+                break
+            skill = self.load_skill(skill_category, skill_id)
+            if skill:
+                results.append((skill, sim))
+        return results
+
+    def _fts_search(
+        self,
+        query: str,
+        category: Optional[SkillCategory],
+        top_k: int,
+        min_effectiveness: float,
+    ) -> List[Skill]:
+        """Fallback FTS5 search."""
         skills = []
         safe_query = self._sanitize_fts_query(query)
 
@@ -207,7 +316,7 @@ class SkillsStore:
                 if category:
                     cursor = conn.execute("""
                         SELECT s.id, s.category FROM skills s
-                        JOIN skills_search fs ON s.id = fs.skill_id
+                        JOIN skills_search fs ON s.rowid = fs.rowid
                         WHERE skills_search MATCH ? AND s.category = ? AND s.average_effectiveness >= ?
                         ORDER BY s.average_effectiveness DESC
                         LIMIT ?
@@ -215,7 +324,7 @@ class SkillsStore:
                 else:
                     cursor = conn.execute("""
                         SELECT s.id, s.category FROM skills s
-                        JOIN skills_search fs ON s.id = fs.skill_id
+                        JOIN skills_search fs ON s.rowid = fs.rowid
                         WHERE skills_search MATCH ? AND s.average_effectiveness >= ?
                         ORDER BY s.average_effectiveness DESC
                         LIMIT ?
@@ -225,8 +334,9 @@ class SkillsStore:
                     skill = self.load_skill(skill_category, skill_id)
                     if skill:
                         skills.append(skill)
-            except Exception:
-                pass
+            except Exception as e:
+                import sys
+                print(f"FTS5 search error: {e}", file=sys.stderr)
 
         return skills
 
@@ -266,9 +376,87 @@ class SkillsStore:
         # Delete from database
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("DELETE FROM skills WHERE id = ?", (skill_id,))
-            conn.execute("DELETE FROM skills_search WHERE skill_id = ?", (skill_id,))
+            conn.execute("INSERT INTO skills_search(skills_search) VALUES('rebuild')")
 
         return True
+
+    def log_usage(
+        self,
+        context: str,
+        skill_id: Optional[str],
+        effectiveness: Optional[float],
+    ) -> None:
+        """Log a skill usage event for pattern detection."""
+        from datetime import datetime
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO skill_usage_log (context, skill_id, effectiveness, timestamp) "
+                "VALUES (?, ?, ?, ?)",
+                (context, skill_id, effectiveness, datetime.now().isoformat()),
+            )
+
+    def get_low_effectiveness_skills(
+        self, threshold: float = 0.5, min_executions: int = 3
+    ) -> List[dict]:
+        """Get skills with low effectiveness."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT id, name, category, average_effectiveness, total_executions, "
+                "last_used_at, file_path FROM skills "
+                "WHERE average_effectiveness < ? AND total_executions >= ? "
+                "ORDER BY average_effectiveness ASC",
+                (threshold, min_executions),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_stale_skills(self, days: int = 60) -> List[dict]:
+        """Get skills unused for more than N days."""
+        from datetime import datetime, timedelta
+
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT id, name, category, average_effectiveness, total_executions, "
+                "last_used_at FROM skills "
+                "WHERE last_used_at IS NOT NULL AND last_used_at < ? "
+                "ORDER BY last_used_at ASC",
+                (cutoff,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_unmatched_patterns(self, min_frequency: int = 3) -> List[dict]:
+        """Get task patterns that have no matching skill (repeated N+ times)."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT context, COUNT(*) as frequency, "
+                "AVG(effectiveness) as avg_effectiveness, "
+                "MAX(timestamp) as last_seen "
+                "FROM skill_usage_log "
+                "WHERE skill_id IS NULL "
+                "GROUP BY context HAVING COUNT(*) >= ? "
+                "ORDER BY COUNT(*) DESC",
+                (min_frequency,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_recent_usage_log(
+        self, skill_id: str, limit: int = 10
+    ) -> List[dict]:
+        """Get recent usage log entries for a skill."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT context, effectiveness, timestamp "
+                "FROM skill_usage_log "
+                "WHERE skill_id = ? "
+                "ORDER BY timestamp DESC LIMIT ?",
+                (skill_id, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
 
     def _skill_from_dict(self, data: dict) -> Skill:
         """Convert dictionary to Skill object."""

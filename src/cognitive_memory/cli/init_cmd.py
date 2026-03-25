@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -24,6 +26,10 @@ _MSG = {
         "opt1": "  - Install Ollama for semantic search: brew install ollama",
         "opt2": "  - Run: ollama pull zylonai/multilingual-e5-large",
         "opt3": "  - Export skills from DB: cogmem skills export",
+        "skill_creator_installed": "Installed Anthropic official skill-creator plugin",
+        "skill_creator_exists": "skill-creator plugin already installed",
+        "skill_creator_skip": "Claude Code not found — install skill-creator manually: claude plugins install skill-creator@claude-plugins-official",
+        "skill_creator_fail": "Failed to install skill-creator plugin (install manually: claude plugins install skill-creator@claude-plugins-official)",
     },
     "ja": {
         "created": "作成しました: {}",
@@ -40,6 +46,10 @@ _MSG = {
         "opt1": "  - セマンティック検索用に Ollama をインストール: brew install ollama",
         "opt2": "  - 実行: ollama pull zylonai/multilingual-e5-large",
         "opt3": "  - スキルをDBからエクスポート: cogmem skills export",
+        "skill_creator_installed": "Anthropic 公式 skill-creator プラグインをインストールしました",
+        "skill_creator_exists": "skill-creator プラグインはインストール済みです",
+        "skill_creator_skip": "Claude Code が見つかりません — 手動でインストールしてください: claude plugins install skill-creator@claude-plugins-official",
+        "skill_creator_fail": "skill-creator プラグインのインストールに失敗しました（手動: claude plugins install skill-creator@claude-plugins-official）",
     },
 }
 
@@ -90,6 +100,39 @@ _DEFAULT_MEMORY_RECALL_SKILL = {
 - 「わからない」と答える前に必ず検索すること
 """,
 }
+
+
+def _install_skill_creator(msg: dict) -> None:
+    """Install Anthropic official skill-creator plugin if not present."""
+    claude_bin = shutil.which("claude")
+    if not claude_bin:
+        print(msg["skill_creator_skip"])
+        return
+
+    # Check if already installed
+    try:
+        result = subprocess.run(
+            [claude_bin, "plugins", "list"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if "skill-creator" in result.stdout:
+            print(msg["skill_creator_exists"])
+            return
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+    # Install
+    try:
+        result = subprocess.run(
+            [claude_bin, "plugins", "install", "skill-creator@claude-plugins-official"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            print(msg["skill_creator_installed"])
+        else:
+            print(msg["skill_creator_fail"])
+    except (subprocess.TimeoutExpired, OSError):
+        print(msg["skill_creator_fail"])
 
 
 def _select_language() -> str:
@@ -257,6 +300,9 @@ def run_init(target_dir: str = ".", lang: str | None = None):
         else:
             gitignore.write_text(f"# Cognitive Memory\n{db_entry}\n")
             print(msg["created"].format(gitignore))
+
+    # Install Anthropic official skill-creator plugin
+    _install_skill_creator(msg)
 
     print()
     print(msg["done_title"])

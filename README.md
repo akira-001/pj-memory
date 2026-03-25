@@ -133,6 +133,8 @@ pip install cogmem-agent
 cogmem init        # Scaffolds project structure (see below)
 ```
 
+`cogmem init` automatically installs the [Anthropic official skill-creator plugin](https://github.com/anthropics/claude-plugins-official) for Claude Code. This enables creating and iteratively improving skills with built-in evaluation workflows.
+
 ### Project Structure
 
 `cogmem init` generates the following structure:

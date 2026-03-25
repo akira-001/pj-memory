@@ -23,7 +23,7 @@ class SkillReflectionLoop:
 
     def __init__(self, store: SkillsStore):
         self.store = store
-        self.evaluator = SkillEvaluator()
+        self.evaluator = SkillEvaluator(embedder=store.embedder)
         self.generator = SkillGenerator()
 
     def read_phase(self, context: str) -> Dict[str, any]:
@@ -36,11 +36,26 @@ class SkillReflectionLoop:
         Returns:
             Dict containing applicable skills and analysis
         """
-        # Search for applicable skills
-        applicable_skills = self.store.search_skills(context, top_k=10)
+        # Search for applicable skills with similarity scores
+        scored_skills = self.store.search_skills_scored(context, top_k=10)
 
-        # Rank skills by applicability and effectiveness
-        ranked_skills = self._rank_skills_by_context(applicable_skills, context)
+        # Build score map with min-max normalization to amplify differences
+        raw_scores = {skill.id: sim for skill, sim in scored_skills}
+        applicable_skills = [skill for skill, _sim in scored_skills]
+
+        if len(raw_scores) > 1:
+            min_sim = min(raw_scores.values())
+            max_sim = max(raw_scores.values())
+            spread = max_sim - min_sim
+            if spread > 0:
+                score_map = {sid: (sim - min_sim) / spread for sid, sim in raw_scores.items()}
+            else:
+                score_map = {sid: 0.5 for sid in raw_scores}
+        else:
+            score_map = {sid: 1.0 for sid in raw_scores}
+
+        # Rank skills using vector similarity scores
+        ranked_skills = self._rank_skills_by_context(applicable_skills, context, score_map)
 
         # Analysis of the situation
         analysis = {
@@ -53,16 +68,18 @@ class SkillReflectionLoop:
 
         return {
             "applicable_skills": ranked_skills,
-            "analysis": analysis
+            "analysis": analysis,
+            "score_map": score_map,
         }
 
-    def select_best_skill(self, applicable_skills: List[Skill], context: str) -> Optional[Skill]:
+    def select_best_skill(self, applicable_skills: List[Skill], context: str, score_map: Optional[Dict[str, float]] = None) -> Optional[Skill]:
         """
         Select the best skill for execution based on context and performance.
 
         Args:
             applicable_skills: List of skills that could apply
             context: Current situation context
+            score_map: Pre-computed vector similarity scores {skill_id: score}
 
         Returns:
             Best skill to execute, or None if no suitable skill
@@ -73,7 +90,7 @@ class SkillReflectionLoop:
         # Score skills based on multiple factors
         scored_skills = []
         for skill in applicable_skills:
-            score = self._calculate_skill_selection_score(skill, context)
+            score = self._calculate_skill_selection_score(skill, context, score_map)
             scored_skills.append((skill, score))
 
         # Sort by score and return best
@@ -193,13 +210,21 @@ class SkillReflectionLoop:
 
         return reflection
 
-    def _rank_skills_by_context(self, skills: List[Skill], context: str) -> List[Skill]:
+    def _rank_skills_by_context(
+        self,
+        skills: List[Skill],
+        context: str,
+        score_map: Optional[Dict[str, float]] = None,
+    ) -> List[Skill]:
         """Rank skills by their applicability to the current context."""
         scored_skills = []
 
         for skill in skills:
-            # Calculate context similarity
-            context_score = self.evaluator.calculate_context_similarity(context, skill.description)
+            # Use pre-computed vector similarity if available
+            if score_map and skill.id in score_map:
+                context_score = score_map[skill.id]
+            else:
+                context_score = self.evaluator.calculate_context_similarity(context, skill.description)
 
             # Factor in skill effectiveness
             effectiveness_score = skill.usage_stats.average_effectiveness
@@ -207,11 +232,11 @@ class SkillReflectionLoop:
             # Consider recency (more recent = better)
             recency_score = self._calculate_recency_score(skill)
 
-            # Combined score
+            # Combined score — context relevance dominates
             total_score = (
-                context_score * 0.4 +
-                effectiveness_score * 0.4 +
-                recency_score * 0.2
+                context_score * 0.55 +
+                effectiveness_score * 0.30 +
+                recency_score * 0.15
             )
 
             scored_skills.append((skill, total_score))
@@ -220,13 +245,16 @@ class SkillReflectionLoop:
         scored_skills.sort(key=lambda x: x[1], reverse=True)
         return [skill for skill, score in scored_skills]
 
-    def _calculate_skill_selection_score(self, skill: Skill, context: str) -> float:
+    def _calculate_skill_selection_score(self, skill: Skill, context: str, score_map: Optional[Dict[str, float]] = None) -> float:
         """Calculate comprehensive score for skill selection."""
         # Base effectiveness
         effectiveness = skill.usage_stats.average_effectiveness
 
-        # Context relevance
-        context_relevance = self.evaluator.calculate_context_similarity(context, skill.description)
+        # Context relevance (most important for correct matching)
+        if score_map and skill.id in score_map:
+            context_relevance = score_map[skill.id]
+        else:
+            context_relevance = self.evaluator.calculate_context_similarity(context, skill.description)
 
         # Success rate
         success_rate = (
@@ -237,11 +265,11 @@ class SkillReflectionLoop:
         # Recency factor (prefer recently used skills)
         recency = self._calculate_recency_score(skill)
 
-        # Combine scores with weights
+        # Combine scores with weights — context relevance dominates
         score = (
-            effectiveness * 0.35 +
-            context_relevance * 0.30 +
-            success_rate * 0.25 +
+            context_relevance * 0.50 +
+            effectiveness * 0.25 +
+            success_rate * 0.15 +
             recency * 0.10
         )
 

@@ -36,21 +36,13 @@ Step 3: Run `cogmem index` (differential index update)
          → Skip if Ollama is not running
          → If cogmem is not installed, run `pip install cogmem-agent`
 
-Step 4: Load skill files from `.claude/skills/` and inject relevant skills into context
-         → Extract keywords from user's message / task content
-         → Match against each skill file's "## Triggers" section
-         → Keep matched skill content as working context
-         → Always load generic skills (memory-recall.md) even without a match
-         → Follow procedures and patterns described in matched skills
-         ※ Skills are not just "referenced" — they must be "acted upon"
-
-Step 5: Run `cogmem search` with keywords from the current conversation context
+Step 4: Run `cogmem search` with keywords from the current conversation context
          → Present entries with score >= 0.75 and arousal >= 0.6 as flashbacks
 
-Step 6: Run `cogmem signals` to check crystallization signals
+Step 5: Run `cogmem signals` to check crystallization signals
          → Add notification only if conditions are met
 
-Step 7: Token budget check (target: 6k tokens total)
+Step 6: Token budget check (target: 6k tokens total)
          → Recommend /compact if budget is exceeded
 
 Post-Init response format (add to the beginning only if notifications exist):
@@ -138,7 +130,10 @@ After completing a task that referenced a skill, execute the following:
    ```bash
    cogmem skills learn "task summary" --effectiveness 0.0-1.0 --user-satisfaction 0.0-1.0
    ```
-4. If the skill's procedure needs improvement, directly update the file in `.claude/skills/`
+4. If skills were improved or created, run `cogmem skills export --force` to sync to `.claude/skills/`:
+   ```bash
+   cogmem skills export --force
+   ```
 
 ### When to Provide Feedback
 - After task completion (success or failure)
@@ -146,7 +141,11 @@ After completing a task that referenced a skill, execute the following:
 - When a new pattern is discovered
 
 ### Auto-Generation of New Skills
-When the same type of task is repeated 3+ times, extract the pattern and create a new skill file in `.claude/skills/`.
+When the same type of task is repeated 3+ times:
+1. Run `cogmem skills create` to register the skill in the DB
+2. Run `cogmem skills export --force` to output as an MD file to `.claude/skills/`
+
+Note: Do not edit `.claude/skills/` directly. Always use the cogmem DB → export flow.
 
 ---
 

@@ -1,8 +1,8 @@
-# Memory Recall Skill
+---
+description: Search past conversations with cogmem when user references prior context or makes ambiguous references
+---
 
-## Triggers
-- User references past conversations ("we talked about", "last time", "remember")
-- Ambiguous references that need context
+# Memory Recall Skill
 
 ## Steps
 1. Check the current conversation context for the answer

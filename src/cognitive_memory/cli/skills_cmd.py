@@ -45,6 +45,12 @@ def run_skills(args):
         run_skills_export(skills_manager, args, config)
     elif args.skills_command == "import":
         run_skills_import(skills_manager, args)
+    elif args.skills_command == "audit":
+        run_skills_audit(skills_manager, args)
+    elif args.skills_command == "review":
+        run_skills_review(skills_manager, args)
+    elif args.skills_command == "ingest":
+        run_skills_ingest(skills_manager, args)
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)
@@ -306,16 +312,15 @@ async def run_skills_learn(skills_manager: SkillsManager, args):
 def _skill_to_markdown(skill) -> str:
     """Convert a Skill object to markdown format for .claude/skills/."""
     lines = []
+    # YAML frontmatter for Claude Code native skill matching
+    lines.append("---")
+    lines.append(f"description: {skill.description}")
+    lines.append("---")
+    lines.append("")
     lines.append(f"# {skill.name}")
     lines.append("")
     lines.append(f"*Category: {skill.category} | Effectiveness: {skill.usage_stats.average_effectiveness:.2f} | Version: {skill.version}*")
     lines.append(f"*Skill ID: {skill.id}*")
-    lines.append("")
-    lines.append("## トリガー")
-    for line in skill.description.split(". "):
-        line = line.strip()
-        if line:
-            lines.append(f"- {line}")
     lines.append("")
     lines.append("## 手順")
     for i, step in enumerate(skill.execution_pattern.split("\n"), 1):
@@ -391,9 +396,21 @@ def _parse_skill_markdown(filepath: Path) -> dict:
 
     lines = content.split("\n")
     current_section = None
-    section_lines = {"triggers": [], "steps": [], "description": []}
+    section_lines = {"triggers": [], "steps": []}
 
-    for line in lines:
+    # Parse YAML frontmatter if present
+    frontmatter_description = ""
+    body_start = 0
+    if lines and lines[0].strip() == "---":
+        for i, line in enumerate(lines[1:], 1):
+            if line.strip() == "---":
+                body_start = i + 1
+                break
+            match = re.match(r'^description:\s*(.+)', line)
+            if match:
+                frontmatter_description = match.group(1).strip()
+
+    for line in lines[body_start:]:
         stripped = line.strip()
         if stripped.startswith("# ") and not stripped.startswith("## "):
             result["name"] = stripped[2:].strip()
@@ -414,7 +431,12 @@ def _parse_skill_markdown(filepath: Path) -> dict:
         elif current_section == "steps" and stripped:
             section_lines["steps"].append(stripped)
 
-    result["description"] = ". ".join(section_lines["triggers"])
+    # Prefer frontmatter description, fall back to triggers section
+    if frontmatter_description:
+        result["description"] = frontmatter_description
+    elif section_lines["triggers"]:
+        result["description"] = ". ".join(section_lines["triggers"])
+
     result["execution_pattern"] = "\n".join(section_lines["steps"])
     return result
 
@@ -468,3 +490,158 @@ def run_skills_import(skills_manager: SkillsManager, args):
     print(f"\nImported {imported} skills from {source_dir}")
     if skipped:
         print(f"Skipped {skipped} existing skills (use --force to overwrite)")
+
+
+def run_skills_audit(skills_manager: SkillsManager, args):
+    """Audit skills and recommend improvements."""
+    from ..skills.audit import SkillAuditor
+
+    auditor = SkillAuditor(skills_manager.store)
+    result = auditor.audit(brief=args.brief)
+
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        recs = result["recommendations"]
+        summary = result["summary"]
+
+        if not recs:
+            print("All skills are healthy. No recommendations.")
+            return
+
+        print(f"\nSkill Audit Results")
+        print("=" * 50)
+        print(f"Total skills: {summary['total_skills']}")
+        print(f"Needs improvement: {summary['needs_improvement']}")
+        print(f"Suggested new: {summary['suggested_new']}")
+        print(f"Stale: {summary['stale']}")
+
+        print(f"\nRecommendations:")
+        for i, rec in enumerate(recs, 1):
+            priority_marker = {"high": "!!!", "medium": "!!", "low": "!"}.get(rec["priority"], "")
+            rec_type = rec["type"].upper()
+            if rec["type"] == "create":
+                print(f"  {i}. [{rec_type}] {priority_marker} {rec['pattern']}")
+            else:
+                print(f"  {i}. [{rec_type}] {priority_marker} {rec.get('skill_name', 'unknown')}")
+            print(f"     Reason: {rec['reason']}")
+
+
+def run_skills_ingest(skills_manager: SkillsManager, args):
+    """Ingest skill-creator benchmark results."""
+    from ..skills.ingest import BenchmarkIngestor
+
+    ingestor = BenchmarkIngestor(skills_manager.store)
+    result = ingestor.ingest(
+        workspace_path=args.benchmark,
+        skill_name=args.skill_name,
+    )
+
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        if "error" in result:
+            print(f"Error: {result['error']}")
+            sys.exit(1)
+
+        print(f"\nBenchmark Ingested")
+        print("=" * 30)
+        print(f"Skill: {result['skill_name']}")
+        print(f"Skill ID: {result['skill_id'] or 'not found in DB'}")
+        print(f"Source: {result['source']}")
+        print(f"Effectiveness: {result['metrics']['effectiveness']:.3f}")
+        print(f"Error Rate: {result['metrics']['error_rate']:.3f}")
+        print(f"Execution Time: {result['metrics']['execution_time']:.0f}ms")
+
+
+def _display_width(s: str) -> int:
+    """Calculate terminal display width accounting for East Asian characters."""
+    import unicodedata
+    width = 0
+    for ch in s:
+        eaw = unicodedata.east_asian_width(ch)
+        width += 2 if eaw in ('F', 'W') else 1
+    return width
+
+
+def _truncate_to_width(s: str, max_width: int) -> str:
+    """Truncate string to fit within max_width terminal columns."""
+    import unicodedata
+    width = 0
+    result = []
+    for ch in s:
+        eaw = unicodedata.east_asian_width(ch)
+        ch_width = 2 if eaw in ('F', 'W') else 1
+        if width + ch_width > max_width:
+            break
+        result.append(ch)
+        width += ch_width
+    # Pad with spaces to fill max_width
+    text = ''.join(result)
+    padding = max_width - _display_width(text)
+    return text + ' ' * padding
+
+
+def run_skills_review(skills_manager: SkillsManager, args):
+    """Full skill health review with recommendations."""
+    from ..skills.audit import SkillAuditor
+
+    auditor = SkillAuditor(skills_manager.store)
+    result = auditor.review()
+
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+        return
+
+    summary = result["summary"]
+    skills = result["skills"]
+    recs = result["recommendations"]
+
+    print(f"\nSkill Health Review")
+    print("=" * 60)
+    print(f"Total: {summary['total_skills']}  "
+          f"Healthy: {summary['healthy']}  "
+          f"Critical: {summary['critical']}  "
+          f"New: {summary['new']}")
+    print()
+
+    # Status indicators
+    status_icon = {
+        "healthy": "[OK]",
+        "needs_attention": "[!!]",
+        "critical": "[XX]",
+        "new": "[  ]",
+    }
+    trend_icon = {
+        "improving": "^",
+        "declining": "v",
+        "stable": "-",
+    }
+
+    name_col = 28
+    if skills:
+        print(f"{'Status':<8} {'Name':<{name_col}} {'Eff':>5} {'Trend':>5} {'Exec':>5} {'Ver':>4}")
+        print("-" * 60)
+        for s in skills:
+            icon = status_icon.get(s["status"], "?")
+            arrow = trend_icon.get(s["trend"], "-")
+            name = _truncate_to_width(s['name'], name_col)
+            print(f"{icon:<8} {name} {s['effectiveness']:>5.2f} {arrow:>5} {s['executions']:>5} {s['version']:>4}")
+        print()
+
+    if recs:
+        print(f"Recommendations ({len(recs)}):")
+        print("-" * 60)
+        for i, rec in enumerate(recs, 1):
+            priority = {"high": "!!!", "medium": "!!", "low": "!"}.get(rec["priority"], "")
+            if rec["type"] == "create":
+                print(f"  {i}. [CREATE] {priority} {rec['pattern']}")
+            elif rec["type"] == "improve":
+                print(f"  {i}. [IMPROVE] {priority} {rec.get('skill_name', '?')}")
+            elif rec["type"] == "stale":
+                print(f"  {i}. [STALE] {priority} {rec.get('skill_name', '?')}")
+            print(f"     {rec['reason']}")
+        print()
+        print("Run /skill-improve <name> to start improvement loop.")
+    else:
+        print("All skills are healthy. No recommendations.")

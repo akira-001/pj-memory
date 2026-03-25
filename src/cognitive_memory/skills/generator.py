@@ -135,53 +135,15 @@ class SkillGenerator:
         return ' '.join(clean_words) + " Skill"
 
     def _generate_execution_pattern(self, request: SkillCreationRequest) -> str:
-        """Generate execution pattern based on request context and performance."""
+        """Generate minimal stub pattern. Use skill-creator for quality content."""
         context = request.context
-        performance = request.performance
         feedback = request.user_feedback
 
-        pattern = f"""# Auto-generated execution pattern
-## Context: {context}
-
-## Learned Parameters:
-- Base effectiveness: {performance.effectiveness:.2f}
-- User satisfaction: {performance.user_satisfaction:.2f}
-- Execution time: {performance.execution_time:.0f}ms
-- Error rate: {performance.error_rate:.2f}
-
-## User Feedback Integration:
-{feedback}
-
-## Execution Steps:
-
-1. **Context Analysis**
-   - Analyze current situation and requirements
-   - Identify key parameters and constraints
-   - Consider user preferences and feedback
-
-2. **Pattern Application**
-   - Apply learned strategies from similar contexts
-   - Adapt approach based on specific requirements
-   - Optimize for effectiveness and user satisfaction
-
-3. **Execution & Monitoring**
-   - Execute optimized approach
-   - Monitor intermediate results
-   - Adjust strategy if needed
-
-4. **Result Evaluation**
-   - Measure effectiveness against success metrics
-   - Collect user feedback
-   - Record lessons learned for future improvement
-
-## Success Indicators:
-- Task completion within expected time
-- User satisfaction score > 0.7
-- Error rate < 0.2
-- Positive user feedback
-"""
-
-        return pattern
+        lines = [f"# {context}"]
+        if feedback:
+            lines.append(f"\n{feedback}")
+        lines.append("\n<!-- Use /skill-creator to develop full execution steps -->")
+        return "\n".join(lines)
 
     def _generate_success_metrics(self, request: SkillCreationRequest) -> List[SuccessMetric]:
         """Generate success metrics for the new skill."""
@@ -224,35 +186,11 @@ class SkillGenerator:
         user_feedback: str,
         performance: PerformanceMetric
     ) -> str:
-        """Improve the execution pattern based on feedback and performance."""
-        improvement_note = f"""
-
-## Performance Improvement (v{datetime.now().strftime('%Y%m%d_%H%M%S')})
-
-### Previous Performance Issues:
-- Effectiveness: {performance.effectiveness:.2f}
-- Error Rate: {performance.error_rate:.2f}
-- User Feedback: "{user_feedback}"
-
-### Improvement Actions:
-- Enhanced error handling and validation
-- Optimized approach based on user feedback
-- Added adaptive strategies for better performance
-
-### Updated Execution Notes:
-"""
-
-        if performance.effectiveness < 0.3:
-            improvement_note += "- Critical: Complete strategy overhaul required\n"
-        elif performance.effectiveness < 0.5:
-            improvement_note += "- Major: Significant modifications to core approach\n"
-        else:
-            improvement_note += "- Minor: Fine-tuning and optimization adjustments\n"
-
-        if performance.error_rate > 0.5:
-            improvement_note += "- Enhanced error detection and recovery mechanisms\n"
-
-        if "slow" in user_feedback.lower() or performance.execution_time > 5000:
-            improvement_note += "- Performance optimization for faster execution\n"
-
-        return current_pattern + improvement_note
+        """Append improvement note. Use skill-creator for substantive improvements."""
+        note = (
+            f"\n\n## Improvement Note ({datetime.now().strftime('%Y-%m-%d')})\n"
+            f"- Effectiveness: {performance.effectiveness:.2f}\n"
+            f"- Feedback: {user_feedback}\n"
+            f"<!-- Run /skill-creator to apply improvements -->"
+        )
+        return current_pattern + note
