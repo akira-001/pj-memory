@@ -54,8 +54,13 @@
         <thead>
             <tr>
                 <th>{{ t('skills.name', lang) }}</th>
+                <th>{{ t('skills.category', lang) }}</th>
+                <th>{{ t('skills.effectiveness', lang) }}</th>
+                <th>{{ t('skills.executions', lang) }}</th>
                 <th>{{ t('skills.events', lang) }}</th>
+                <th>{{ t('skills.version', lang) }}</th>
                 <th>{{ t('skills.last_used', lang) }}</th>
+                <th>{{ t('skills.trend', lang) }}</th>
             </tr>
         </thead>
         <tbody>
@@ -64,21 +69,38 @@
                 <td>
                     <div style="font-weight: 500;">{{ skill.name }}</div>
                     {% if skill.summary %}
-                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.summary[:100] }}{% if skill.summary|length > 100 %}...{% endif %}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.summary[:80] }}{% if skill.summary|length > 80 %}...{% endif %}</div>
                     {% endif %}
                 </td>
                 <td>
+                    {% if skill.category != "—" %}
+                    <span class="badge badge-skill">{{ skill.category }}</span>
+                    {% else %}
+                    <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if skill.effectiveness > 0 %}
+                    <div class="eff-bar">
+                        <div class="eff-bar-fill" style="width: {{ (skill.effectiveness * 100)|round }}%; background: {% if skill.effectiveness >= 0.7 %}var(--success){% elif skill.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                    </div>
+                    <span style="margin-left: 0.5rem; font-size: 0.8125rem;">{{ "%.2f"|format(skill.effectiveness) }}</span>
+                    {% else %}
+                    <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td>{{ skill.total_executions }}</td>
+                <td>
                     {% if skill.total_events > 0 %}
                         {{ skill.total_events }}
-                        {% if skill.events_by_type %}
-                        <div style="font-size: 0.6875rem; color: var(--text-dim); margin-top: 0.125rem;">
-                            {% for etype, cnt in skill.events_by_type.items() %}
-                                <span class="badge badge-{% if etype == 'user_correction' %}error{% elif etype == 'extra_step' %}insight{% elif etype == 'skill_start' %}milestone{% else %}pattern{% endif %}" style="margin-right: 0.25rem;">{{ etype }} {{ cnt }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
                     {% else %}
                         <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td>
+                    v{{ skill.version }}
+                    {% if skill.improvements > 0 %}
+                    <span style="font-size: 0.6875rem; color: var(--success);">(+{{ skill.improvements }})</span>
                     {% endif %}
                 </td>
                 <td style="color: var(--text-dim); font-size: 0.8125rem;">
@@ -86,6 +108,17 @@
                         {{ skill.last_used_at[:10] }}
                     {% else %}
                         &mdash;
+                    {% endif %}
+                </td>
+                <td>
+                    {% if skill.trend == "up" %}
+                        <span class="trend-up">&#9650;</span>
+                    {% elif skill.trend == "down" %}
+                        <span class="trend-down">&#9660;</span>
+                    {% elif skill.trend == "new" %}
+                        <span class="badge badge-milestone">new</span>
+                    {% else %}
+                        <span class="trend-flat">&mdash;</span>
                     {% endif %}
                 </td>
             </tr>

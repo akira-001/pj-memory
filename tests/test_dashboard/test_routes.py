@@ -34,9 +34,101 @@ class TestSkillsList:
         resp = client.get("/skills")
         assert "Total" in resp.text
 
-    def test_skills_shows_skill_name(self, client):
+    def test_skills_table_has_required_columns(self, client):
+        """Table must have all 8 columns: Name, Category, Effectiveness, Executions, Events, Version, Last Used, Trend."""
         resp = client.get("/skills")
-        assert "Skills" in resp.text  # page renders with title
+        html = resp.text
+        for col_key in [
+            "skills.name", "skills.category", "skills.effectiveness",
+            "skills.executions", "skills.events", "skills.version",
+            "skills.last_used", "skills.trend",
+        ]:
+            # The i18n t() function is called in the template — check EN labels
+            from cognitive_memory.dashboard.i18n import t
+            label = t(col_key, "en")
+            assert label in html, f"Missing column header: {label} (key: {col_key})"
+
+    def test_skills_shows_skill_name_from_claude_skills(self, client, project_dir):
+        """Skills from .claude/skills/ should show their directory name."""
+        # Create a test skill in a local .claude/skills/ dir
+        from cognitive_memory.dashboard.services import skills_service
+        test_skills_dir = project_dir / ".claude" / "skills" / "test-tdd-skill"
+        test_skills_dir.mkdir(parents=True)
+        (test_skills_dir / "SKILL.md").write_text(
+            "---\nname: test-tdd-skill\ndescription: A TDD test skill\n---\n# Test\n",
+            encoding="utf-8",
+        )
+        # Temporarily add this dir to scan paths
+        original_dirs = skills_service._CLAUDE_SKILLS_DIRS[:]
+        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
+        try:
+            resp = client.get("/skills")
+            assert "test-tdd-skill" in resp.text
+            assert "A TDD test skill" in resp.text
+        finally:
+            skills_service._CLAUDE_SKILLS_DIRS[:] = original_dirs
+
+    def test_skills_shows_db_stats_for_matched_skill(self, client, project_dir):
+        """When a .claude/skills/ skill matches a DB skill, DB stats should be shown."""
+        from cognitive_memory.dashboard.services import skills_service
+        # Create .claude/skills/ entry matching the DB skill (test-skill-001)
+        test_skills_dir = project_dir / ".claude" / "skills" / "test-skill-001"
+        test_skills_dir.mkdir(parents=True)
+        (test_skills_dir / "SKILL.md").write_text(
+            "---\nname: test-skill-001\ndescription: A test skill for dashboard testing\n---\n# Test\n",
+            encoding="utf-8",
+        )
+        original_dirs = skills_service._CLAUDE_SKILLS_DIRS[:]
+        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
+        try:
+            resp = client.get("/skills")
+            assert "test-skill-001" in resp.text
+            # DB stats: effectiveness 0.75, executions 10, version v2
+            assert "0.75" in resp.text
+            assert ">10<" in resp.text  # exact match in <td>10</td>
+            assert "v2" in resp.text
+            assert "conversation-skills" in resp.text
+        finally:
+            skills_service._CLAUDE_SKILLS_DIRS[:] = original_dirs
+
+    def test_skills_shows_nonzero_executions_for_hash_id_skill(self, client, project_dir):
+        """DB skills with hash IDs should match via description and show real execution counts."""
+        import sqlite3
+        from cognitive_memory.dashboard.services import skills_service
+
+        # Insert DB skill with hash id
+        db_path = project_dir / "memory" / "skills.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "INSERT OR REPLACE INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                "skill_888_hash", "テストスキル", "automation-skills",
+                "テスト自動化スキル: テスト用のスキルです",
+                "test pattern",
+                0.90, 25, 20, "2026-03-25T12:00:00",
+                "2026-03-01T00:00:00", "2026-03-25T12:00:00", 4,
+                "path/to/skill.json", None,
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        test_dir = project_dir / ".claude" / "skills" / "test-auto"
+        test_dir.mkdir(parents=True)
+        (test_dir / "SKILL.md").write_text(
+            "---\nname: test-auto\ndescription: テスト自動化スキル\n---\n",
+            encoding="utf-8",
+        )
+        original = skills_service._CLAUDE_SKILLS_DIRS[:]
+        skills_service._CLAUDE_SKILLS_DIRS.append(project_dir / ".claude" / "skills")
+        try:
+            resp = client.get("/skills")
+            assert "test-auto" in resp.text
+            assert ">25<" in resp.text  # execution count must be 25, not 0
+            assert "0.90" in resp.text
+            assert "v4" in resp.text
+        finally:
+            skills_service._CLAUDE_SKILLS_DIRS[:] = original
 
     def test_skill_detail_returns_200(self, client):
         resp = client.get("/skills/test-skill-001")
