@@ -1,5 +1,7 @@
 """Git history pattern detection for cogmem watch."""
 from __future__ import annotations
+import re
+from collections import Counter
 from typing import Any
 
 
@@ -17,8 +19,6 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
             "entries": [{"category": str, "title": str, "content": str, "arousal": float}, ...],
         }
     """
-    import re as _re
-    from collections import Counter
 
     fix_count = 0
     revert_count = 0
@@ -52,7 +52,7 @@ def analyze_git_history(log_lines: list[str]) -> dict[str, Any]:
         # Skill creation signals: group fix commits by common words
         word_counts: Counter[str] = Counter()
         for msg in fix_messages:
-            words = _re.findall(r"[a-zA-Z]{3,}", msg.lower())
+            words = re.findall(r"[a-zA-Z]{3,}", msg.lower())
             word_counts.update(words)
         common = [w for w, c in word_counts.items() if c >= 3 and w not in ("fix", "the", "for")]
         if common:

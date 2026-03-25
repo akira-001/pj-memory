@@ -21,6 +21,9 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
             ["git", "log", f"--since={since}", "--oneline"],
             capture_output=True, text=True, cwd=config._base_dir,
         )
+        if result.returncode != 0:
+            print(result.stderr.strip(), file=sys.stderr)
+            sys.exit(1)
         log_lines = [line for line in result.stdout.strip().split("\n") if line]
     except FileNotFoundError:
         print("git not found", file=sys.stderr)
