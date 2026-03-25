@@ -95,15 +95,31 @@ class TestSkillsList:
         # Should show event count 3 and "—" for category/effectiveness/executions
         assert "skill-gamma" in html
 
-    def test_skill_sorted_by_executions_desc(self, client):
-        """Skills should be sorted: alpha(25) > test-skill-001(10) > beta(5) > gamma(0)."""
+    def test_skill_sorted_by_executions_desc_in_html(self, client):
+        """HTML table must render skills sorted: alpha(25) > test-skill-001(10) > beta(5) > gamma(0).
+        Verifies the actual rendered order, not just the service return value.
+        """
         resp = client.get("/skills")
         html = resp.text
         pos_alpha = html.index("skill-alpha")
         pos_001 = html.index("test-skill-001")
         pos_beta = html.index("skill-beta")
         pos_gamma = html.index("skill-gamma")
-        assert pos_alpha < pos_001 < pos_beta < pos_gamma
+        assert pos_alpha < pos_001 < pos_beta < pos_gamma, (
+            f"Wrong order in HTML: alpha@{pos_alpha}, 001@{pos_001}, beta@{pos_beta}, gamma@{pos_gamma}"
+        )
+
+    def test_skill_execution_counts_in_html(self, client):
+        """Execution count cells must contain correct nonzero values, not all zeros."""
+        resp = client.get("/skills")
+        html = resp.text
+        # Extract execution count cells: they appear as <td>N</td> after effectiveness column
+        import re
+        # Find all table rows with skill data and their execution counts
+        # skill-alpha should have 25, test-skill-001 should have 10, skill-beta should have 5
+        assert ">25<" in html, "skill-alpha should show 25 executions"
+        assert ">10<" in html, "test-skill-001 should show 10 executions"
+        assert ">5<" in html, "skill-beta should show 5 executions"
 
     def test_skill_detail_returns_200(self, client):
         resp = client.get("/skills/test-skill-001")
