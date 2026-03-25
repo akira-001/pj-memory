@@ -196,7 +196,8 @@ def project_dir(tmp_path):
             average_effectiveness REAL NOT NULL, total_executions INTEGER NOT NULL,
             successful_executions INTEGER NOT NULL, last_used_at TEXT,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-            version INTEGER NOT NULL, file_path TEXT NOT NULL, embedding TEXT
+            version INTEGER NOT NULL, file_path TEXT NOT NULL, embedding TEXT,
+            claude_skill_name TEXT
         )
     """)
     sconn.execute("""
@@ -215,7 +216,7 @@ def project_dir(tmp_path):
 
     # DB skill matching test-skill-001 (exact id match)
     sconn.execute(
-        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             "test-skill-001", "Test Skill", "conversation-skills",
             "A test skill for dashboard testing",
@@ -223,12 +224,13 @@ def project_dir(tmp_path):
             0.75, 10, 8, "2026-03-20T10:00:00",
             "2026-03-10T00:00:00", "2026-03-20T10:00:00", 2,
             str(skills_dir / "conversation-skills" / "test-skill-001.json"), None,
+            "test-skill-001",  # claude_skill_name = exact id
         ),
     )
 
-    # DB skill matching skill-alpha (via description title match)
+    # DB skill matching skill-alpha (via claude_skill_name)
     sconn.execute(
-        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             "skill_hash_alpha", "Alpha Skill", "automation-skills",
             "Alpha skill: for testing dashboard rendering",
@@ -236,12 +238,13 @@ def project_dir(tmp_path):
             0.92, 25, 23, "2026-03-25T10:00:00",
             "2026-03-01T00:00:00", "2026-03-25T10:00:00", 3,
             "path/alpha.json", None,
+            "skill-alpha",  # claude_skill_name
         ),
     )
 
-    # DB skill matching skill-beta (via description title match)
+    # DB skill matching skill-beta (via claude_skill_name)
     sconn.execute(
-        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO skills VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             "skill_hash_beta", "Beta Skill", "meta-skills",
             "Beta skill: with low effectiveness",
@@ -249,6 +252,7 @@ def project_dir(tmp_path):
             0.35, 5, 2, "2026-03-18T10:00:00",
             "2026-03-05T00:00:00", "2026-03-18T10:00:00", 1,
             "path/beta.json", None,
+            "skill-beta",  # claude_skill_name
         ),
     )
 

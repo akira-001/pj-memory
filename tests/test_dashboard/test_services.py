@@ -166,8 +166,8 @@ class TestSkillsService:
             for field in required:
                 assert field in s, f"Skill {s.get('name')}: missing field '{field}'"
 
-    def test_skill_alpha_matched_by_title(self, config):
-        """skill-alpha matches DB via description title, gets DB stats."""
+    def test_skill_alpha_matched_by_claude_skill_name(self, config):
+        """skill-alpha matches DB via claude_skill_name column, gets DB stats."""
         skills = get_skills_list(config)
         alpha = [s for s in skills if s["name"] == "skill-alpha"][0]
         assert alpha["total_executions"] == 25
@@ -185,8 +185,8 @@ class TestSkillsService:
         assert s001["version"] == 2
         assert s001["total_events"] == 2  # skill_start + extra_step
 
-    def test_skill_beta_has_low_effectiveness(self, config):
-        """skill-beta matches DB, has low effectiveness and trend down."""
+    def test_skill_beta_matched_by_claude_skill_name(self, config):
+        """skill-beta matches DB via claude_skill_name, has low effectiveness."""
         skills = get_skills_list(config)
         beta = [s for s in skills if s["name"] == "skill-beta"][0]
         assert beta["total_executions"] == 5
