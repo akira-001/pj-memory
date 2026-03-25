@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}cogmem{% endblock %} — cogmem dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% set lang = get_lang(request) %}
+    <nav class="sidebar">
+        <div class="sidebar-brand">cogmem</div>
+        <a href="/" class="nav-link {% if active_page == 'memory' %}active{% endif %}">
+            <span class="nav-icon">&#9679;</span> {{ t('nav.memory', lang) }}
+        </a>
+        <a href="/skills" class="nav-link {% if active_page == 'skills' %}active{% endif %}">
+            <span class="nav-icon">&#9733;</span> {{ t('nav.skills', lang) }}
+        </a>
+        <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}">
+            <span class="nav-icon">&#9776;</span> {{ t('nav.logs', lang) }}
+        </a>
+        <a href="/search" class="nav-link {% if active_page == 'search' %}active{% endif %}">
+            <span class="nav-icon">&#8981;</span> {{ t('nav.search', lang) }}
+        </a>
+        <a href="/personality" class="nav-link {% if active_page == 'personality' %}active{% endif %}">
+            <span class="nav-icon">&#9824;</span> {{ t('nav.personality', lang) }}
+        </a>
+        <div class="lang-switch">
+            <a href="/_lang/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
+            <a href="/_lang/ja" class="lang-btn {% if lang == 'ja' %}active{% endif %}">JA</a>
+        </div>
+    </nav>
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+    <div class="htmx-indicator" id="global-indicator">Loading...</div>
+    <div id="skill-modal"></div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

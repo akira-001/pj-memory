@@ -1,0 +1,145 @@
+{% set lang = get_lang(request) %}
+<div class="modal-overlay" onclick="if(event.target===this)document.getElementById('skill-modal').innerHTML=''">
+    <div class="modal-content">
+        <button class="modal-close" onclick="document.getElementById('skill-modal').innerHTML=''">&times;</button>
+
+        <!-- Header -->
+        <h2 style="margin-bottom: 0.25rem;">{{ skill.name }} <span class="badge badge-skill">{{ skill.category }}</span></h2>
+        <p style="font-size: 0.8125rem; color: var(--text-dim); margin-bottom: 1.25rem;">{{ skill.description }}</p>
+
+        <!-- Stats -->
+        <div class="stats-grid" style="margin-bottom: 1.25rem;">
+            <div class="stat-card">
+                <div class="stat-label">{{ t('skills.effectiveness', lang) }}</div>
+                <div class="stat-value">{{ "%.2f"|format(skill.usage_stats.average_effectiveness) }}</div>
+                <div class="eff-bar" style="margin-top: 0.5rem;">
+                    <div class="eff-bar-fill" style="width: {{ (skill.usage_stats.average_effectiveness * 100)|round }}%; background: {% if skill.usage_stats.average_effectiveness >= 0.7 %}var(--success){% elif skill.usage_stats.average_effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">{{ t('skills.executions', lang) }}</div>
+                <div class="stat-value">{{ skill.usage_stats.total_executions }}</div>
+                <div class="stat-sub">{{ skill.usage_stats.successful_executions }} successful</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">{{ t('skills.version', lang) }}</div>
+                <div class="stat-value">{{ skill.version }}</div>
+                <div class="stat-sub">{{ t('skills.updated', lang) }} {{ skill.updated_at[:10] }}</div>
+            </div>
+        </div>
+
+        <!-- Execution Pattern -->
+        {% if skill.execution_pattern %}
+        <div style="margin-bottom: 1.25rem;">
+            <div class="section-title">{{ t('skills.exec_pattern', lang) }}</div>
+            <div style="font-size: 0.8125rem; color: var(--text-dim); white-space: pre-wrap; background: var(--bg); padding: 0.75rem; border-radius: 6px;">{{ skill.execution_pattern }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Effectiveness Trend Chart -->
+        {% if trend_data %}
+        <div style="margin-bottom: 1.25rem;">
+            <div class="section-title">{{ t('skills.eff_trend', lang) }}</div>
+            <div style="height: 160px;">
+                <canvas id="modal-trend-chart"></canvas>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Events Timeline -->
+        {% if events %}
+        <div style="margin-bottom: 1.25rem;">
+            <div class="section-title">{{ t('skills.events', lang) }}</div>
+            <div class="timeline">
+                {% for event in events[:10] %}
+                <div class="timeline-item">
+                    <div class="timeline-date">{{ event.timestamp[:16] }}</div>
+                    <div class="timeline-text">
+                        <span class="badge badge-{% if event.event_type == 'skill_start' %}milestone{% elif event.event_type == 'skill_end' %}decision{% elif event.event_type == 'error_recovery' %}error{% elif event.event_type == 'user_correction' %}error{% elif event.event_type == 'extra_step' %}pattern{% elif event.event_type == 'skipped_step' %}question{% else %}insight{% endif %}">
+                            {{ event.event_type }}
+                        </span>
+                        <div style="margin-top: 0.25rem;">{{ event.description }}</div>
+                        {% if event.step_ref %}
+                        <div style="color: var(--text-dim); font-size: 0.75rem;">Step: {{ event.step_ref }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Usage -->
+        {% if usage_log %}
+        <div>
+            <div class="section-title">{{ t('skills.recent_usage', lang) }}</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>{{ t('skills.effectiveness', lang) }}</th>
+                        <th>{{ t('skills.context', lang) }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in usage_log[:10] %}
+                    <tr>
+                        <td style="font-size: 0.75rem; color: var(--text-dim); white-space: nowrap;">{{ entry.timestamp[:10] }}</td>
+                        <td>
+                            {% if entry.effectiveness is not none %}
+                            <span style="color: {% if entry.effectiveness >= 0.7 %}var(--success){% elif entry.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};">
+                                {{ "%.2f"|format(entry.effectiveness) }}
+                            </span>
+                            {% else %}
+                            &mdash;
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8125rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ entry.context }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div style="margin-top: 1.25rem; text-align: right;">
+            <a href="/skills/{{ skill.id }}" class="btn" style="text-decoration: none;">{{ t('skills.overview', lang) }} &rarr;</a>
+        </div>
+    </div>
+</div>
+
+{% if trend_data %}
+<script>
+(function() {
+    const data = {{ trend_data | tojson }};
+    const canvas = document.getElementById('modal-trend-chart');
+    if (!canvas) return;
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.timestamp.slice(0, 10)),
+            datasets: [{
+                label: 'Effectiveness',
+                data: data.map(d => d.effectiveness),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: '#6366f1',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { min: 0, max: 1, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8f9a' } },
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8f9a', maxRotation: 45 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+})();
+</script>
+{% endif %}

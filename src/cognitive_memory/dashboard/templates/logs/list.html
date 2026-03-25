@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Session Logs{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('logs.title', lang) }}</h1>
+</div>
+
+{% if dates %}
+
+<!-- Recent Logs (first 3) -->
+<div class="section-title">{{ t('logs.recent', lang) }}</div>
+<div style="margin-bottom: 2rem;">
+    {% for item in dates[:3] %}
+    <a href="/logs/{{ item.date }}" class="log-list-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <div>
+                <span style="font-weight: 600;">{{ item.date }}</span>
+                <span style="color: var(--text-dim); font-size: 0.8125rem; margin-left: 0.75rem;">
+                    {{ item.entry_count }} {{ t('logs.entries', lang) }}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                {% if item.has_compact %}
+                <span class="compact-badge">compact</span>
+                {% endif %}
+                <span style="color: var(--text-dim); font-size: 0.875rem;">&rarr;</span>
+            </div>
+        </div>
+        {% if item.overview %}
+        <div class="log-overview">{{ item.overview }}</div>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Earlier (remaining items) -->
+{% if dates[3:] %}
+<div class="section-title">{{ t('logs.earlier', lang) }}</div>
+<div>
+    {% for item in dates[3:] %}
+    <a href="/logs/{{ item.date }}" class="log-list-item">
+        <div>
+            <span style="font-weight: 600;">{{ item.date }}</span>
+            <span style="color: var(--text-dim); font-size: 0.8125rem; margin-left: 0.75rem;">
+                {{ item.entry_count }} {{ t('logs.entries', lang) }}
+            </span>
+            {% if item.overview %}
+            <span class="log-overview" style="display: block;">{{ item.overview.split('\n')[0][:80] }}{% if item.overview|length > 80 %}...{% endif %}</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            {% if item.has_compact %}
+            <span class="compact-badge">compact</span>
+            {% endif %}
+            <span style="color: var(--text-dim); font-size: 0.875rem;">&rarr;</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>{{ t('logs.no_logs', lang) }}</p>
+</div>
+{% endif %}
+{% endblock %}

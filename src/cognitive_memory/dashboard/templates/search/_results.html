@@ -1,0 +1,23 @@
+{% set lang = get_lang(request) %}
+{% if status %}
+<div style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-dim);">
+    {{ t('common.status', lang) }}: {{ status }} | {{ results|length }} {{ t('search.results', lang) }}
+</div>
+{% endif %}
+
+{% for result in results %}
+<div class="result-card">
+    <div class="result-header">
+        <span class="result-score">{{ "%.2f"|format(result.score) }}</span>
+        <span class="result-date">{{ result.date }}</span>
+        <span class="badge badge-{{ result.source }}">{{ result.source }}</span>
+        <span style="color: var(--text-dim); font-size: 0.75rem;">{{ t('common.arousal', lang) }}: {{ "%.1f"|format(result.arousal) }}</span>
+        <a href="/logs/{{ result.date }}" style="margin-left: auto; font-size: 0.75rem;">{{ t('search.view_log', lang) }} &rarr;</a>
+    </div>
+    <div class="result-content">{{ result.content[:300] }}{% if result.content|length > 300 %}...{% endif %}</div>
+</div>
+{% endfor %}
+
+{% if not results %}
+<div class="empty-state">{{ t('search.no_results', lang) }}{% if query %} {{ t('common.for', lang) }} "{{ query }}"{% endif %}</div>
+{% endif %}

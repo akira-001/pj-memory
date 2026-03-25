@@ -47,6 +47,12 @@ def main(argv: list[str] | None = None):
     migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions")
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
 
+    # dashboard
+    dash_parser = subparsers.add_parser("dashboard", help="Start the web dashboard")
+    dash_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind")
+    dash_parser.add_argument("--port", type=int, default=8765, help="Port to bind")
+    dash_parser.add_argument("--no-browser", action="store_true", help="Don't auto-open browser")
+
     # skills subcommand group
     skills_parser = subparsers.add_parser("skills", help="Manage skills (Memento-Skills)")
     skills_subparsers = skills_parser.add_subparsers(dest="skills_command")
@@ -163,6 +169,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "migrate":
         from .migrate_cmd import run_migrate
         run_migrate(args.dir)
+    elif args.command == "dashboard":
+        from .dashboard_cmd import run_dashboard
+        run_dashboard(host=args.host, port=args.port, no_browser=args.no_browser)
     elif args.command == "skills":
         from .skills_cmd import run_skills
         run_skills(args)

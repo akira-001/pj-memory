@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Log {{ date }}{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <p><a href="/logs" style="color: var(--accent); text-decoration: none;">&larr; {{ t('logs.all_logs', lang) }}</a></p>
+    <h1 style="margin-top: 0.5rem;">{{ date }}</h1>
+</div>
+
+{% if data is none %}
+<div class="empty-state">
+    <p>Log file not found for {{ date }}.</p>
+</div>
+{% else %}
+
+{% if data.overview %}
+<div class="stat-card" style="margin-bottom: 1.5rem;">
+    <div class="stat-label" style="margin-bottom: 0.5rem;">{{ t('logs.session_overview', lang) }}</div>
+    <div style="font-size: 0.875rem; line-height: 1.6; white-space: pre-line;">{{ data.overview }}</div>
+</div>
+{% endif %}
+
+<div class="filters-bar">
+    <select class="filter-select" id="filter-category"
+            hx-get="/logs/api/entries"
+            hx-target="#entries-list"
+            hx-include="[name='sort'],[name='q'],[name='date']"
+            hx-trigger="change"
+            hx-indicator="#global-indicator"
+            name="category">
+        <option value="">{{ t('logs.all_categories', lang) }}</option>
+        <option value="INSIGHT">INSIGHT</option>
+        <option value="DECISION">DECISION</option>
+        <option value="ERROR">ERROR</option>
+        <option value="PATTERN">PATTERN</option>
+        <option value="QUESTION">QUESTION</option>
+        <option value="MILESTONE">MILESTONE</option>
+    </select>
+
+    <select class="filter-select" id="filter-sort"
+            hx-get="/logs/api/entries"
+            hx-target="#entries-list"
+            hx-include="[name='category'],[name='q'],[name='date']"
+            hx-trigger="change"
+            hx-indicator="#global-indicator"
+            name="sort">
+        <option value="time">{{ t('logs.sort_time', lang) }}</option>
+        <option value="arousal">{{ t('logs.sort_arousal', lang) }}</option>
+    </select>
+
+    <input type="text"
+           class="search-input"
+           placeholder="{{ t('logs.search_entries', lang) }}"
+           name="q"
+           hx-get="/logs/api/entries"
+           hx-target="#entries-list"
+           hx-include="[name='category'],[name='sort'],[name='date']"
+           hx-trigger="keyup changed delay:500ms"
+           hx-indicator="#global-indicator"
+           style="max-width: 280px;">
+
+    <input type="hidden" name="date" value="{{ date }}">
+</div>
+
+<div id="entries-list">
+    {% with entries=data.entries %}
+    {% include "logs/_entries.html" %}
+    {% endwith %}
+</div>
+
+{% if data.handover %}
+<div class="stat-card" style="margin-top: 2rem;">
+    <div class="stat-label" style="margin-bottom: 0.5rem;">{{ t('logs.handover', lang) }}</div>
+    <div style="font-size: 0.875rem; line-height: 1.6; white-space: pre-line;">{{ data.handover }}</div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

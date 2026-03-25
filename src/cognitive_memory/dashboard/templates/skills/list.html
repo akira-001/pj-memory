@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Skills{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('skills.title', lang) }}</h1>
+</div>
+
+<!-- Audit Summary -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.total', lang) }}</div>
+        <div class="stat-value">{{ audit.summary.total_skills }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.needs_improvement', lang) }}</div>
+        <div class="stat-value" style="color: var(--warning);">{{ audit.summary.needs_improvement }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.suggested_new', lang) }}</div>
+        <div class="stat-value" style="color: var(--info);">{{ audit.summary.suggested_new }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.stale', lang) }}</div>
+        <div class="stat-value" style="color: var(--text-dim);">{{ audit.summary.stale }}</div>
+    </div>
+</div>
+
+<!-- Audit Recommendations -->
+{% if audit.recommendations %}
+<div class="signal-panel">
+    <h3>{{ t('skills.recommendations', lang) }}</h3>
+    {% for rec in audit.recommendations %}
+    <div class="signal-item">
+        <span class="signal-dot {% if rec.priority == 'high' %}active{% else %}inactive{% endif %}"></span>
+        <span class="badge badge-{% if rec.type == 'improve' %}error{% elif rec.type == 'create' %}insight{% else %}pattern{% endif %}">
+            {{ rec.type }}
+        </span>
+        {% if rec.skill_name is defined %}
+        <strong>{{ rec.skill_name }}</strong> &mdash;
+        {% endif %}
+        {{ rec.reason }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Skills Table -->
+{% if skills %}
+<div class="chart-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('skills.name', lang) }}</th>
+                <th>{{ t('skills.category', lang) }}</th>
+                <th>{{ t('skills.effectiveness', lang) }}</th>
+                <th>{{ t('skills.executions', lang) }}</th>
+                <th>{{ t('skills.last_used', lang) }}</th>
+                <th>{{ t('skills.trend', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for skill in skills %}
+            <tr hx-get="/skills/api/detail/{{ skill.id }}" hx-target="#skill-modal" hx-swap="innerHTML" style="cursor: pointer;">
+                <td>
+                    <div style="font-weight: 500;">{{ skill.name }}</div>
+                    {% if skill.description %}
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.description[:50] }}{% if skill.description|length > 50 %}...{% endif %}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-skill">{{ skill.category }}</span>
+                </td>
+                <td>
+                    <div class="eff-bar">
+                        <div class="eff-bar-fill" style="width: {{ (skill.effectiveness * 100)|round }}%; background: {% if skill.effectiveness >= 0.7 %}var(--success){% elif skill.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                    </div>
+                    <span style="margin-left: 0.5rem; font-size: 0.8125rem;">{{ "%.2f"|format(skill.effectiveness) }}</span>
+                </td>
+                <td>{{ skill.total_executions }}</td>
+                <td style="color: var(--text-dim); font-size: 0.8125rem;">
+                    {% if skill.last_used_at %}
+                        {{ skill.last_used_at[:10] }}
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+                <td>
+                    {% if skill.trend == "up" %}
+                        <span class="trend-up">&#9650;</span>
+                    {% elif skill.trend == "down" %}
+                        <span class="trend-down">&#9660;</span>
+                    {% elif skill.trend == "new" %}
+                        <span class="badge badge-milestone">new</span>
+                    {% else %}
+                        <span class="trend-flat">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>{{ t('skills.no_skills', lang) }}</p>
+</div>
+{% endif %}
+{% endblock %}

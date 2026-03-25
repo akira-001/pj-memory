@@ -1,0 +1,22 @@
+{% set lang = get_lang(request) %}
+{% if entries %}
+{% for entry in entries %}
+<div class="log-entry">
+    <div class="log-entry-header">
+        {% if entry.category %}
+        <span class="badge badge-{{ entry.category|lower }}">{{ entry.category }}</span>
+        {% endif %}
+        <span class="log-entry-title">{{ entry.title }}</span>
+    </div>
+    <div class="log-entry-meta">
+        {{ t('common.arousal', lang) }}: {{ "%.1f"|format(entry.arousal) }}
+        {% if entry.emotion %} | {{ entry.emotion }}{% endif %}
+    </div>
+    <div class="log-entry-body">{{ entry.body }}</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>{{ t('logs.no_entries', lang) }}</p>
+</div>
+{% endif %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('search.title', lang) }}</h1>
+    <p>{{ t('search.subtitle', lang) }}</p>
+</div>
+
+{% if summary %}
+<div class="stat-card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <div>
+            <div class="stat-label">{{ t('search.memory_index', lang) }}</div>
+            <div class="stat-value" style="font-size: 1.25rem;">{{ summary.total_memories }}</div>
+            <div class="stat-sub">{{ summary.total_days }} {{ t('search.days_suffix', lang) }}</div>
+        </div>
+        <div style="flex: 1; height: 60px;">
+            <canvas id="sparkline"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<form class="search-box" hx-get="/search/api/results" hx-target="#results" hx-indicator="#search-indicator">
+    <input type="text" name="q" class="search-input" placeholder="{{ t('search.placeholder', lang) }}" value="{{ query }}" autofocus>
+    <button type="submit" class="btn">{{ t('search.button', lang) }}</button>
+</form>
+
+<div id="search-indicator" class="htmx-indicator">{{ t('search.searching', lang) }}</div>
+
+{% if status %}
+<div style="margin-bottom: 1rem; font-size: 0.8125rem; color: var(--text-dim);">
+    {{ t('common.status', lang) }}: {{ status }} | {{ results|length }} {{ t('search.results', lang) }}
+</div>
+{% endif %}
+
+<div id="results">
+    {% if results %}
+    {% include "search/_results.html" %}
+    {% elif query %}
+    <div class="empty-state">{{ t('search.no_results', lang) }} {{ t('common.for', lang) }} "{{ query }}"</div>
+    {% else %}
+    <div class="empty-state">{{ t('search.enter_query', lang) }}</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if summary and summary.daily_counts %}
+<script>
+(function() {
+    const data = {{ summary.daily_counts | tojson }};
+    const canvas = document.getElementById('sparkline');
+    if (!canvas) return;
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [{
+                data: data.map(d => d.count),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                borderWidth: 1.5,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        title: (items) => items[0].label,
+                        label: (item) => item.raw + ' memories',
+                    }
+                }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false, beginAtZero: true },
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

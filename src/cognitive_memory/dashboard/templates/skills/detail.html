@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}{{ skill.name }}{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <p><a href="/skills" style="color: var(--accent); text-decoration: none;">&larr; {{ t('skills.title', lang) }}</a></p>
+    <h1>{{ skill.name }} <span class="badge badge-skill">{{ skill.category }}</span></h1>
+</div>
+
+<div class="detail-grid">
+    <!-- Left column: Overview + Chart -->
+    <div>
+        <!-- Overview -->
+        <div class="chart-card" style="margin-bottom: 1.5rem;">
+            <h3>{{ t('skills.overview', lang) }}</h3>
+            <p style="font-size: 0.8125rem; line-height: 1.6; margin-bottom: 1rem;">{{ skill.description }}</p>
+
+            <div style="font-size: 0.8125rem; margin-bottom: 1rem;">
+                <strong>{{ t('skills.exec_pattern', lang) }}:</strong>
+                <div style="color: var(--text-dim); margin-top: 0.25rem; white-space: pre-wrap;">{{ skill.execution_pattern }}</div>
+            </div>
+
+            <div class="stats-grid" style="margin-bottom: 0;">
+                <div class="stat-card">
+                    <div class="stat-label">{{ t('skills.effectiveness', lang) }}</div>
+                    <div class="stat-value">{{ "%.2f"|format(skill.usage_stats.average_effectiveness) }}</div>
+                    <div class="eff-bar" style="margin-top: 0.5rem;">
+                        <div class="eff-bar-fill" style="width: {{ (skill.usage_stats.average_effectiveness * 100)|round }}%; background: {% if skill.usage_stats.average_effectiveness >= 0.7 %}var(--success){% elif skill.usage_stats.average_effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">{{ t('skills.executions', lang) }}</div>
+                    <div class="stat-value">{{ skill.usage_stats.total_executions }}</div>
+                    <div class="stat-sub">{{ skill.usage_stats.successful_executions }} successful</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">{{ t('skills.version', lang) }}</div>
+                    <div class="stat-value">{{ skill.version }}</div>
+                    <div class="stat-sub">{{ t('skills.updated', lang) }} {{ skill.updated_at[:10] }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Effectiveness Trend Chart -->
+        <div class="chart-card">
+            <h3>{{ t('skills.eff_trend', lang) }}</h3>
+            {% if trend_data %}
+            <canvas id="trendChart" height="200"></canvas>
+            {% else %}
+            <div class="empty-state" style="padding: 2rem;">
+                <p>No usage data yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right column: Events Timeline -->
+    <div>
+        <!-- Events Timeline -->
+        <div class="chart-card" style="margin-bottom: 1.5rem;">
+            <h3>{{ t('skills.events', lang) }}</h3>
+            {% if events %}
+            <div class="timeline">
+                {% for event in events %}
+                <div class="timeline-item">
+                    <div class="timeline-date">{{ event.timestamp[:16] }}</div>
+                    <div class="timeline-text">
+                        <span class="badge badge-{% if event.event_type == 'skill_start' %}milestone{% elif event.event_type == 'skill_end' %}decision{% elif event.event_type == 'error_recovery' %}error{% elif event.event_type == 'user_correction' %}error{% elif event.event_type == 'extra_step' %}pattern{% elif event.event_type == 'skipped_step' %}question{% else %}insight{% endif %}">
+                            {{ event.event_type }}
+                        </span>
+                        <div style="margin-top: 0.25rem;">{{ event.description }}</div>
+                        {% if event.step_ref %}
+                        <div style="color: var(--text-dim); font-size: 0.75rem;">Step: {{ event.step_ref }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding: 2rem;">
+                <p>No events recorded.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Usage Log -->
+        <div class="chart-card">
+            <h3>{{ t('skills.recent_usage', lang) }}</h3>
+            {% if usage_log %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>{{ t('skills.effectiveness', lang) }}</th>
+                        <th>{{ t('skills.context', lang) }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in usage_log %}
+                    <tr>
+                        <td style="font-size: 0.75rem; color: var(--text-dim); white-space: nowrap;">{{ entry.timestamp[:10] }}</td>
+                        <td>
+                            {% if entry.effectiveness is not none %}
+                            <span style="color: {% if entry.effectiveness >= 0.7 %}var(--success){% elif entry.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};">
+                                {{ "%.2f"|format(entry.effectiveness) }}
+                            </span>
+                            {% else %}
+                            &mdash;
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8125rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ entry.context }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="padding: 2rem;">
+                <p>No usage logs.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if trend_data %}
+<script>
+(function() {
+    const data = {{ trend_data | tojson }};
+    const labels = data.map(d => d.timestamp.slice(0, 10));
+    const values = data.map(d => d.effectiveness);
+
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Effectiveness',
+                data: values,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#6366f1',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 1,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#8b8f9a' },
+                },
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#8b8f9a', maxRotation: 45 },
+                }
+            },
+            plugins: {
+                legend: { display: false },
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,18 @@
+<!-- HTMX partial: audit recommendations -->
+{% set lang = get_lang(request) %}
+{% if audit.recommendations %}
+{% for rec in audit.recommendations %}
+<div class="signal-item">
+    <span class="signal-dot {% if rec.priority == 'high' %}active{% else %}inactive{% endif %}"></span>
+    <span class="badge badge-{% if rec.type == 'improve' %}error{% elif rec.type == 'create' %}insight{% else %}pattern{% endif %}">
+        {{ rec.type }}
+    </span>
+    {% if rec.skill_name is defined %}
+    <strong>{{ rec.skill_name }}</strong> &mdash;
+    {% endif %}
+    {{ rec.reason }}
+</div>
+{% endfor %}
+{% else %}
+<p style="color: var(--text-dim); font-size: 0.8125rem;">{{ t('skills.no_recommendations', lang) }}</p>
+{% endif %}

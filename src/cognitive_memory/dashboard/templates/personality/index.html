@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ t('personality.title', get_lang(request)) }}{% endblock %}
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('personality.title', lang) }}</h1>
+</div>
+
+<!-- Two-column: User Profile + Agent Identity -->
+<div class="detail-grid">
+    <div>
+        <h3 style="margin-bottom: 1rem;">{{ t('personality.user_profile', lang) }}</h3>
+        {% if data.user %}
+        {% for section, content in data.user.items() %}
+        <div class="stat-card" style="margin-bottom: 0.75rem;">
+            <div class="stat-label">{{ section }}</div>
+            <div style="font-size: 0.8125rem; margin-top: 0.5rem; line-height: 1.6; white-space: pre-line;">{{ content if content else t('personality.no_data', lang) }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">{{ t('personality.no_data', lang) }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <h3 style="margin-bottom: 1rem;">{{ t('personality.agent_identity', lang) }}</h3>
+        {% if data.soul %}
+        {% for section, content in data.soul.items() %}
+        <div class="stat-card" style="margin-bottom: 0.75rem;">
+            <div class="stat-label">{{ section }}</div>
+            <div style="font-size: 0.8125rem; margin-top: 0.5rem; line-height: 1.6; white-space: pre-line;">{{ content if content else t('personality.no_data', lang) }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">{{ t('personality.no_data', lang) }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Learning Timeline -->
+<h3 style="margin-top: 2rem; margin-bottom: 1rem;">{{ t('personality.learning_timeline', lang) }}</h3>
+{% if data.learning %}
+<div class="timeline">
+    {% for entry in data.learning %}
+    <div class="timeline-item">
+        <div class="timeline-date">{{ entry.date }}</div>
+        <div class="timeline-text">
+            <strong>{{ entry.title }}</strong>
+            {% if entry.body %}<br><span style="color: var(--text-dim);">{{ entry.body }}</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">{{ t('personality.no_entries', lang) }}</div>
+{% endif %}
+
+<!-- Knowledge Summary -->
+{% if data.knowledge %}
+<h3 style="margin-top: 2rem; margin-bottom: 1rem;">{{ t('personality.knowledge_summary', lang) }}</h3>
+<div class="stat-card">
+    <div style="font-size: 0.8125rem; line-height: 1.6; white-space: pre-line;">{{ data.knowledge }}</div>
+</div>
+{% endif %}
+{% endblock %}

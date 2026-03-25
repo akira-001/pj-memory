@@ -1,0 +1,115 @@
+"""Personality service for dashboard."""
+
+from __future__ import annotations
+
+import re
+import sqlite3
+from pathlib import Path
+from typing import Any, List
+
+from ...config import CogMemConfig
+
+
+def get_personality_data(config: CogMemConfig) -> dict[str, Any]:
+    """Read identity files and learning timeline."""
+    soul = _read_and_parse_md(config.identity_soul_path)
+    user = _read_and_parse_md(config.identity_user_path)
+    learning = _get_learning_timeline(config)
+    knowledge = _read_file_or_empty(config.knowledge_summary_path)
+    return {
+        "soul": soul,
+        "user": user,
+        "learning": learning,
+        "knowledge": knowledge,
+    }
+
+
+def _read_and_parse_md(path: Path) -> dict[str, str]:
+    """Parse markdown file into {section_heading: content} dict.
+
+    Splits on ## headings. Skips the title (# heading).
+    """
+    if not path.exists():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+
+    sections: dict[str, str] = {}
+    current_heading: str | None = None
+    current_lines: list[str] = []
+
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            if current_heading is not None:
+                sections[current_heading] = "\n".join(current_lines).strip()
+            current_heading = line[3:].strip()
+            current_lines = []
+        elif line.startswith("# ") and current_heading is None:
+            # Skip the title line
+            continue
+        elif current_heading is not None:
+            current_lines.append(line)
+
+    if current_heading is not None:
+        sections[current_heading] = "\n".join(current_lines).strip()
+
+    return sections
+
+
+def _read_file_or_empty(path: Path) -> str:
+    """Read file content or return empty string."""
+    if not path.exists():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _get_learning_timeline(config: CogMemConfig) -> List[dict[str, Any]]:
+    """Get INSIGHT entries from memories DB as learning timeline."""
+    db_path = config.database_path
+    if not Path(db_path).exists():
+        return []
+
+    conn: sqlite3.Connection | None = None
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT date, content, arousal FROM memories "
+            "WHERE content LIKE '%[INSIGHT]%' "
+            "ORDER BY date DESC, id DESC LIMIT 50"
+        ).fetchall()
+
+        results: list[dict[str, Any]] = []
+        for row in rows:
+            # Extract title from content (### [INSIGHT] Title)
+            title_match = re.search(r"\[INSIGHT\]\s*(.*?)(?:\n|$)", row["content"])
+            title = title_match.group(1).strip() if title_match else "Insight"
+            # Get first content line (after header and metadata)
+            lines = row["content"].split("\n")
+            body_lines = [
+                l
+                for l in lines[1:]
+                if l.strip() and not l.strip().startswith("*Arousal")
+            ]
+            body = body_lines[0].strip() if body_lines else ""
+
+            results.append(
+                {
+                    "date": row["date"],
+                    "title": title,
+                    "body": body[:200],
+                    "arousal": row["arousal"],
+                }
+            )
+
+        return results
+    except sqlite3.Error:
+        return []
+    finally:
+        if conn is not None:
+            conn.close()

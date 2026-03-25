@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Memory Overview{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('memory.title', lang) }}</h1>
+    <p>{{ t('memory.subtitle', lang) }}</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">{{ t('memory.total_memories', lang) }}</div>
+        <div class="stat-value">{{ data.total_memories }}</div>
+        {% if data.date_range.min %}
+        <div class="stat-sub">{{ t('memory.since', lang) }} {{ data.date_range.min }}</div>
+        {% endif %}
+        <div class="stat-sub">{{ data.total_days }} {{ t('memory.days', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('memory.date_range', lang) }}</div>
+        <div class="stat-value" style="font-size: 1.125rem;">
+            {% if data.date_range.min %}
+                {{ data.date_range.min }} — {{ data.date_range.max }}
+            {% else %}
+                {{ t('memory.no_data', lang) }}
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('memory.avg_arousal', lang) }}</div>
+        <div class="stat-value">{{ data.avg_arousal }}</div>
+        <div class="stat-sub">{{ t('memory.scale', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('memory.categories', lang) }}</div>
+        <div class="stat-value">{{ data.category_counts | length }}</div>
+        <div class="stat-sub">
+            {% for cat, count in data.category_counts.items() %}
+                <span class="badge badge-{{ cat | lower }}">{{ cat }} {{ count }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="charts-grid">
+    <div class="chart-card">
+        <h3>{{ t('memory.daily_accumulation', lang) }}</h3>
+        <p class="chart-desc">{{ t('memory.daily_desc', lang) }}</p>
+        <canvas id="dailyChart"></canvas>
+    </div>
+    <div class="chart-card">
+        <h3>{{ t('memory.category_breakdown', lang) }}</h3>
+        <p class="chart-desc">{{ t('memory.category_desc', lang) }}</p>
+        <canvas id="categoryChart"></canvas>
+    </div>
+</div>
+
+<!-- Arousal Distribution -->
+<div class="chart-card" style="margin-bottom: 2rem;">
+    <h3>{{ t('memory.arousal_distribution', lang) }}</h3>
+    <p class="chart-desc">{{ t('memory.arousal_desc', lang) }}</p>
+    <canvas id="arousalChart"></canvas>
+</div>
+
+<!-- Signals Panel -->
+<div class="signal-panel">
+    <h3>{{ t('memory.crystallization', lang) }}</h3>
+    <p class="chart-desc">{{ t('memory.crystal_desc', lang) }}</p>
+    <div class="signal-item">
+        <span class="signal-dot {{ 'active' if signals.pattern_count >= signals.pattern_threshold else 'inactive' }}"></span>
+        <span>{{ t('memory.pattern_entries', lang) }}: {{ signals.pattern_count }} / {{ signals.pattern_threshold }}</span>
+    </div>
+    <div class="signal-item">
+        <span class="signal-dot {{ 'active' if signals.error_count >= signals.error_threshold else 'inactive' }}"></span>
+        <span>{{ t('memory.error_entries', lang) }}: {{ signals.error_count }} / {{ signals.error_threshold }}</span>
+    </div>
+    <div class="signal-item">
+        <span class="signal-dot {{ 'active' if signals.log_days >= signals.log_days_threshold else 'inactive' }}"></span>
+        <span>{{ t('memory.log_days', lang) }}: {{ signals.log_days }} / {{ signals.log_days_threshold }}</span>
+    </div>
+    <div class="signal-item">
+        <span class="signal-dot {{ 'active' if signals.days_since_checkpoint >= signals.checkpoint_interval_days else 'inactive' }}"></span>
+        <span>{{ t('memory.days_since_cp', lang) }}: {{ signals.days_since_checkpoint }} / {{ signals.checkpoint_interval_days }}</span>
+    </div>
+    {% if signals.should_crystallize %}
+    <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(99, 102, 241, 0.1); border-radius: 6px; font-size: 0.8125rem;">
+        {{ t('memory.crystal_recommended', lang) }} — {{ signals.triggered_conditions | length }} {{ t('memory.conditions_met', lang) }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+Chart.defaults.color = '#e0e2e8';
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+const categoryColors = {
+    'INSIGHT': '#a5b4fc',
+    'DECISION': '#86efac',
+    'ERROR': '#fca5a5',
+    'PATTERN': '#fcd34d',
+    'QUESTION': '#93c5fd',
+    'MILESTONE': '#d8b4fe',
+    'SKILL': '#5eead4',
+};
+
+// Daily Accumulation Chart
+const dailyCounts = {{ data.daily_counts | tojson }};
+new Chart(document.getElementById('dailyChart'), {
+    type: 'bar',
+    data: {
+        labels: dailyCounts.map(d => d.date),
+        datasets: [{
+            label: 'Memories',
+            data: dailyCounts.map(d => d.count),
+            backgroundColor: '#6366f1',
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { maxTicksLimit: 15, maxRotation: 45 },
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+            }
+        }
+    }
+});
+
+// Category Breakdown Chart
+const categoryCounts = {{ data.category_counts | tojson }};
+const catLabels = Object.keys(categoryCounts);
+const catValues = Object.values(categoryCounts);
+const catColors = catLabels.map(c => categoryColors[c] || '#8b8f9a');
+
+new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+        labels: catLabels,
+        datasets: [{
+            data: catValues,
+            backgroundColor: catColors,
+            borderWidth: 0,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { padding: 16, usePointStyle: true },
+            }
+        },
+        cutout: '60%',
+    }
+});
+
+// Arousal Distribution Chart
+const arousalHist = {{ data.arousal_histogram | tojson }};
+new Chart(document.getElementById('arousalChart'), {
+    type: 'bar',
+    data: {
+        labels: arousalHist.map(d => d.bucket),
+        datasets: [{
+            label: 'Count',
+            data: arousalHist.map(d => d.count),
+            backgroundColor: arousalHist.map((d, i) => {
+                const intensity = 0.3 + (i / 10) * 0.7;
+                return `rgba(99, 102, 241, ${intensity})`;
+            }),
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
