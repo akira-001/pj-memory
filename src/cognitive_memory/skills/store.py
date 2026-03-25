@@ -109,9 +109,16 @@ class SkillsStore:
                     event_type TEXT NOT NULL,
                     description TEXT NOT NULL,
                     step_ref TEXT,
-                    timestamp TEXT NOT NULL
+                    timestamp TEXT NOT NULL,
+                    resolved INTEGER NOT NULL DEFAULT 0
                 )
             """)
+
+            # Migration: add resolved column if missing
+            try:
+                conn.execute("ALTER TABLE skill_session_events ADD COLUMN resolved INTEGER NOT NULL DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
     def save_skill(self, skill: Skill) -> None:
         """Save skill to both file system and database."""
@@ -515,9 +522,46 @@ class SkillsStore:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    def resolve_events(self, skill_name: str) -> int:
+        """Mark all unresolved events for a skill as resolved.
+
+        Called after SKILL.md is actually edited. Also increments skill version.
+        Returns count of resolved events.
+        """
+        from datetime import datetime
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "UPDATE skill_session_events SET resolved = 1 "
+                "WHERE skill_name = ? AND resolved = 0",
+                (skill_name,),
+            )
+            resolved_count = cursor.rowcount
+
+            if resolved_count > 0:
+                # Increment version — skill was actually improved
+                conn.execute(
+                    "UPDATE skills SET version = version + 1, updated_at = ? "
+                    "WHERE name = ?",
+                    (datetime.now().isoformat(), skill_name),
+                )
+
+            return resolved_count
+
     def get_track_summary(self, session_date: str) -> dict:
         """Get track summary with improvement recommendations for a session."""
-        events = self.get_session_events(session_date)
+        # Get unresolved events for the session (or all sessions if checking broadly)
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT skill_name, event_type, description, step_ref, timestamp "
+                "FROM skill_session_events "
+                "WHERE (session_date = ? OR resolved = 0) "
+                "AND resolved = 0 "
+                "ORDER BY timestamp ASC",
+                (session_date,),
+            ).fetchall()
+            events = [dict(r) for r in rows]
 
         # Group events by skill
         skills_events: dict = {}

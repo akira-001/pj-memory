@@ -55,6 +55,9 @@ def run_skills(args):
         run_skills_track(skills_manager, args)
     elif args.skills_command == "track-summary":
         run_skills_track_summary(skills_manager, args)
+    elif args.skills_command == "resolve":
+        count = skills_manager.store.resolve_events(args.skill_name)
+        print(f"Resolved {count} events for {args.skill_name}")
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)

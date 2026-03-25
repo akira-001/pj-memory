@@ -466,4 +466,59 @@ class TestSkillTracking:
         event_types = [e["event_type"] for e in summary["skills_used"][0]["events"]]
         assert "skill_start" not in event_types
         assert "skill_end" not in event_types
-        assert "user_correction" in event_types
+
+
+class TestResolveEvents:
+    """Tests for the resolve_events functionality."""
+
+    def test_resolve_events(self, store):
+        """resolve_events should mark events as resolved."""
+        store.track_event("2026-03-25", "test-skill", "user_correction", "wrong time")
+        store.track_event("2026-03-25", "test-skill", "extra_step", "added step")
+
+        # Before resolve: needs_improvement should be True
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["needs_improvement"] is True
+
+        # Resolve
+        count = store.resolve_events("test-skill")
+        assert count == 2
+
+        # After resolve: needs_improvement should be False (no unresolved events)
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 0
+
+    def test_unresolved_events_persist_across_sessions(self, store):
+        """Unresolved events from previous sessions should still trigger needs_improvement."""
+        # Event from yesterday, never resolved
+        store.track_event("2026-03-24", "test-skill", "user_correction", "wrong time")
+
+        # Check today's summary — should still show unresolved event
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["needs_improvement"] is True
+
+    def test_resolved_events_dont_trigger(self, store):
+        """Resolved events should not trigger needs_improvement."""
+        store.track_event("2026-03-24", "test-skill", "user_correction", "wrong time")
+        store.resolve_events("test-skill")
+
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 0
+
+    def test_resolve_returns_zero_when_no_events(self, store):
+        """resolve_events returns 0 when no unresolved events exist."""
+        count = store.resolve_events("nonexistent-skill")
+        assert count == 0
+
+    def test_resolve_only_affects_target_skill(self, store):
+        """resolve_events only resolves events for the specified skill."""
+        store.track_event("2026-03-25", "skill-a", "user_correction", "issue a")
+        store.track_event("2026-03-25", "skill-b", "user_correction", "issue b")
+
+        store.resolve_events("skill-a")
+
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["skill_name"] == "skill-b"

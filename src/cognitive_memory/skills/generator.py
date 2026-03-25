@@ -79,7 +79,7 @@ class SkillGenerator:
         # Update skill
         skill.improvement_history.append(improvement)
         skill.updated_at = datetime.now().isoformat()
-        skill.version += 1
+        # version is incremented by resolve_events(), not learn
 
         # Improve execution pattern if performance is low
         if performance.effectiveness < 0.5:

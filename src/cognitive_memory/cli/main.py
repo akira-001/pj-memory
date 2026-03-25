@@ -142,6 +142,10 @@ def main(argv: list[str] | None = None):
     skills_ts_parser.add_argument("--date", type=str, default=None, help="Session date (default: today)")
     skills_ts_parser.add_argument("--json", action="store_true", help="JSON output")
 
+    # skills resolve
+    skills_resolve_parser = skills_subparsers.add_parser("resolve", help="Mark skill events as resolved after SKILL.md edit")
+    skills_resolve_parser.add_argument("skill_name", type=str, help="Skill name to resolve")
+
     # watch
     watch_parser = subparsers.add_parser("watch", help="Detect patterns from git history")
     watch_parser.add_argument("--since", type=str, default="today", help="Git log --since value")
