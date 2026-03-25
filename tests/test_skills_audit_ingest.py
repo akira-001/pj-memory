@@ -441,3 +441,29 @@ class TestSkillTracking:
         assert len(summary["skills_used"]) == 1
         assert summary["skills_used"][0]["skill_name"] == "skill-bad"
         assert "skill-good" in summary["skills_ok"]
+
+    def test_track_skill_start_end(self, store):
+        """skill_start/end should be recorded but not trigger improvement."""
+        store.track_event("2026-03-25", "recall", "skill_start", "検索タスク開始")
+        store.track_event("2026-03-25", "recall", "skill_end", "検索完了")
+        events = store.get_session_events("2026-03-25")
+        assert len(events) == 2
+
+        summary = store.get_track_summary("2026-03-25")
+        assert summary["skills_used"] == []
+        assert "recall" in summary["skills_ok"]
+
+    def test_track_start_with_deviation(self, store):
+        """skill_start + deviation events: start/end excluded from judgment."""
+        store.track_event("2026-03-25", "morning-briefing", "skill_start", "朝のブリーフィング")
+        store.track_event("2026-03-25", "morning-briefing", "user_correction", "天気の場所が違う")
+        store.track_event("2026-03-25", "morning-briefing", "skill_end", "完了")
+
+        summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert summary["skills_used"][0]["needs_improvement"] is True
+        # events should NOT include skill_start/end
+        event_types = [e["event_type"] for e in summary["skills_used"][0]["events"]]
+        assert "skill_start" not in event_types
+        assert "skill_end" not in event_types
+        assert "user_correction" in event_types

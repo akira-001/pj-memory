@@ -472,7 +472,10 @@ class SkillsStore:
 
     # --- Skill Session Event Tracking ---
 
-    VALID_EVENT_TYPES = {"extra_step", "skipped_step", "error_recovery", "user_correction"}
+    VALID_EVENT_TYPES = {
+        "skill_start", "skill_end",
+        "extra_step", "skipped_step", "error_recovery", "user_correction",
+    }
 
     def track_event(
         self,
@@ -528,10 +531,15 @@ class SkillsStore:
         skills_ok = []
 
         for skill_name, skill_events in skills_events.items():
-            needs, reason = self._needs_improvement(skill_events)
+            # Filter out lifecycle events for improvement judgment
+            action_events = [
+                e for e in skill_events
+                if e["event_type"] not in ("skill_start", "skill_end")
+            ]
+            needs, reason = self._needs_improvement(action_events)
             entry = {
                 "skill_name": skill_name,
-                "events": skill_events,
+                "events": action_events,
                 "needs_improvement": needs,
                 "reason": reason,
             }
