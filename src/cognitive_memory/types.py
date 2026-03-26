@@ -27,6 +27,7 @@ class SearchResult:
     source: str  # "semantic" | "grep"
     cosine_sim: Optional[float] = None
     time_decay: Optional[float] = None
+    content_hash: Optional[str] = None
 
 
 @dataclass

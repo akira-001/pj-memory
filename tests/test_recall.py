@@ -11,6 +11,7 @@ import pytest
 
 from cognitive_memory.config import CogMemConfig
 from cognitive_memory.store import MemoryStore
+from cognitive_memory.types import SearchResult
 
 
 @pytest.fixture
@@ -140,3 +141,46 @@ class TestReinforceRecall:
 
     def test_nonexistent_hash(self, store):
         store.reinforce_recall("nonexistent")  # should not raise
+
+
+class TestSearchResultHash:
+    def test_search_result_has_content_hash(self):
+        """SearchResult accepts content_hash field."""
+        r = SearchResult(
+            score=0.9, date="2026-03-26", content="test",
+            arousal=0.5, source="semantic", content_hash="abc123",
+        )
+        assert r.content_hash == "abc123"
+
+    def test_search_result_hash_default_none(self):
+        """content_hash defaults to None."""
+        r = SearchResult(
+            score=0.9, date="2026-03-26", content="test",
+            arousal=0.5, source="grep",
+        )
+        assert r.content_hash is None
+
+
+class TestSemanticSearchHash:
+    def test_semantic_returns_content_hash(self, store):
+        """semantic_search includes content_hash from DB."""
+        content = "### [INSIGHT] テスト洞察"
+        ch = hashlib.sha256(content.encode()).hexdigest()
+        vec = [0.1] * 384
+        store.conn.execute(
+            "INSERT INTO memories (content_hash, date, content, arousal, vector) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (ch, "2026-03-26", content, 0.8, json.dumps(vec)),
+        )
+        store.conn.commit()
+
+        from cognitive_memory.search import semantic_search
+        from cognitive_memory.scoring import normalize
+
+        query_vec = normalize([0.1] * 384)
+        results, status = semantic_search(
+            query_vec, store.config.database_path, store.config, top_k=5
+        )
+        assert status == "ok"
+        assert len(results) >= 1
+        assert results[0].content_hash == ch

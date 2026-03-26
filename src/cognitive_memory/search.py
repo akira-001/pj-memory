@@ -38,7 +38,7 @@ def semantic_search(
     results: List[SearchResult] = []
     try:
         for row in conn.execute(
-            "SELECT date, content, arousal, vector FROM memories"
+            "SELECT content_hash, date, content, arousal, vector FROM memories"
         ):
             v = json.loads(row["vector"])
             sim = cosine_sim(query_vec, v)
@@ -58,6 +58,7 @@ def semantic_search(
                     source="semantic",
                     cosine_sim=round(sim, 4),
                     time_decay=round(decay, 4),
+                    content_hash=row["content_hash"],
                 )
             )
     except sqlite3.Error:
