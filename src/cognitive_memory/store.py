@@ -104,6 +104,20 @@ class MemoryStore:
             self._conn.close()
             self._conn = None
 
+    def reinforce_recall(self, content_hash: str, arousal_boost: float = 0.1) -> None:
+        """Record a recall event: increment count, boost arousal, update timestamp."""
+        self.conn.execute(
+            """
+            UPDATE memories
+            SET recall_count = recall_count + 1,
+                last_recalled = ?,
+                arousal = MIN(arousal + ?, 1.0)
+            WHERE content_hash = ?
+            """,
+            (datetime.now().isoformat(), arousal_boost, content_hash),
+        )
+        self.conn.commit()
+
     def index_file(self, filepath: Path, force: bool = False) -> int:
         """Index a single log file. Returns number of entries stored."""
         filename = filepath.name
