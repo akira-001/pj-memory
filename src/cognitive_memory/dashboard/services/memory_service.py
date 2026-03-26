@@ -58,18 +58,18 @@ def get_overview_data(config: CogMemConfig) -> dict[str, Any]:
         ).fetchall()
         daily_counts = [{"date": r["date"], "count": r["count"]} for r in daily_rows]
 
-        # Arousal histogram (bucket in Python)
+        # Arousal histogram (0.4-1.0 range, 6 buckets)
         arousal_rows = conn.execute("SELECT arousal FROM memories").fetchall()
-        buckets = [0] * 10
+        buckets = [0] * 6
         for r in arousal_rows:
             val = r["arousal"]
-            if val is not None:
-                idx = min(int(val * 10), 9)
+            if val is not None and val >= 0.4:
+                idx = min(int((val - 0.4) * 10), 5)
                 buckets[idx] += 1
 
         arousal_histogram = [
-            {"bucket": f"{i/10:.1f}-{(i+1)/10:.1f}", "count": buckets[i]}
-            for i in range(10)
+            {"bucket": f"{(i+4)/10:.1f}-{(i+5)/10:.1f}", "count": buckets[i]}
+            for i in range(6)
         ]
 
         # Category counts from content
@@ -81,6 +81,25 @@ def get_overview_data(config: CogMemConfig) -> dict[str, Any]:
                 cat = match.group(1)
                 category_counts[cat] = category_counts.get(cat, 0) + 1
 
+        most_recalled = []
+        try:
+            rows = conn.execute(
+                "SELECT content, recall_count, last_recalled, arousal "
+                "FROM memories WHERE recall_count > 0 "
+                "ORDER BY recall_count DESC LIMIT 5"
+            ).fetchall()
+            most_recalled = [
+                {
+                    "title": r["content"].split("\n")[0][:80],
+                    "recall_count": r["recall_count"],
+                    "last_recalled": r["last_recalled"],
+                    "arousal": r["arousal"],
+                }
+                for r in rows
+            ]
+        except sqlite3.OperationalError:
+            pass  # recall_count column may not exist yet
+
         return {
             "total_memories": total,
             "total_days": len(daily_counts),
@@ -89,6 +108,7 @@ def get_overview_data(config: CogMemConfig) -> dict[str, Any]:
             "daily_counts": daily_counts,
             "arousal_histogram": arousal_histogram,
             "category_counts": category_counts,
+            "most_recalled": most_recalled,
         }
 
     finally:
@@ -104,10 +124,11 @@ def _empty_data() -> dict[str, Any]:
         "avg_arousal": 0.0,
         "daily_counts": [],
         "arousal_histogram": [
-            {"bucket": f"{i/10:.1f}-{(i+1)/10:.1f}", "count": 0}
-            for i in range(10)
+            {"bucket": f"{(i+4)/10:.1f}-{(i+5)/10:.1f}", "count": 0}
+            for i in range(6)
         ],
         "category_counts": {},
+        "most_recalled": [],
     }
 
 

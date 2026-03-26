@@ -65,6 +65,35 @@
     <canvas id="arousalChart"></canvas>
 </div>
 
+{# --- Most Recalled Memories --- #}
+<section class="card">
+    <h2>{{ t('memory.most_recalled', lang) }}</h2>
+    {% if data.most_recalled %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('memory.recall_count', lang) }}</th>
+                <th>Title</th>
+                <th>{{ t('common.arousal', lang) }}</th>
+                <th>{{ t('memory.last_recalled', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in data.most_recalled %}
+            <tr>
+                <td>{{ m.recall_count }}</td>
+                <td>{{ m.title }}</td>
+                <td>{{ "%.2f"|format(m.arousal) }}</td>
+                <td>{{ m.last_recalled[:10] if m.last_recalled else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">{{ t('memory.no_recalls', lang) }}</p>
+    {% endif %}
+</section>
+
 <!-- Signals Panel -->
 <div class="signal-panel">
     <h3>{{ t('memory.crystallization', lang) }}</h3>

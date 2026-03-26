@@ -23,6 +23,13 @@ class TestMemoryOverview:
         resp = client.get("/")
         assert "Crystallization" in resp.text
 
+    def test_home_shows_recall_section(self, client):
+        """Memory overview page has a recall/想起 section."""
+        resp = client.get("/")
+        assert resp.status_code == 200
+        html = resp.text.lower()
+        assert "recall" in html or "想起" in html
+
 
 class TestSkillsList:
     """Skills list page tests.
