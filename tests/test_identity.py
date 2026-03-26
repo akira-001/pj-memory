@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cognitive_memory.identity import parse_identity_md, write_identity_md
+from cognitive_memory.identity import parse_identity_md, write_identity_md, update_identity_section
 
 
 class TestParseIdentityMd:
@@ -76,3 +76,38 @@ class TestWriteIdentityMd:
         text = md.read_text(encoding="utf-8")
         assert "## Sec" in text
         assert "Content" in text
+
+
+class TestUpdateIdentitySection:
+    def test_update_existing_section(self, tmp_path):
+        md = tmp_path / "user.md"
+        md.write_text(
+            "# User\n\n## 基本情報\n- 名前:\n- 役割:\n\n## 専門性\n[会話から観察された内容]\n",
+            encoding="utf-8",
+        )
+        update_identity_section(md, "基本情報", "- 名前: Akira\n- 役割: コンサルタント")
+        result = parse_identity_md(md)
+        assert "Akira" in result["sections"]["基本情報"]
+        assert "コンサルタント" in result["sections"]["基本情報"]
+
+    def test_add_new_section(self, tmp_path):
+        md = tmp_path / "user.md"
+        md.write_text("# User\n\n## 基本情報\nTest\n", encoding="utf-8")
+        update_identity_section(md, "新セクション", "新しい内容")
+        result = parse_identity_md(md)
+        assert result["sections"]["新セクション"] == "新しい内容"
+        assert result["sections"]["基本情報"] == "Test"
+
+    def test_overwrite_existing_data(self, tmp_path):
+        md = tmp_path / "user.md"
+        md.write_text("# User\n\n## 専門性\nPython, SQL\n", encoding="utf-8")
+        update_identity_section(md, "専門性", "Python, SQL, Go")
+        result = parse_identity_md(md)
+        assert "Go" in result["sections"]["専門性"]
+
+    def test_file_not_exists_creates(self, tmp_path):
+        md = tmp_path / "identity" / "user.md"
+        update_identity_section(md, "基本情報", "- 名前: Akira")
+        assert md.exists()
+        result = parse_identity_md(md)
+        assert "Akira" in result["sections"]["基本情報"]
