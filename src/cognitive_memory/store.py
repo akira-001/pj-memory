@@ -66,7 +66,9 @@ class MemoryStore:
                 date         TEXT,
                 content      TEXT,
                 arousal      REAL,
-                vector       BLOB
+                vector       BLOB,
+                recall_count INTEGER DEFAULT 0,
+                last_recalled TEXT
             )
         """
         )
@@ -79,6 +81,15 @@ class MemoryStore:
             )
         """
         )
+        # Migration for existing DBs
+        for col, col_def in [
+            ("recall_count", "INTEGER DEFAULT 0"),
+            ("last_recalled", "TEXT"),
+        ]:
+            try:
+                self._conn.execute(f"ALTER TABLE memories ADD COLUMN {col} {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         self._conn.commit()
 
     @property
@@ -163,7 +174,34 @@ class MemoryStore:
             return 0
 
         files = sorted(logs_dir.glob("*.md"))
-        files = [f for f in files if not f.name.endswith(".compact.md")]
+        # Prefer original .md over .compact.md; use compact only when
+        # the original has 0 indexed entries (e.g. old format logs).
+        regular = {f.stem: f for f in files if not f.name.endswith(".compact.md")}
+        compact = {
+            f.name.replace(".compact.md", ""): f
+            for f in files
+            if f.name.endswith(".compact.md")
+        }
+
+        selected: list[Path] = []
+        all_dates = sorted(set(list(regular.keys()) + list(compact.keys())))
+        for date_key in all_dates:
+            reg = regular.get(date_key)
+            comp = compact.get(date_key)
+            if reg:
+                # Check if regular file already indexed with 0 entries
+                row = self.conn.execute(
+                    "SELECT entry_count FROM indexed_files WHERE filename = ?",
+                    (reg.name,),
+                ).fetchone()
+                if row and row["entry_count"] == 0 and comp:
+                    # Regular had no entries; try compact instead
+                    selected.append(comp)
+                else:
+                    selected.append(reg)
+            elif comp:
+                selected.append(comp)
+        files = selected
 
         total = 0
         for fp in files:
