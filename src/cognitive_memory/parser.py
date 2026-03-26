@@ -33,6 +33,20 @@ def parse_entries(
     """Extract log entries from a markdown file, excluding handover section."""
     content = md_text.split(handover_delimiter)[0]
 
+    # Phase 0: Session overview as SUMMARY entry (contextual binding)
+    overview_match = re.search(
+        r"## セッション概要\s*\n(.*?)(?=\n##[# ]|\Z)", content, re.DOTALL
+    )
+    if overview_match:
+        overview_text = overview_match.group(1).strip()
+        if not is_noise(overview_text):
+            yield MemoryEntry(
+                date=date,
+                content=f"### [SUMMARY] {overview_text}",
+                arousal=0.5,
+                category="SUMMARY",
+            )
+
     # Phase 1: ### heading entries (standard format)
     entries = re.split(r"\n(?=### )", content)
     for e in entries:

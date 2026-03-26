@@ -54,14 +54,14 @@ class TestStage1Vivid:
         rows = pipeline_store.conn.execute(
             "SELECT COUNT(*) as n FROM memories WHERE date = '2026-03-20'"
         ).fetchone()
-        assert rows["n"] == 8
+        assert rows["n"] == 9  # 8 entries + 1 SUMMARY
 
     def test_arousal_distribution(self, pipeline_store):
         rows = pipeline_store.conn.execute(
             "SELECT arousal FROM memories WHERE date = '2026-03-20' ORDER BY id"
         ).fetchall()
         arousals = [r["arousal"] for r in rows]
-        assert arousals == pytest.approx([0.4, 0.5, 0.8, 0.9, 0.5, 0.6, 0.8, 0.5])
+        assert arousals == pytest.approx([0.5, 0.4, 0.5, 0.8, 0.9, 0.5, 0.6, 0.8, 0.5])
 
     def test_categories_correct(self, pipeline_store):
         rows = pipeline_store.conn.execute(
@@ -72,6 +72,7 @@ class TestStage1Vivid:
             m = re.search(r"\[([A-Z]+)\]", r["content"])
             categories.append(m.group(1) if m else None)
         assert categories == [
+            "SUMMARY",
             "QUESTION", "DECISION", "ERROR", "INSIGHT",
             "MILESTONE", "DECISION", "PATTERN", "MILESTONE",
         ]
@@ -103,7 +104,7 @@ class TestStage2Fading:
             "SELECT content, arousal FROM memories "
             "WHERE date = '2026-03-20' AND arousal < 0.6"
         ).fetchall()
-        assert len(rows) == 4
+        assert len(rows) == 5  # 4 entries + 1 SUMMARY (arousal 0.5)
         for r in rows:
             assert r["arousal"] < 0.6
 
@@ -210,49 +211,45 @@ class TestRecallReinforcement:
 
 class TestLLMAbstractionQuality:
     """LLM を使って結晶化の抽象度を評価する。
-    Ollama が起動していない環境ではスキップ。"""
+    MLX サーバーが起動していない環境ではスキップ。"""
+
+    _MLX_URL = "http://localhost:8080/v1/chat/completions"
+    _MLX_MODEL = "mlx-community/Qwen3-32B-4bit"
 
     @pytest.fixture(autouse=True)
     def check_llm(self):
         import urllib.request
         try:
-            resp = urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
+            resp = urllib.request.urlopen("http://localhost:8080/v1/models", timeout=3)
             data = json.loads(resp.read())
-            models = [m.get("name", "") for m in data.get("models", [])]
-            # Find smallest available qwen3 model (prefer 4b to avoid 31GB memory usage)
-            qwen3_models = [m for m in models if "qwen3" in m and "coder" not in m]
-            if not qwen3_models:
-                pytest.skip("No qwen3 model available in Ollama")
-            # Sort by parameter size: extract number before 'b', default to 999
-            import re as _re
-            def _param_size(name):
-                m = _re.search(r":(\d+)b", name)
-                return int(m.group(1)) if m else 999
-            self._llm_model = sorted(qwen3_models, key=_param_size)[0]
+            models = [m.get("id", "") for m in data.get("data", [])]
+            if self._MLX_MODEL not in models:
+                pytest.skip(f"{self._MLX_MODEL} not available on MLX server")
         except Exception:
-            pytest.skip("Ollama not available")
+            pytest.skip("MLX server not available")
 
     def _generate(self, prompt: str, retries: int = 2) -> str:
         import urllib.request
         import urllib.error
         payload = json.dumps({
-            "model": self._llm_model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {"temperature": 0.1, "num_predict": 1024},
+            "model": self._MLX_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 1024,
+            "temperature": 0.1,
         }).encode()
         for attempt in range(retries + 1):
             try:
                 req = urllib.request.Request(
-                    "http://localhost:11434/api/generate",
+                    self._MLX_URL,
                     data=payload,
                     headers={"Content-Type": "application/json"},
                 )
                 resp = urllib.request.urlopen(req, timeout=120)
-                return json.loads(resp.read())["response"].strip()
+                data = json.loads(resp.read())
+                return data["choices"][0]["message"]["content"].strip()
             except (urllib.error.URLError, OSError):
                 if attempt == retries:
-                    pytest.skip("Ollama generation timed out")
+                    pytest.skip("MLX generation timed out")
         return ""
 
     def test_pattern_abstracts_to_rule(self, pipeline_store):

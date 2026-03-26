@@ -110,27 +110,17 @@ def grep_search(
         date = date_match.group(1)
 
         md_text = fp.read_text(encoding="utf-8")
-        content = md_text.split(config.handover_delimiter)[0]
-        entries = re.split(r"\n(?=### )", content)
+        parsed = list(parse_entries(md_text, date, config.handover_delimiter))
 
-        for e in entries:
-            if not e.strip() or not e.startswith("###"):
-                continue
-            e_lower = e.lower()
-            if any(k.lower() in e_lower for k in keywords):
-                m = re.search(r"Arousal: ([0-9.]+)", e)
-                try:
-                    arousal = float(m.group(1)) if m else 0.5
-                except (ValueError, AttributeError):
-                    arousal = 0.5
-                e_clean = e.replace("---", "").strip()
+        for entry in parsed:
+            if any(k.lower() in entry.content.lower() for k in keywords):
                 # Reverse lookup content_hash from DB
                 found_hash = None
                 if db_conn is not None:
                     try:
                         row = db_conn.execute(
                             "SELECT content_hash FROM memories WHERE content = ? AND date = ?",
-                            (e_clean, date),
+                            (entry.content, date),
                         ).fetchone()
                         if row:
                             found_hash = row["content_hash"]
@@ -138,17 +128,17 @@ def grep_search(
                         pass
                 decay = time_decay(
                     date,
-                    arousal,
+                    entry.arousal,
                     base_half_life=config.base_half_life,
                     floor=config.decay_floor,
                 )
-                score = config.arousal_weight * arousal * decay
+                score = config.arousal_weight * entry.arousal * decay
                 results.append(
                     SearchResult(
                         score=round(score, 4),
                         date=date,
-                        content=e_clean,
-                        arousal=arousal,
+                        content=entry.content,
+                        arousal=entry.arousal,
                         source="grep",
                         content_hash=found_hash,
                     )

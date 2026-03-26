@@ -97,6 +97,120 @@ This entry has an invalid arousal value but enough content."""
         entries = list(parse_entries(md, "2026-01-01"))
         assert entries == []
 
+
+class TestSummaryExtraction:
+    """Tests for session overview (## セッション概要) extraction as SUMMARY entry."""
+
+    def test_summary_extracted_as_entry(self):
+        md = """# 2026-03-24 セッションログ
+
+## セッション概要
+SlackBot（Mei/Eve）に3つの機能を追加。ファイルアップロード、スタンプ競争、Google Maps統合。
+
+## ログエントリ
+
+### [MILESTONE] ファイルアップロード実装
+*Arousal: 0.5 | Emotion: Completion*
+Slack API でファイルアップロードを実装した。
+
+---
+
+## 引き継ぎ
+- 次のアクション
+"""
+        entries = list(parse_entries(md, "2026-03-24"))
+        summary_entries = [e for e in entries if e.category == "SUMMARY"]
+        assert len(summary_entries) == 1
+        assert "Mei" in summary_entries[0].content
+        assert "SlackBot" in summary_entries[0].content
+        assert summary_entries[0].arousal == 0.5
+        assert summary_entries[0].date == "2026-03-24"
+
+    def test_summary_not_extracted_when_empty(self):
+        md = """# 2026-03-24 セッションログ
+
+## セッション概要
+
+## ログエントリ
+
+### [INSIGHT] Something important
+*Arousal: 0.8 | Emotion: Discovery*
+This is a real entry with enough content to pass filter.
+
+---
+"""
+        entries = list(parse_entries(md, "2026-03-24"))
+        summary_entries = [e for e in entries if e.category == "SUMMARY"]
+        assert len(summary_entries) == 0
+
+    def test_summary_not_extracted_when_too_short(self):
+        md = """# 2026-03-24 セッションログ
+
+## セッション概要
+テスト用
+
+## ログエントリ
+
+### [INSIGHT] Something important
+*Arousal: 0.8 | Emotion: Discovery*
+This is a real entry with enough content to pass filter.
+
+---
+"""
+        entries = list(parse_entries(md, "2026-03-24"))
+        summary_entries = [e for e in entries if e.category == "SUMMARY"]
+        assert len(summary_entries) == 0
+
+    def test_summary_coexists_with_regular_entries(self):
+        md = """# 2026-03-24 セッションログ
+
+## セッション概要
+SlackBot（Mei/Eve）に3つの機能を追加。ファイルアップロード、スタンプ競争、Google Maps統合。
+
+## ログエントリ
+
+### [MILESTONE] ファイルアップロード実装
+*Arousal: 0.5 | Emotion: Completion*
+Slack API でファイルアップロードを実装した。
+
+---
+
+### [DECISION] Google Maps 統合方針
+*Arousal: 0.6 | Emotion: Determination*
+Takeout データを使ってコンテキストに追加する方針に決定。
+
+---
+
+## 引き継ぎ
+- 次のアクション
+"""
+        entries = list(parse_entries(md, "2026-03-24"))
+        assert len(entries) == 3  # 1 SUMMARY + 2 regular
+        categories = [e.category for e in entries]
+        assert "SUMMARY" in categories
+        assert "MILESTONE" in categories
+        assert "DECISION" in categories
+
+    def test_summary_excluded_from_handover(self):
+        """Summary in handover section should not be extracted."""
+        md = """# 2026-03-24 セッションログ
+
+## セッション概要
+
+## ログエントリ
+
+### [INSIGHT] Something important enough to pass
+*Arousal: 0.8 | Emotion: Discovery*
+This is a real entry with enough content to pass filter.
+
+---
+
+## 引き継ぎ
+- SlackBot（Mei/Eve）の引き継ぎ内容（これは概要ではない）
+"""
+        entries = list(parse_entries(md, "2026-03-24"))
+        assert not any("引き継ぎ内容" in e.content for e in entries)
+
     def test_noise_entries_filtered(self):
         md = """### [INSIGHT] OK
 

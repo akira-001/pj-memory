@@ -115,7 +115,7 @@
         <span>{{ t('memory.days_since_cp', lang) }}: {{ signals.days_since_checkpoint }} / {{ signals.checkpoint_interval_days }}</span>
     </div>
     {% if signals.should_crystallize %}
-    <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(78, 171, 154, 0.1); border-radius: 6px; font-size: 0.8125rem;">
+    <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(107, 138, 107, 0.1); border-radius: 6px; font-size: 0.8125rem;">
         {{ t('memory.crystal_recommended', lang) }} — {{ signals.triggered_conditions | length }} {{ t('memory.conditions_met', lang) }}
     </div>
     {% endif %}
@@ -124,17 +124,17 @@
 
 {% block scripts %}
 <script>
-Chart.defaults.color = '#d8e8e4';
-Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+Chart.defaults.color = '#8a8078';
+Chart.defaults.borderColor = 'rgba(0, 0, 0, 0.06)';
 
 const categoryColors = {
-    'INSIGHT': '#6dc4b5',
-    'DECISION': '#86efac',
-    'ERROR': '#fca5a5',
-    'PATTERN': '#fcd34d',
-    'QUESTION': '#93c5fd',
-    'MILESTONE': '#4EAB9A',
-    'SKILL': '#2E8B7A',
+    'INSIGHT': '#5a9a5a',
+    'DECISION': '#7a6aaa',
+    'ERROR': '#c05050',
+    'PATTERN': '#c08a30',
+    'QUESTION': '#5070b0',
+    'MILESTONE': '#3a8a9a',
+    'SKILL': '#4a7a4a',
 };
 
 // Daily Accumulation Chart
@@ -146,7 +146,7 @@ new Chart(document.getElementById('dailyChart'), {
         datasets: [{
             label: 'Memories',
             data: dailyCounts.map(d => d.count),
-            backgroundColor: '#4EAB9A',
+            backgroundColor: '#6b8a6b',
             borderRadius: 4,
         }]
     },
@@ -172,7 +172,7 @@ new Chart(document.getElementById('dailyChart'), {
 const categoryCounts = {{ data.category_counts | tojson }};
 const catLabels = Object.keys(categoryCounts);
 const catValues = Object.values(categoryCounts);
-const catColors = catLabels.map(c => categoryColors[c] || '#8b8f9a');
+const catColors = catLabels.map(c => categoryColors[c] || '#8a8078');
 
 new Chart(document.getElementById('categoryChart'), {
     type: 'doughnut',
@@ -207,7 +207,7 @@ new Chart(document.getElementById('arousalChart'), {
             data: arousalHist.map(d => d.count),
             backgroundColor: arousalHist.map((d, i) => {
                 const intensity = 0.3 + (i / 10) * 0.7;
-                return `rgba(78, 171, 154, ${intensity})`;
+                return `rgba(107, 138, 107, ${intensity})`;
             }),
             borderRadius: 4,
         }]

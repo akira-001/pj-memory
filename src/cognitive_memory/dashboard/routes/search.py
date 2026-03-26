@@ -22,7 +22,7 @@ async def search_page(request: Request):
 
     if q:
         with MemoryStore(config) as store:
-            response = store.search(q, top_k=10)
+            response = store._execute_search(q, top_k=10)
             results = response.results
             status = response.status
 
@@ -52,7 +52,7 @@ async def search_results(request: Request):
         return HTMLResponse('<div class="empty-state">Enter a search query</div>')
 
     with MemoryStore(config) as store:
-        response = store.search(q, top_k=10)
+        response = store._execute_search(q, top_k=10)
 
     return templates.TemplateResponse(
         "search/_results.html",

@@ -305,6 +305,87 @@ cogmem recall-stats                    # Memory recall statistics
 cogmem dashboard                       # Launch web dashboard
 ```
 
+### Usage Example: A Typical Session
+
+Here's what a real development session looks like with Cognitive Memory and Claude Code.
+
+**1. Start Claude Code**
+
+```bash
+cd your-project     # Must contain cogmem.toml
+claude              # Launch Claude Code
+```
+
+**2. Greet the agent — Session Init runs automatically**
+
+```
+You: おはよう (or "good morning", "let's start", etc.)
+```
+
+The agent detects a new session and runs **Session Init** automatically:
+- Reads today's context and recent logs
+- Runs `cogmem index` to update the search index
+- Searches for relevant past memories (flashbacks)
+- Checks memory consolidation signals and skill health
+
+```
+Agent: おはよう、Akira。
+
+💭 Flashback: Previously discussed the auth middleware rewrite —
+   legal flagged session token storage for compliance.
+🔧 Skill audit: "deploy" skill has declining effectiveness (0.6 → 0.4).
+
+What are we working on today?
+```
+
+**3. Work normally — Live Logging happens in the background**
+
+As you work, the agent automatically logs significant moments:
+- Direction changes, insights, decisions, errors, milestones
+- Each entry gets an arousal score based on emotional/cognitive significance
+- High-arousal events are recorded with richer context (causal chains, prior names, user quotes)
+
+**4. When context reaches ~60%, compact the conversation**
+
+```
+You: /compact
+```
+
+This compresses prior messages to free context window space while preserving important information. The agent continues working with full awareness of what happened earlier.
+
+**5. Close the session — Wrap runs automatically**
+
+```
+You: ありがとう (or "thanks", "done for today", "that's all")
+```
+
+The agent detects session closure and runs **Wrap** automatically:
+- Writes a session summary and handover notes to the log
+- Checks for memory consolidation signals
+- Evaluates and improves skills used during the session
+- Updates identity files if new information was learned
+- Increments session counter
+
+```
+Agent: お疲れさま。今日のログを記録したよ。
+
+## Handover
+- **Continuing**: Auth middleware rewrite (compliance-driven)
+- **Next actions**: 1. Finish token migration  2. Update deploy script
+- **Notes**: deploy skill updated (added rollback step)
+```
+
+**6. Next session — the agent remembers**
+
+```bash
+claude              # Start a new session
+You: 再開 (or "let's continue")
+```
+
+The agent reads the previous handover, searches for context, and picks up where you left off — with full awareness of past decisions, mistakes, and insights.
+
+**The cycle**: Greet → Work → Compact (if needed) → Wrap → Repeat. Memory accumulates across sessions, and the agent becomes more context-aware over time.
+
 ### Python API
 
 ```python

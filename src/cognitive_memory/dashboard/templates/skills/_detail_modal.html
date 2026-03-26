@@ -122,20 +122,20 @@
             datasets: [{
                 label: 'Effectiveness',
                 data: data.map(d => d.effectiveness),
-                borderColor: '#4EAB9A',
-                backgroundColor: 'rgba(78, 171, 154, 0.1)',
+                borderColor: '#6b8a6b',
+                backgroundColor: 'rgba(107, 138, 107, 0.1)',
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
-                pointBackgroundColor: '#4EAB9A',
+                pointBackgroundColor: '#6b8a6b',
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { min: 0, max: 1, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8f9a' } },
-                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b8f9a', maxRotation: 45 } }
+                y: { min: 0, max: 1, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#8a8078' } },
+                x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#8a8078', maxRotation: 45 } }
             },
             plugins: { legend: { display: false } }
         }
