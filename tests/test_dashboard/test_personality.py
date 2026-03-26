@@ -44,23 +44,23 @@ class TestPersonalityRoutes:
 
 class TestPersonalityService:
     def test_read_and_parse_md(self, project_dir):
-        from cognitive_memory.dashboard.services.personality_service import _read_and_parse_md
+        from cognitive_memory.identity import parse_identity_md
 
         md_path = project_dir / "test_parse.md"
         md_path.write_text(
             "# Title\n\n## Section A\nContent A\n\n## Section B\nContent B line 1\nContent B line 2\n",
             encoding="utf-8",
         )
-        result = _read_and_parse_md(md_path)
-        assert "Section A" in result
-        assert result["Section A"] == "Content A"
-        assert "Section B" in result
-        assert "Content B line 1" in result["Section B"]
+        result = parse_identity_md(md_path)
+        assert "Section A" in result["sections"]
+        assert result["sections"]["Section A"] == "Content A"
+        assert "Section B" in result["sections"]
+        assert "Content B line 1" in result["sections"]["Section B"]
 
     def test_read_and_parse_md_missing(self, tmp_path):
-        from cognitive_memory.dashboard.services.personality_service import _read_and_parse_md
-        result = _read_and_parse_md(tmp_path / "nonexistent.md")
-        assert result == {}
+        from cognitive_memory.identity import parse_identity_md
+        result = parse_identity_md(tmp_path / "nonexistent.md")
+        assert result["sections"] == {}
 
     def test_read_file_or_empty(self, project_dir):
         from cognitive_memory.dashboard.services.personality_service import _read_file_or_empty

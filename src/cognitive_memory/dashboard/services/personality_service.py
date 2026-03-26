@@ -8,54 +8,21 @@ from pathlib import Path
 from typing import Any, List
 
 from ...config import CogMemConfig
+from ...identity import parse_identity_md
 
 
 def get_personality_data(config: CogMemConfig) -> dict[str, Any]:
     """Read identity files and learning timeline."""
-    soul = _read_and_parse_md(config.identity_soul_path)
-    user = _read_and_parse_md(config.identity_user_path)
+    soul_data = parse_identity_md(config.identity_soul_path)
+    user_data = parse_identity_md(config.identity_user_path)
     learning = _get_learning_timeline(config)
     knowledge = _read_file_or_empty(config.knowledge_summary_path)
     return {
-        "soul": soul,
-        "user": user,
+        "soul": soul_data["sections"],
+        "user": user_data["sections"],
         "learning": learning,
         "knowledge": knowledge,
     }
-
-
-def _read_and_parse_md(path: Path) -> dict[str, str]:
-    """Parse markdown file into {section_heading: content} dict.
-
-    Splits on ## headings. Skips the title (# heading).
-    """
-    if not path.exists():
-        return {}
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return {}
-
-    sections: dict[str, str] = {}
-    current_heading: str | None = None
-    current_lines: list[str] = []
-
-    for line in text.split("\n"):
-        if line.startswith("## "):
-            if current_heading is not None:
-                sections[current_heading] = "\n".join(current_lines).strip()
-            current_heading = line[3:].strip()
-            current_lines = []
-        elif line.startswith("# ") and current_heading is None:
-            # Skip the title line
-            continue
-        elif current_heading is not None:
-            current_lines.append(line)
-
-    if current_heading is not None:
-        sections[current_heading] = "\n".join(current_lines).strip()
-
-    return sections
 
 
 def _read_file_or_empty(path: Path) -> str:
