@@ -152,6 +152,31 @@ def main(argv: list[str] | None = None):
     watch_parser.add_argument("--json", action="store_true", help="JSON output")
     watch_parser.add_argument("--auto-log", action="store_true", help="Auto-append detected patterns to session log")
 
+    # identity subcommand group
+    identity_parser = subparsers.add_parser("identity", help="View and update identity files")
+    identity_subparsers = identity_parser.add_subparsers(dest="identity_command")
+
+    # identity update
+    id_update_parser = identity_subparsers.add_parser("update", help="Update identity file sections")
+    id_update_parser.add_argument("--target", type=str, required=True, choices=["user", "soul"],
+                                  help="Target identity file")
+    id_update_parser.add_argument("--section", type=str, default=None, help="Section heading to update")
+    id_update_parser.add_argument("--content", type=str, default=None, help="New content for section")
+    id_update_parser.add_argument("--json", type=str, default=None, dest="json_input",
+                                  help='JSON object of {section: content} pairs')
+
+    # identity show
+    id_show_parser = identity_subparsers.add_parser("show", help="Show identity file contents")
+    id_show_parser.add_argument("--target", type=str, default=None, choices=["user", "soul"],
+                                help="Target identity file (omit for both)")
+
+    # identity detect
+    id_detect_parser = identity_subparsers.add_parser("detect", help="Detect placeholder sections")
+    id_detect_parser.add_argument("--target", type=str, default=None, choices=["user", "soul"],
+                                  help="Target identity file (omit for both)")
+    id_detect_parser.add_argument("--json", action="store_true", dest="json_output",
+                                  help="JSON output")
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -188,3 +213,17 @@ def main(argv: list[str] | None = None):
     elif args.command == "watch":
         from .watch_cmd import run_watch
         run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)
+    elif args.command == "identity":
+        from .identity_cmd import run_identity_update, run_identity_show, run_identity_detect
+        if args.identity_command == "update":
+            run_identity_update(
+                target=args.target, section=args.section,
+                content=args.content, json_input=args.json_input,
+            )
+        elif args.identity_command == "show":
+            run_identity_show(target=args.target)
+        elif args.identity_command == "detect":
+            run_identity_detect(target=args.target, json_output=args.json_output)
+        else:
+            identity_parser.print_help()
+            sys.exit(1)
