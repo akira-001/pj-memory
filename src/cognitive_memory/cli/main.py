@@ -146,6 +146,10 @@ def main(argv: list[str] | None = None):
     skills_resolve_parser = skills_subparsers.add_parser("resolve", help="Mark skill events as resolved after SKILL.md edit")
     skills_resolve_parser.add_argument("skill_name", type=str, help="Skill name to resolve")
 
+    # recall-stats
+    recall_parser = subparsers.add_parser("recall-stats", help="Show recall statistics")
+    recall_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
+
     # watch
     watch_parser = subparsers.add_parser("watch", help="Detect patterns from git history")
     watch_parser.add_argument("--since", type=str, default="today", help="Git log --since value")
@@ -210,6 +214,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "skills":
         from .skills_cmd import run_skills
         run_skills(args)
+    elif args.command == "recall-stats":
+        from .recall_cmd import run_recall_stats
+        run_recall_stats(json_output=args.json_output)
     elif args.command == "watch":
         from .watch_cmd import run_watch
         run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)

@@ -347,3 +347,31 @@ class TestContextSearchReinforcement:
         monkeypatch.setattr(store.config, "context_search_enabled", False)
         store.context_search("test")
         assert len(reinforced) == 0
+
+
+class TestRecallStats:
+    def test_sorted_by_count(self, store):
+        store.conn.execute(
+            "INSERT INTO memories VALUES (NULL, 'rs1', '2026-03-26', '### [INSIGHT] よく思い出す', 0.8, '[]', 5, '2026-03-26T10:00:00')"
+        )
+        store.conn.execute(
+            "INSERT INTO memories VALUES (NULL, 'rs2', '2026-03-25', '### [DECISION] 一度だけ', 0.6, '[]', 1, NULL)"
+        )
+        store.conn.commit()
+        rows = store.conn.execute(
+            "SELECT content, recall_count FROM memories "
+            "WHERE recall_count > 0 ORDER BY recall_count DESC"
+        ).fetchall()
+        assert len(rows) == 2
+        assert rows[0]["recall_count"] == 5
+        assert rows[1]["recall_count"] == 1
+
+    def test_no_recalls(self, store):
+        store.conn.execute(
+            "INSERT INTO memories VALUES (NULL, 'rs3', '2026-03-26', 'no recall', 0.5, '[]', 0, NULL)"
+        )
+        store.conn.commit()
+        rows = store.conn.execute(
+            "SELECT * FROM memories WHERE recall_count > 0"
+        ).fetchall()
+        assert len(rows) == 0
