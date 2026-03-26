@@ -219,12 +219,16 @@ class TestLLMAbstractionQuality:
             resp = urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
             data = json.loads(resp.read())
             models = [m.get("name", "") for m in data.get("models", [])]
-            # Find smallest available qwen3 model
+            # Find smallest available qwen3 model (prefer 4b to avoid 31GB memory usage)
             qwen3_models = [m for m in models if "qwen3" in m and "coder" not in m]
             if not qwen3_models:
                 pytest.skip("No qwen3 model available in Ollama")
-            # Prefer smaller models: 4b > 8b > 32b
-            self._llm_model = sorted(qwen3_models)[0]
+            # Sort by parameter size: extract number before 'b', default to 999
+            import re as _re
+            def _param_size(name):
+                m = _re.search(r":(\d+)b", name)
+                return int(m.group(1)) if m else 999
+            self._llm_model = sorted(qwen3_models, key=_param_size)[0]
         except Exception:
             pytest.skip("Ollama not available")
 
