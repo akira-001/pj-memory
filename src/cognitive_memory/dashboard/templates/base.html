@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}cogmem{% endblock %} — cogmem dashboard</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -12,7 +13,7 @@
 <body>
     {% set lang = get_lang(request) %}
     <nav class="sidebar">
-        <div class="sidebar-brand">cogmem</div>
+        <div class="sidebar-brand"><img src="/static/logo.svg" alt="cogmem" class="sidebar-logo"></div>
         <a href="/" class="nav-link {% if active_page == 'memory' %}active{% endif %}">
             <span class="nav-icon">&#9679;</span> {{ t('nav.memory', lang) }}
         </a>
@@ -27,6 +28,9 @@
         </a>
         <a href="/personality" class="nav-link {% if active_page == 'personality' %}active{% endif %}">
             <span class="nav-icon">&#9824;</span> {{ t('nav.personality', lang) }}
+        </a>
+        <a href="/consolidation" class="nav-link {% if active_page == 'consolidation' %}active{% endif %}">
+            <span class="nav-icon">&#9830;</span> {{ t('nav.crystallization', lang) }}
         </a>
         <div class="lang-switch">
             <a href="/_lang/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>

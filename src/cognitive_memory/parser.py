@@ -32,6 +32,8 @@ def parse_entries(
 ) -> Iterator[MemoryEntry]:
     """Extract log entries from a markdown file, excluding handover section."""
     content = md_text.split(handover_delimiter)[0]
+
+    # Phase 1: ### heading entries (standard format)
     entries = re.split(r"\n(?=### )", content)
     for e in entries:
         if not e.strip() or not e.startswith("###"):
@@ -48,3 +50,20 @@ def parse_entries(
         cat_match = re.search(r"\[([A-Z]+)\]", e_clean)
         category = cat_match.group(1) if cat_match else None
         yield MemoryEntry(date=date, content=e_clean, arousal=arousal, category=category)
+
+    # Phase 2: compact list entries (- [CATEGORY] text)
+    for line in content.split("\n"):
+        line = line.strip()
+        m = re.match(r"^- \[([A-Z]+)\]\s+(.+)$", line)
+        if not m:
+            continue
+        category = m.group(1)
+        text = m.group(2).strip()
+        if is_noise(text):
+            continue
+        yield MemoryEntry(
+            date=date,
+            content=f"### [{category}] {text}",
+            arousal=0.5,
+            category=category,
+        )

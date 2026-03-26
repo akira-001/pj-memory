@@ -21,7 +21,7 @@ class TestMemoryOverview:
 
     def test_home_shows_signals(self, client):
         resp = client.get("/")
-        assert "Crystallization" in resp.text
+        assert "Consolidation" in resp.text
 
     def test_home_shows_recall_section(self, client):
         """Memory overview page has a recall/想起 section."""

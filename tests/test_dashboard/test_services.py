@@ -32,7 +32,7 @@ class TestMemoryService:
 
     def test_arousal_histogram(self, config):
         data = get_overview_data(config)
-        assert len(data["arousal_histogram"]) == 10
+        assert len(data["arousal_histogram"]) == 6
         total = sum(b["count"] for b in data["arousal_histogram"])
         assert total == 5
 
@@ -54,7 +54,7 @@ class TestMemoryService:
     def test_empty_data_structure(self):
         data = _empty_data()
         assert data["total_memories"] == 0
-        assert len(data["arousal_histogram"]) == 10
+        assert len(data["arousal_histogram"]) == 6
 
     def test_total_days(self, config):
         data = get_overview_data(config)

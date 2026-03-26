@@ -13,7 +13,7 @@
                 <div class="stat-label">{{ t('skills.effectiveness', lang) }}</div>
                 <div class="stat-value">{{ "%.2f"|format(skill.usage_stats.average_effectiveness) }}</div>
                 <div class="eff-bar" style="margin-top: 0.5rem;">
-                    <div class="eff-bar-fill" style="width: {{ (skill.usage_stats.average_effectiveness * 100)|round }}%; background: {% if skill.usage_stats.average_effectiveness >= 0.7 %}var(--success){% elif skill.usage_stats.average_effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                    <div class="eff-bar-fill" style="width: {{ (skill.usage_stats.average_effectiveness * 100)|round }}%; background: {% if skill.usage_stats.average_effectiveness >= 0.7 %}var(--accent){% elif skill.usage_stats.average_effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
                 </div>
             </div>
             <div class="stat-card">
@@ -122,12 +122,12 @@
             datasets: [{
                 label: 'Effectiveness',
                 data: data.map(d => d.effectiveness),
-                borderColor: '#6366f1',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderColor: '#4EAB9A',
+                backgroundColor: 'rgba(78, 171, 154, 0.1)',
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
-                pointBackgroundColor: '#6366f1',
+                pointBackgroundColor: '#4EAB9A',
             }]
         },
         options: {

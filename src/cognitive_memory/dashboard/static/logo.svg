@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 140" width="480" height="140">
+  <defs>
+    <linearGradient id="brainGrad_teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4EAB9A"/>
+      <stop offset="100%" stop-color="#0E6B5A"/>
+    </linearGradient>
+    <linearGradient id="nodeGrad_teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4EAB9A"/>
+      <stop offset="60%" stop-color="#2E8B7A"/>
+    </linearGradient>
+    <filter id="glow_teal" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Brain outline -->
+  <g transform="translate(16, 12) scale(0.92)">
+    <!-- Brain main shape - left hemisphere -->
+    <path d="M62,20 C45,8 28,10 20,22 C12,34 10,48 14,62 C8,66 4,74 6,84 C8,94 16,100 26,100 
+             L30,100 C32,108 36,114 42,118 L46,120 C44,124 46,128 50,128 
+             C52,128 54,126 54,124 L56,110 C58,108 60,104 60,100" 
+          fill="url(#brainGrad_teal)" opacity="0.25" stroke="#2E8B7A" stroke-width="1.8"/>
+    
+    <!-- Brain main shape - right hemisphere -->
+    <path d="M62,20 C79,8 96,10 104,22 C112,34 114,48 110,62 C116,66 120,74 118,84 
+             C116,94 108,100 98,100 L94,100 C92,108 88,114 82,118 L78,120 
+             C80,124 78,128 74,128 C72,128 70,126 70,124 L68,110 C66,108 64,104 64,100" 
+          fill="url(#brainGrad_teal)" opacity="0.25" stroke="#2E8B7A" stroke-width="1.8"/>
+    
+    <!-- Brain stem -->
+    <path d="M56,110 Q60,116 62,124 Q64,116 68,110" 
+          fill="url(#brainGrad_teal)" opacity="0.4" stroke="#2E8B7A" stroke-width="1.5"/>
+    
+    <!-- Brain folds - left -->
+    <path d="M30,40 Q42,35 55,42" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M22,58 Q38,50 56,58" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M18,76 Q36,68 56,76" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M28,92 Q42,85 56,92" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    
+    <!-- Brain folds - right -->
+    <path d="M69,42 Q82,35 94,40" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M68,58 Q86,50 102,58" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M68,76 Q88,68 106,76" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    <path d="M68,92 Q82,85 96,92" fill="none" stroke="#2E8B7A" stroke-width="1.2" opacity="0.5"/>
+    
+    <!-- Neural network connections -->
+    <g stroke="#4EAB9A" stroke-width="0.9" opacity="0.7" filter="url(#glow_teal)">
+      <!-- Connection lines -->
+      <line x1="35" y1="32" x2="52" y2="48"/>
+      <line x1="52" y1="48" x2="38" y2="65"/>
+      <line x1="38" y1="65" x2="55" y2="82"/>
+      <line x1="55" y1="82" x2="40" y2="95"/>
+      <line x1="35" y1="32" x2="25" y2="52"/>
+      <line x1="25" y1="52" x2="38" y2="65"/>
+      <line x1="25" y1="52" x2="18" y2="72"/>
+      <line x1="18" y1="72" x2="38" y2="65"/>
+      <line x1="18" y1="72" x2="30" y2="88"/>
+      <line x1="30" y1="88" x2="55" y2="82"/>
+      <line x1="30" y1="88" x2="40" y2="95"/>
+      
+      <line x1="89" y1="32" x2="72" y2="48"/>
+      <line x1="72" y1="48" x2="86" y2="65"/>
+      <line x1="86" y1="65" x2="69" y2="82"/>
+      <line x1="69" y1="82" x2="84" y2="95"/>
+      <line x1="89" y1="32" x2="99" y2="52"/>
+      <line x1="99" y1="52" x2="86" y2="65"/>
+      <line x1="99" y1="52" x2="106" y2="72"/>
+      <line x1="106" y1="72" x2="86" y2="65"/>
+      <line x1="106" y1="72" x2="94" y2="88"/>
+      <line x1="94" y1="88" x2="69" y2="82"/>
+      <line x1="94" y1="88" x2="84" y2="95"/>
+      
+      <!-- Cross connections -->
+      <line x1="52" y1="48" x2="72" y2="48"/>
+      <line x1="38" y1="65" x2="86" y2="65"/>
+      <line x1="55" y1="82" x2="69" y2="82"/>
+      <line x1="35" y1="32" x2="89" y2="32"/>
+      <line x1="40" y1="95" x2="84" y2="95"/>
+    </g>
+    
+    <!-- Neural network nodes -->
+    <g fill="url(#nodeGrad_teal)" filter="url(#glow_teal)">
+      <!-- Left nodes -->
+      <circle cx="35" cy="32" r="3.5"/>
+      <circle cx="25" cy="52" r="3"/>
+      <circle cx="52" cy="48" r="3.5"/>
+      <circle cx="38" cy="65" r="3"/>
+      <circle cx="18" cy="72" r="3"/>
+      <circle cx="55" cy="82" r="3.5"/>
+      <circle cx="30" cy="88" r="3"/>
+      <circle cx="40" cy="95" r="3.5"/>
+      
+      <!-- Right nodes -->
+      <circle cx="89" cy="32" r="3.5"/>
+      <circle cx="99" cy="52" r="3"/>
+      <circle cx="72" cy="48" r="3.5"/>
+      <circle cx="86" cy="65" r="3"/>
+      <circle cx="106" cy="72" r="3"/>
+      <circle cx="69" cy="82" r="3.5"/>
+      <circle cx="94" cy="88" r="3"/>
+      <circle cx="84" cy="95" r="3.5"/>
+      
+      <!-- Center node -->
+      <circle cx="62" cy="58" r="4" fill="#4EAB9A"/>
+    </g>
+  </g>
+  
+  <!-- Text: cogmem -->
+  <text x="148" y="80" font-family="'Georgia', 'Times New Roman', serif" font-size="52" font-weight="bold" fill="#4EAB9A" letter-spacing="2">cogmem</text>
+
+  <!-- Text: cognitive memory -->
+  <text x="150" y="108" font-family="'Helvetica Neue', 'Arial', sans-serif" font-size="20" fill="#a0c4bc" letter-spacing="4" font-weight="300">cognitive memory</text>
+</svg>

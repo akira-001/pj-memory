@@ -6,6 +6,7 @@
 {% set lang = get_lang(request) %}
 <div class="page-header">
     <h1>{{ t('skills.title', lang) }}</h1>
+    <p class="subtitle">{{ t('skills.subtitle', lang) }}</p>
 </div>
 
 <!-- Audit Summary -->
@@ -82,7 +83,7 @@
                 <td>
                     {% if skill.effectiveness > 0 %}
                     <div class="eff-bar">
-                        <div class="eff-bar-fill" style="width: {{ (skill.effectiveness * 100)|round }}%; background: {% if skill.effectiveness >= 0.7 %}var(--success){% elif skill.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
+                        <div class="eff-bar-fill" style="width: {{ (skill.effectiveness * 100)|round }}%; background: {% if skill.effectiveness >= 0.7 %}var(--accent){% elif skill.effectiveness >= 0.5 %}var(--warning){% else %}var(--error){% endif %};"></div>
                     </div>
                     <span style="margin-left: 0.5rem; font-size: 0.8125rem;">{{ "%.2f"|format(skill.effectiveness) }}</span>
                     {% else %}

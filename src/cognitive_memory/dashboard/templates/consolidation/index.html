@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% set lang = get_lang(request) %}
+
+{% block title %}{{ t('crystal.title', lang) }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ t('crystal.title', lang) }}</h1>
+    <p class="subtitle">{{ t('crystal.subtitle', lang) }}</p>
+</div>
+
+{# --- Signals Section --- #}
+<section class="card">
+    <h2>{{ t('crystal.signals', lang) }}</h2>
+    <p class="section-desc">{{ t('crystal.signals_desc', lang) }}</p>
+    {% if data.signals.should_crystallize %}
+    <div class="alert alert-warning">
+        {{ t('crystal.recommended', lang) }} — {{ data.signals.triggered_conditions|length }} {{ t('crystal.conditions_met', lang) }}
+    </div>
+    {% endif %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('crystal.condition', lang) }}</th>
+                <th>{{ t('crystal.current', lang) }}</th>
+                <th>{{ t('crystal.threshold', lang) }}</th>
+                <th>{{ t('crystal.status', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ t('crystal.pattern_entries', lang) }}</td>
+                <td><span class="signal-value">{{ data.signals.pattern_count }}</span></td>
+                <td>{{ data.signals.pattern_threshold }}</td>
+                <td>{% if data.signals.pattern_count >= data.signals.pattern_threshold %}<span class="status-ready">{{ t('crystal.ready', lang) }}</span>{% else %}<span class="status-accumulating">{{ t('crystal.accumulating', lang) }}</span>{% endif %}</td>
+            </tr>
+            <tr>
+                <td>{{ t('crystal.error_entries', lang) }}</td>
+                <td><span class="signal-value">{{ data.signals.error_count }}</span></td>
+                <td>{{ data.signals.error_threshold }}</td>
+                <td>{% if data.signals.error_count >= data.signals.error_threshold %}<span class="status-ready">{{ t('crystal.ready', lang) }}</span>{% else %}<span class="status-accumulating">{{ t('crystal.accumulating', lang) }}</span>{% endif %}</td>
+            </tr>
+            <tr>
+                <td>{{ t('crystal.log_days', lang) }}</td>
+                <td><span class="signal-value">{{ data.signals.log_days }}</span></td>
+                <td>{{ data.signals.log_days_threshold }}</td>
+                <td>{% if data.signals.log_days >= data.signals.log_days_threshold %}<span class="status-ready">{{ t('crystal.ready', lang) }}</span>{% else %}<span class="status-accumulating">{{ t('crystal.accumulating', lang) }}</span>{% endif %}</td>
+            </tr>
+            <tr>
+                <td>{{ t('crystal.days_since_cp', lang) }}</td>
+                <td><span class="signal-value">{{ data.signals.days_since_checkpoint }}</span></td>
+                <td>{{ data.signals.checkpoint_interval_days }}</td>
+                <td>{% if data.signals.days_since_checkpoint >= data.signals.checkpoint_interval_days %}<span class="status-ready">{{ t('crystal.ready', lang) }}</span>{% else %}<span class="status-accumulating">{{ t('crystal.accumulating', lang) }}</span>{% endif %}</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+{# --- Checkpoint Section --- #}
+<section class="card">
+    <h2>{{ t('crystal.checkpoint', lang) }}</h2>
+    <p class="section-desc">{{ t('crystal.checkpoint_desc', lang) }}</p>
+    <div class="stat-row">
+        <div class="stat-card">
+            <div class="stat-label">{{ t('crystal.last_checkpoint', lang) }}</div>
+            <div class="stat-value">{{ data.checkpoint.last if data.checkpoint.last else t('crystal.never', lang) }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">{{ t('crystal.total_checkpoints', lang) }}</div>
+            <div class="stat-value"><span class="checkpoint-count">{{ data.checkpoint.count }}</span></div>
+        </div>
+    </div>
+</section>
+
+{# --- Error Patterns Section --- #}
+<section class="card">
+    <h2>{{ t('crystal.error_patterns', lang) }}</h2>
+    <p class="section-desc">{{ t('crystal.error_patterns_desc', lang) }}</p>
+    {% if data.error_patterns %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>{{ t('crystal.ep_title', lang) }}</th>
+                <th>{{ t('crystal.ep_date', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ep in data.error_patterns %}
+            <tr>
+                <td><code>{{ ep.id }}</code></td>
+                <td>{{ ep.title }}</td>
+                <td>{{ ep.date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">{{ t('crystal.no_patterns', lang) }}</p>
+    {% endif %}
+</section>
+
+{# --- Principles Section --- #}
+<section class="card">
+    <h2>{{ t('crystal.principles', lang) }}</h2>
+    <p class="section-desc">{{ t('crystal.principles_desc', lang) }}</p>
+    {% if data.principles %}
+    <div class="principles-list">
+        {% for p in data.principles %}
+        <div class="principle-item">
+            <h3>{{ p.title }}</h3>
+            {{ p.body_html|safe }}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">{{ t('crystal.no_principles', lang) }}</p>
+    {% endif %}
+</section>
+{% endblock %}
