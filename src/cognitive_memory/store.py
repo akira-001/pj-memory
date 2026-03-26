@@ -150,6 +150,20 @@ class MemoryStore:
             return 0
 
         texts = [e.content for e in entries]
+
+        # Remove stale entries for this date whose content_hash is no longer present
+        new_hashes = {hashlib.sha256(e.content.encode()).hexdigest() for e in entries}
+        existing = self.conn.execute(
+            "SELECT content_hash FROM memories WHERE date = ?", (date,)
+        ).fetchall()
+        stale = [row["content_hash"] for row in existing if row["content_hash"] not in new_hashes]
+        if stale:
+            self.conn.executemany(
+                "DELETE FROM memories WHERE content_hash = ?",
+                [(h,) for h in stale],
+            )
+            print(f"  [CLEANUP] {filename}: removed {len(stale)} stale entr{'y' if len(stale) == 1 else 'ies'}", file=sys.stderr)
+
         vectors = self.embedder.embed_batch(texts)
         if vectors is None:
             print(f"  [SKIP] {filename}: embed failed", file=sys.stderr)
