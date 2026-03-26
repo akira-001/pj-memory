@@ -2,7 +2,7 @@
 
 [日本語](README_ja.md)
 
-Human-like cognitive memory for AI agents — emotion-gated recall with adaptive forgetting.
+Human-like cognitive memory for AI agents — emotion-gated recall, adaptive forgetting, skill learning, and identity evolution.
 
 Unlike traditional vector databases that treat all memories equally, Cognitive Memory models how humans actually remember: emotionally significant experiences persist longer, while routine information naturally fades. This makes AI agents feel more natural and context-aware.
 
@@ -15,6 +15,13 @@ Unlike traditional vector databases that treat all memories equally, Cognitive M
 - **FailOpen design**: Falls back to keyword search when embeddings are unavailable
 - **Zero required dependencies**: Core uses only Python stdlib (sqlite3, urllib)
 - **Pluggable embeddings**: Ollama (built-in), OpenAI, or any custom provider
+- **Recall reinforcement**: Memories that are recalled frequently get arousal boosts, like human reconsolidation
+- **Vivid encoding**: High-arousal events are recorded with richer context — prior names, causal chains, user quotes
+- **Déjà vu recognition**: Automatically detects when a request matches prior work and surfaces it naturally
+- **Skill learning system**: Tracks skill usage, detects improvement opportunities, and auto-generates new skills
+- **Git history analysis**: `cogmem watch` analyzes commit patterns to detect workflow habits and protocol gaps
+- **Identity management**: Maintains and auto-updates agent personality (`soul.md`) and user profile (`user.md`)
+- **Web dashboard**: FastAPI + HTMX dashboard for browsing memories, skills, logs, and personality (EN/JA)
 
 ## Why Cognitive Memory?
 
@@ -116,6 +123,59 @@ How it works:
 - **Flashback filtering**: Only surfaces results that pass both similarity (≥ 0.65) and emotional significance (arousal ≥ 0.5)
 - **Performance budget**: < 200ms warm, < 1ms for gate-skipped queries
 
+### 5. Recall Reinforcement (v0.10.0)
+
+Each time a memory is retrieved, its arousal gets a +0.1 boost (capped at 1.0) and its recall_count increments. This models human memory reconsolidation — memories that are recalled frequently become more resistant to forgetting.
+
+```python
+# After search, matching entries are automatically reinforced:
+# UPDATE memories SET recall_count = recall_count + 1,
+#                     arousal = MIN(arousal + 0.1, 1.0),
+#                     last_recalled = NOW()
+```
+
+### 6. Skill Learning System (v0.4.0–v0.8.0)
+
+Cogmem tracks how an agent uses skills and learns from each execution:
+
+- **Track**: Records skill_start, skill_end, and deviation events (extra_step, skipped_step, error_recovery, user_correction)
+- **Learn**: After each task, evaluates effectiveness and stores learning data
+- **Audit**: Identifies low-performing, declining, stale, and uncovered skills
+- **Auto-improve**: When `auto_improve = "auto"`, automatically updates skill files based on tracked events
+
+```bash
+cogmem skills track "my-skill" --event skill_start --description "Starting deployment"
+cogmem skills learn --context "Deployed to prod" --outcome "Success" --effectiveness 0.9
+cogmem skills audit --json --brief
+cogmem skills review            # Full health report
+```
+
+### 7. Identity Management (v0.9.0)
+
+Maintains two identity files that evolve through conversations:
+
+- `identity/soul.md`: Agent personality — role, values, thinking style, communication preferences
+- `identity/user.md`: User profile — expertise, decision patterns, interests
+
+```bash
+cogmem identity show --target user     # Display current profile
+cogmem identity detect --json          # Check for placeholder sections
+cogmem identity update --target user --json '{"expertise": "Added: AI agent design"}'
+```
+
+Identity files are auto-updated during session wrap based on observed interactions.
+
+### 8. Web Dashboard (v0.5.0–v0.10.0)
+
+A built-in web dashboard for browsing memories, skills, logs, and personality.
+
+```bash
+pip install cogmem-agent[dashboard]
+cogmem dashboard                       # Opens at http://127.0.0.1:8765
+```
+
+Pages: Memory Overview, Skills (usage stats + effectiveness), Logs (searchable), Search (live), Personality, Memory Consolidation Signals. Full EN/JA internationalization.
+
 ### The Result
 
 | Aspect | Without Cognitive Memory | With Cognitive Memory |
@@ -125,6 +185,30 @@ How it works:
 | Agent personality | Generic, robotic responses | Remembers what mattered, feels more human |
 | Wasted searches | Every message triggers vector search | Trivial messages are skipped automatically |
 | Contextual recall | Manual search only | Past memories surface automatically when relevant |
+
+## Benchmark: Memory Improves Agent Accuracy
+
+We ran an A/B comparison test using Claude Opus to measure how cogmem's memory affects agent response accuracy. 30 questions covering error pattern avoidance and project-specific knowledge were answered by two agents: one with cogmem context (search results + knowledge summary + error patterns) and one without.
+
+| | Without cogmem | With cogmem | Improvement |
+|--|---------------|-------------|-------------|
+| **Overall** | 5/30 (17%) | 12/30 (40%) | **2.4x** |
+| EP reoccurrence | 1/5 | 3/5 | +2 |
+| Context-dependent | 4/25 | 9/25 | +5 |
+
+**The harder the question, the bigger the advantage:**
+
+| Difficulty | Without | With | cogmem effect |
+|-----------|---------|------|--------------|
+| Easy | 21% | 29% | +7% |
+| Medium | 18% | 45% | **+27%** |
+| Hard | 0% | 60% | **+60%** |
+
+Hard questions (requiring multi-step reasoning from past events) saw the most dramatic improvement — from 0% to 60%. This validates the core hypothesis: emotionally significant memories, properly encoded and retrieved, make agents meaningfully smarter.
+
+> **Note**: This benchmark tests cogmem's memory retrieval only. In production, agents also benefit from behavioral protocols (`agents.md`), personality (`soul.md`), and auto-generated skills — making the real-world advantage even larger.
+
+*Benchmark details: 55-question test set (5 EP reoccurrence + 50 context-dependent), keyword-based grading, Claude Opus 4.6. Full dataset and runner at `tests/ab_comparison/`.*
 
 ## Install
 
@@ -150,6 +234,7 @@ your-project/
 └── memory/
     ├── logs/                    # Session logs (YYYY-MM-DD.md)
     ├── contexts/                # Daily context files
+    ├── skills.db                # Skill usage and learning data
     └── knowledge/
         ├── summary.md           # Crystallized knowledge
         └── error-patterns.md    # Recurring error patterns
@@ -209,6 +294,15 @@ cogmem signals                     # Check crystallization signals
 cogmem context-search "query"      # Context-aware search with flashback filtering
 cogmem status                      # Show statistics
 cogmem migrate                     # Upgrade from older versions
+cogmem watch --since "8 hours ago"     # Analyze recent git history
+cogmem skills track "skill" --event skill_start  # Track skill usage
+cogmem skills learn --effectiveness 0.9 # Record learning
+cogmem skills audit --json --brief     # Audit skill health
+cogmem skills review                   # Full skill report
+cogmem identity show --target user     # Show identity
+cogmem identity update --target user   # Update identity
+cogmem recall-stats                    # Memory recall statistics
+cogmem dashboard                       # Launch web dashboard
 ```
 
 ### Python API
