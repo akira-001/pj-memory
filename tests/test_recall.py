@@ -184,3 +184,38 @@ class TestSemanticSearchHash:
         assert status == "ok"
         assert len(results) >= 1
         assert results[0].content_hash == ch
+
+
+class TestGrepSearchHash:
+    def test_grep_returns_content_hash(self, store):
+        """grep_search looks up content_hash from DB by matching content."""
+        content = "### [ERROR] テスト用エラーエントリ\n*Arousal: 0.9 | Emotion: Correction*\ngrep で見つかるテスト。"
+        content_clean = content.replace("---", "").strip()
+        content_hash = hashlib.sha256(content_clean.encode()).hexdigest()
+
+        # Write log file
+        log_file = store.config.logs_path / "2026-03-26.md"
+        log_file.write_text(
+            f"# 2026-03-26\n\n## ログエントリ\n\n{content}\n\n---\n\n## 引き継ぎ\n",
+            encoding="utf-8",
+        )
+
+        # Index so DB has the hash
+        store.index_file(log_file, force=True)
+
+        from cognitive_memory.search import grep_search
+        results = grep_search("テスト用エラー", store.config.logs_path, store.config)
+        assert len(results) >= 1
+        assert results[0].content_hash == content_hash
+
+    def test_grep_returns_none_hash_when_not_indexed(self, store):
+        """grep result has content_hash=None when entry is not in DB."""
+        log_file = store.config.logs_path / "2026-03-27.md"
+        log_file.write_text(
+            "# 2026-03-27\n\n## ログエントリ\n\n### [INSIGHT] DB未登録エントリ\n*Arousal: 0.7*\nインデックスされていない。\n\n---\n\n## 引き継ぎ\n",
+            encoding="utf-8",
+        )
+        from cognitive_memory.search import grep_search
+        results = grep_search("DB未登録", store.config.logs_path, store.config)
+        assert len(results) >= 1
+        assert results[0].content_hash is None

@@ -91,6 +91,16 @@ def grep_search(
     if not logs_dir.exists():
         return []
 
+    # DB connection for content_hash reverse lookup
+    db_conn = None
+    db_path = config.database_path
+    if db_path.exists():
+        try:
+            db_conn = sqlite3.connect(str(db_path))
+            db_conn.row_factory = sqlite3.Row
+        except sqlite3.Error:
+            db_conn = None
+
     for fp in sorted(logs_dir.glob("*.md")):
         if fp.name.endswith(".compact.md"):
             continue
@@ -114,6 +124,18 @@ def grep_search(
                 except (ValueError, AttributeError):
                     arousal = 0.5
                 e_clean = e.replace("---", "").strip()
+                # Reverse lookup content_hash from DB
+                found_hash = None
+                if db_conn is not None:
+                    try:
+                        row = db_conn.execute(
+                            "SELECT content_hash FROM memories WHERE content = ? AND date = ?",
+                            (e_clean, date),
+                        ).fetchone()
+                        if row:
+                            found_hash = row["content_hash"]
+                    except sqlite3.Error:
+                        pass
                 decay = time_decay(
                     date,
                     arousal,
@@ -128,8 +150,12 @@ def grep_search(
                         content=e_clean,
                         arousal=arousal,
                         source="grep",
+                        content_hash=found_hash,
                     )
                 )
+
+    if db_conn is not None:
+        db_conn.close()
 
     results.sort(key=lambda x: x.score, reverse=True)
     return results[:top_k]
