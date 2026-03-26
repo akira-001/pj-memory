@@ -225,11 +225,17 @@ class MemoryStore:
             total += n
         return total
 
-    def search(self, query: str, top_k: int = 5) -> SearchResponse:
-        """Full search pipeline: gate → semantic+grep → merge. FailOpen on embed failure."""
-        if not should_search(query):
-            return SearchResponse(status="skipped_by_gate")
+    def _reinforce_results(self, results: List[SearchResult]) -> None:
+        """Reinforce recall for search results that have a content_hash."""
+        for result in results:
+            if result.content_hash is not None:
+                self.reinforce_recall(result.content_hash)
 
+    def _execute_search(self, query: str, top_k: int = 5) -> SearchResponse:
+        """Core search pipeline: semantic+grep → merge. FailOpen on embed failure.
+
+        Does NOT apply the search gate — callers are responsible for gating.
+        """
         # Try semantic search
         query_vec = self.embedder.embed(query)
         if query_vec is not None:
@@ -252,6 +258,14 @@ class MemoryStore:
         return SearchResponse(
             results=grep_results, status=f"degraded ({status_reason})"
         )
+
+    def search(self, query: str, top_k: int = 5) -> SearchResponse:
+        """Full search pipeline with gate check and recall reinforcement."""
+        if not should_search(query):
+            return SearchResponse(status="skipped_by_gate")
+        response = self._execute_search(query, top_k)
+        self._reinforce_results(response.results)
+        return response
 
     def context_search(
         self,
@@ -281,19 +295,9 @@ class MemoryStore:
         if not should_context_search(query, session_keywords):
             return SearchResponse(status="skipped_by_gate")
 
-        # 3. Embed query
+        # 3. Cache check (requires embedding for similarity comparison)
         query_vec = self.embedder.embed(query)
-        if query_vec is None:
-            # Ollama down — fall back to grep only
-            grep_results = grep_search(
-                query, self.config.logs_path, self.config, top_k
-            )
-            return SearchResponse(
-                results=grep_results, status="degraded (ollama_unavailable)"
-            )
-
-        # 4. Cache check
-        if cache is not None:
+        if query_vec is not None and cache is not None:
             cached = cache.get(query_vec)
             if cached is not None:
                 status = cached.status
@@ -301,24 +305,8 @@ class MemoryStore:
                     status = status + " (cached)"
                 return SearchResponse(results=cached.results, status=status)
 
-        # 5. Full search pipeline (bypass search() gate since we already gated above)
-        sem_results, sem_status = semantic_search(
-            query_vec, self.config.database_path, self.config, top_k
-        )
-        if sem_status == "ok":
-            grep_results = grep_search(
-                query, self.config.logs_path, self.config, top_k
-            )
-            merged = merge_and_dedup(grep_results, sem_results, top_k)
-            response = SearchResponse(results=merged, status="ok")
-        else:
-            # Semantic partially failed — fall back to grep
-            grep_results = grep_search(
-                query, self.config.logs_path, self.config, top_k
-            )
-            response = SearchResponse(
-                results=grep_results, status="degraded ({})".format(sem_status)
-            )
+        # 4. Full search pipeline (bypass search() gate since we already gated above)
+        response = self._execute_search(query, top_k)
 
         # 6. Apply flashback filtering
         filtered = filter_flashbacks(
@@ -330,10 +318,13 @@ class MemoryStore:
         filtered_response = SearchResponse(results=filtered, status=response.status)
 
         # 7. Store in cache
-        if cache is not None:
+        if cache is not None and query_vec is not None:
             cache.put(query_vec, filtered_response)
 
-        # 8. Return
+        # 8. Reinforce recall for returned results
+        self._reinforce_results(filtered_response.results)
+
+        # 9. Return
         return filtered_response
 
     def status(self) -> dict:

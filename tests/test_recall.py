@@ -11,7 +11,7 @@ import pytest
 
 from cognitive_memory.config import CogMemConfig
 from cognitive_memory.store import MemoryStore
-from cognitive_memory.types import SearchResult
+from cognitive_memory.types import SearchResponse, SearchResult
 
 
 @pytest.fixture
@@ -219,3 +219,131 @@ class TestGrepSearchHash:
         results = grep_search("DB未登録", store.config.logs_path, store.config)
         assert len(results) >= 1
         assert results[0].content_hash is None
+
+
+class TestSearchReinforcement:
+    def test_search_reinforces_with_hash(self, store, monkeypatch):
+        """search() calls reinforce_recall for results with content_hash."""
+        content = "### [INSIGHT] 想起対象"
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
+        store.conn.execute(
+            "INSERT INTO memories (content_hash, date, content, arousal, vector) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (content_hash, "2026-03-26", content, 0.5, "[]"),
+        )
+        store.conn.commit()
+
+        def fake_execute(query, top_k=5):
+            return SearchResponse(
+                results=[
+                    SearchResult(
+                        score=0.9, date="2026-03-26", content=content,
+                        arousal=0.5, source="semantic", content_hash=content_hash,
+                    )
+                ],
+                status="ok",
+            )
+        monkeypatch.setattr(store, "_execute_search", fake_execute)
+        store.search("想起")
+
+        row = store.conn.execute(
+            "SELECT recall_count, arousal FROM memories WHERE content_hash = ?",
+            (content_hash,),
+        ).fetchone()
+        assert row["recall_count"] == 1
+        assert row["arousal"] == pytest.approx(0.6)
+
+    def test_search_skips_none_hash(self, store, monkeypatch):
+        """search() does NOT reinforce results with content_hash=None."""
+        reinforced = []
+        original = store.reinforce_recall
+        def tracking(h, **kw):
+            reinforced.append(h)
+            original(h, **kw)
+        monkeypatch.setattr(store, "reinforce_recall", tracking)
+
+        def fake_execute(query, top_k=5):
+            return SearchResponse(
+                results=[
+                    SearchResult(
+                        score=0.5, date="2026-03-26", content="no hash",
+                        arousal=0.5, source="grep", content_hash=None,
+                    )
+                ],
+                status="ok",
+            )
+        monkeypatch.setattr(store, "_execute_search", fake_execute)
+        store.search("test")
+        assert len(reinforced) == 0
+
+    def test_search_no_results_no_reinforce(self, store, monkeypatch):
+        reinforced = []
+        original = store.reinforce_recall
+        def tracking(h, **kw):
+            reinforced.append(h)
+            original(h, **kw)
+        monkeypatch.setattr(store, "reinforce_recall", tracking)
+
+        def fake_execute(query, top_k=5):
+            return SearchResponse(results=[], status="ok")
+        monkeypatch.setattr(store, "_execute_search", fake_execute)
+        store.search("empty")
+        assert len(reinforced) == 0
+
+    def test_search_skipped_no_reinforce(self, store, monkeypatch):
+        reinforced = []
+        original = store.reinforce_recall
+        def tracking(h, **kw):
+            reinforced.append(h)
+            original(h, **kw)
+        monkeypatch.setattr(store, "reinforce_recall", tracking)
+
+        def fake_execute(query, top_k=5):
+            return SearchResponse(results=[], status="skipped_by_gate")
+        monkeypatch.setattr(store, "_execute_search", fake_execute)
+        store.search("a")
+        assert len(reinforced) == 0
+
+
+class TestContextSearchReinforcement:
+    def test_context_search_reinforces(self, store, monkeypatch):
+        content = "### [INSIGHT] フラッシュバック対象"
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
+        store.conn.execute(
+            "INSERT INTO memories (content_hash, date, content, arousal, vector) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (content_hash, "2026-03-26", content, 0.8, "[]"),
+        )
+        store.conn.commit()
+
+        def fake_execute(query, top_k=5):
+            return SearchResponse(
+                results=[
+                    SearchResult(
+                        score=0.9, date="2026-03-26", content=content,
+                        arousal=0.8, source="semantic", cosine_sim=0.9,
+                        content_hash=content_hash,
+                    )
+                ],
+                status="ok",
+            )
+        monkeypatch.setattr(store, "_execute_search", fake_execute)
+        monkeypatch.setattr(store.config, "context_search_enabled", True)
+        store.context_search("フラッシュバック")
+
+        row = store.conn.execute(
+            "SELECT recall_count FROM memories WHERE content_hash = ?",
+            (content_hash,),
+        ).fetchone()
+        assert row["recall_count"] == 1
+
+    def test_context_search_disabled_no_reinforce(self, store, monkeypatch):
+        reinforced = []
+        original = store.reinforce_recall
+        def tracking(h, **kw):
+            reinforced.append(h)
+            original(h, **kw)
+        monkeypatch.setattr(store, "reinforce_recall", tracking)
+        monkeypatch.setattr(store.config, "context_search_enabled", False)
+        store.context_search("test")
+        assert len(reinforced) == 0
