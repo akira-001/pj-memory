@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ..services.logs_service import get_log_dates, get_log_entries
+from ..services.logs_service import get_log_dates, get_log_entries, get_log_summary
 
 router = APIRouter()
 
@@ -16,12 +16,14 @@ async def logs_list(request: Request):
     config = request.app.state.config
     templates = request.app.state.templates
     dates = get_log_dates(config)
+    summary = get_log_summary(config)
     return templates.TemplateResponse(
         "logs/list.html",
         {
             "request": request,
             "active_page": "logs",
             "dates": dates,
+            "summary": summary,
         },
     )
 

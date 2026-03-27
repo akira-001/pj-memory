@@ -6,7 +6,7 @@ import sqlite3
 
 from cognitive_memory.dashboard.i18n import t
 from cognitive_memory.dashboard.services.memory_service import get_overview_data, get_memory_summary, _empty_data
-from cognitive_memory.dashboard.services.logs_service import get_log_dates, get_log_entries
+from cognitive_memory.dashboard.services.logs_service import get_log_dates, get_log_entries, get_log_summary
 from cognitive_memory.dashboard.services.skills_service import (
     _determine_trend,
     get_skills_list,
@@ -128,6 +128,54 @@ class TestLogsService:
         assert data is not None
         assert len(data["entries"]) >= 1
         assert any("エラー" in e["title"] or "エラー" in e["body"] for e in data["entries"])
+
+    def test_get_log_summary_counts(self, config):
+        """Verify total/detailed/compacted/retained counts."""
+        summary = get_log_summary(config)
+        assert summary["total"] == 3  # 2026-03-18, 2026-03-19, 2026-03-20
+        assert summary["detailed"] == 1  # 2026-03-20 (.md only)
+        assert summary["compacted"] == 1  # 2026-03-18 (.compact.md only)
+        assert summary["retained"] == 1  # 2026-03-19 (both .md and .compact.md)
+
+    def test_get_log_summary_categories(self, config):
+        """Verify category_counts aggregation across all logs."""
+        summary = get_log_summary(config)
+        cats = summary["category_counts"]
+        # 2026-03-20 has INSIGHT, DECISION, ERROR (from .md)
+        assert cats.get("INSIGHT", 0) >= 1
+        assert cats.get("DECISION", 0) >= 1
+        assert cats.get("ERROR", 0) >= 1
+        # 2026-03-18 compact has MILESTONE, INSIGHT, DECISION
+        assert cats.get("MILESTONE", 0) >= 1
+
+    def test_get_log_dates_has_status(self, config):
+        """Verify status field is present and correct per date."""
+        dates = get_log_dates(config)
+        date_map = {d["date"]: d for d in dates}
+        assert date_map["2026-03-20"]["status"] == "detailed"
+        assert date_map["2026-03-18"]["status"] == "compacted"
+        assert date_map["2026-03-19"]["status"] == "retained"
+
+    def test_get_log_dates_has_categories(self, config):
+        """Verify categories dict per date."""
+        dates = get_log_dates(config)
+        date_map = {d["date"]: d for d in dates}
+        # Full .md date should have parsed categories
+        cats_20 = date_map["2026-03-20"]["categories"]
+        assert "INSIGHT" in cats_20
+        assert "ERROR" in cats_20
+        # Compact-only date should have categories from compact format
+        cats_18 = date_map["2026-03-18"]["categories"]
+        assert "MILESTONE" in cats_18 or "INSIGHT" in cats_18
+
+    def test_get_log_dates_has_max_arousal(self, config):
+        """Verify max_arousal value."""
+        dates = get_log_dates(config)
+        date_map = {d["date"]: d for d in dates}
+        # 2026-03-20 has arousal values 0.8, 0.6, 0.9
+        assert date_map["2026-03-20"]["max_arousal"] == 0.9
+        # Compact-only date has no arousal data
+        assert date_map["2026-03-18"]["max_arousal"] is None
 
 
 class TestSkillsService:

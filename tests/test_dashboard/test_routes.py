@@ -211,6 +211,29 @@ class TestLogBrowser:
         assert resp.status_code == 200
         assert "テストエラー" in resp.text
 
+    def test_logs_list_shows_summary_cards(self, client):
+        """Summary card values appear in HTML."""
+        resp = client.get("/logs")
+        html = resp.text
+        assert "Total Logs" in html
+        assert "Detailed" in html
+        assert "Compacted" in html
+        assert "Retained" in html
+
+    def test_logs_list_shows_status_badges(self, client):
+        """Status badges for different lifecycle states appear in HTML."""
+        resp = client.get("/logs")
+        html = resp.text
+        # At least one status badge should appear
+        assert "Detailed" in html or "Compacted" in html or "Retained" in html
+
+    def test_logs_list_shows_chart_data(self, client):
+        """Chart.js data is embedded in the page."""
+        resp = client.get("/logs")
+        html = resp.text
+        assert "logCategoryChart" in html
+        assert "catData" in html
+
 
 class TestSearch:
     def test_search_page_returns_200(self, client):

@@ -10,61 +10,135 @@
 
 {% if dates %}
 
-<!-- Recent Logs (first 3) -->
-<div class="section-title">{{ t('logs.recent', lang) }}</div>
-<div style="margin-bottom: 2rem;">
-    {% for item in dates[:3] %}
-    <a href="/logs/{{ item.date }}" class="log-list-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <div>
-                <span style="font-weight: 600;">{{ item.date }}</span>
-                <span style="color: var(--text-dim); font-size: 0.8125rem; margin-left: 0.75rem;">
-                    {{ item.entry_count }} {{ t('logs.entries', lang) }}
-                </span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                {% if item.has_compact %}
-                <span class="compact-badge">compact</span>
-                {% endif %}
-                <span style="color: var(--text-dim); font-size: 0.875rem;">&rarr;</span>
-            </div>
-        </div>
-        {% if item.overview %}
-        <div class="log-overview">{{ item.overview }}</div>
-        {% endif %}
-    </a>
-    {% endfor %}
+<!-- Summary Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">{{ t('logs.summary_total', lang) }}</div>
+        <div class="stat-value">{{ summary.total }}</div>
+        <div class="stat-sub">{{ t('logs.days', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('logs.summary_detailed', lang) }}</div>
+        <div class="stat-value">{{ summary.detailed }}</div>
+        <div class="stat-sub">{{ t('logs.days', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('logs.summary_compacted', lang) }}</div>
+        <div class="stat-value">{{ summary.compacted }}</div>
+        <div class="stat-sub">{{ t('logs.days', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('logs.summary_retained', lang) }}</div>
+        <div class="stat-value">{{ summary.retained }}</div>
+        <div class="stat-sub">{{ t('logs.days', lang) }}</div>
+    </div>
 </div>
 
-<!-- Earlier (remaining items) -->
-{% if dates[3:] %}
-<div class="section-title">{{ t('logs.earlier', lang) }}</div>
-<div>
-    {% for item in dates[3:] %}
-    <a href="/logs/{{ item.date }}" class="log-list-item">
-        <div>
-            <span style="font-weight: 600;">{{ item.date }}</span>
-            <span style="color: var(--text-dim); font-size: 0.8125rem; margin-left: 0.75rem;">
-                {{ item.entry_count }} {{ t('logs.entries', lang) }}
-            </span>
-            {% if item.overview %}
-            <span class="log-overview" style="display: block;">{{ item.overview.split('\n')[0][:80] }}{% if item.overview|length > 80 %}...{% endif %}</span>
-            {% endif %}
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            {% if item.has_compact %}
-            <span class="compact-badge">compact</span>
-            {% endif %}
-            <span style="color: var(--text-dim); font-size: 0.875rem;">&rarr;</span>
-        </div>
-    </a>
-    {% endfor %}
+<!-- Category Distribution Chart -->
+{% if summary.category_counts %}
+<div class="chart-card" style="margin-bottom: 2rem;">
+    <h3>{{ t('logs.category_chart', lang) }}</h3>
+    <canvas id="logCategoryChart" height="120"></canvas>
 </div>
 {% endif %}
+
+<!-- Date Table -->
+<div class="section-title">{{ t('logs.all_logs', lang) }}</div>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{{ t('logs.date', lang) }}</th>
+            <th>{{ t('logs.status', lang) }}</th>
+            <th>{{ t('logs.entries', lang) }}</th>
+            <th>{{ t('logs.categories', lang) }}</th>
+            <th>{{ t('logs.max_arousal', lang) }}</th>
+            <th>{{ t('logs.overview', lang) }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in dates %}
+        <tr>
+            <td><a href="/logs/{{ item.date }}">{{ item.date }}</a></td>
+            <td>
+                {% if item.status == 'detailed' %}
+                <span class="badge" style="background: rgba(90, 158, 90, 0.12); color: #3a7a3a;">{{ t('logs.status_detailed', lang) }}</span>
+                {% elif item.status == 'compacted' %}
+                <span class="badge" style="background: rgba(139, 143, 154, 0.15); color: var(--text-dim);">{{ t('logs.status_compacted', lang) }}</span>
+                {% else %}
+                <span class="badge" style="background: rgba(80, 112, 176, 0.12); color: #405a8a;">{{ t('logs.status_retained', lang) }}</span>
+                {% endif %}
+            </td>
+            <td>{{ item.entry_count }}</td>
+            <td>
+                {% for cat, count in (item.categories | dictsort(by='value', reverse=true))[:3] %}
+                <span class="badge badge-{{ cat | lower }}" style="margin-right: 0.25rem;">{{ cat }}&times;{{ count }}</span>
+                {% endfor %}
+            </td>
+            <td>{{ "%.1f"|format(item.max_arousal) if item.max_arousal is not none else "-" }}</td>
+            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ item.overview.split('\n')[0][:60] }}{% if item.overview|length > 60 %}...{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 {% else %}
 <div class="empty-state">
     <p>{{ t('logs.no_logs', lang) }}</p>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if dates and summary.category_counts %}
+<script>
+Chart.defaults.color = '#8a8078';
+Chart.defaults.borderColor = 'rgba(0, 0, 0, 0.06)';
+
+const logCategoryColors = {
+    'INSIGHT': '#4EAB9A',
+    'DECISION': '#6a9bcc',
+    'ERROR': '#d97757',
+    'PATTERN': '#b0aea5',
+    'QUESTION': '#c4a35a',
+    'MILESTONE': '#7a6fbe',
+    'SKILL': '#4a7a4a',
+    'SUMMARY': '#8a8078',
+};
+
+const catData = {{ summary.category_counts | tojson }};
+const catLabels = Object.keys(catData);
+const catValues = Object.values(catData);
+const catColors = catLabels.map(c => logCategoryColors[c] || '#8a8078');
+
+new Chart(document.getElementById('logCategoryChart'), {
+    type: 'bar',
+    data: {
+        labels: catLabels,
+        datasets: [{
+            data: catValues,
+            backgroundColor: catColors,
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+            },
+            y: {
+                grid: { display: false },
+            }
+        }
+    }
+});
+</script>
 {% endif %}
 {% endblock %}

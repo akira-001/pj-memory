@@ -276,6 +276,28 @@ def project_dir(tmp_path):
     # Write sample log
     (logs_dir / "2026-03-20.md").write_text(SAMPLE_LOG, encoding="utf-8")
 
+    # Compact-only log (compacted status)
+    (logs_dir / "2026-03-18.compact.md").write_text(
+        "# 2026-03-18 コンパクトログ\n"
+        "*元ログ: 2026-03-18.md | 圧縮率: 50%*\n\n"
+        "## エッセンス\nコンパクトテストの概要です。\n\n"
+        "## 重要エントリ\n\n"
+        "### [MILESTONE] テストマイルストーン\nマイルストーン内容。\n\n"
+        "- [INSIGHT] コンパクト洞察エントリ\n"
+        "- [DECISION] コンパクト決定エントリ\n",
+        encoding="utf-8",
+    )
+
+    # Retained log (both .md and .compact.md exist)
+    (logs_dir / "2026-03-19.md").write_text(SAMPLE_LOG_MORE_ERRORS, encoding="utf-8")
+    (logs_dir / "2026-03-19.compact.md").write_text(
+        "# 2026-03-19 コンパクトログ\n"
+        "*元ログ: 2026-03-19.md | 圧縮率: 40%*\n\n"
+        "## エッセンス\n追加エラーの圧縮版。\n\n"
+        "- [ERROR] 環境要因見落とし\n",
+        encoding="utf-8",
+    )
+
     # Write cogmem.toml
     (tmp_path / "cogmem.toml").write_text(
         '[cogmem]\nlogs_dir = "memory/logs"\ndb_path = "memory/vectors.db"\n',
