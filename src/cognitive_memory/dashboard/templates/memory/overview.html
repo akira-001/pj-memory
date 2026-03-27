@@ -36,7 +36,7 @@
     <div class="stat-card">
         <div class="stat-label">{{ t('memory.categories', lang) }}</div>
         <div class="stat-value">{{ data.category_counts | length }}</div>
-        <div class="stat-sub">
+        <div class="stat-sub" style="display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem;">
             {% for cat, count in data.category_counts.items() %}
                 <span class="badge badge-{{ cat | lower }}">{{ cat }} {{ count }}</span>
             {% endfor %}
@@ -82,7 +82,7 @@
             {% for m in data.most_recalled %}
             <tr>
                 <td>{{ m.recall_count }}</td>
-                <td>{{ m.title }}</td>
+                <td>{{ m.title | replace('### ', '') | replace('**', '') }}</td>
                 <td>{{ "%.2f"|format(m.arousal) }}</td>
                 <td>{{ m.last_recalled[:10] if m.last_recalled else '-' }}</td>
             </tr>

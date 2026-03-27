@@ -132,6 +132,61 @@ def _empty_data() -> dict[str, Any]:
     }
 
 
+def get_top_keywords(config: CogMemConfig, limit: int = 10) -> list[dict]:
+    """Extract top keywords from memory entry titles.
+
+    Parses the first line of each memory (title) and extracts meaningful
+    words, excluding common stop words and short tokens. Returns a list
+    of {word, count} sorted by frequency descending.
+    """
+    db_path = config.database_path
+    if not Path(db_path).exists():
+        return []
+
+    # Japanese + English stop words (functional words with no search value)
+    stop_words = {
+        # Japanese particles/auxiliaries
+        "の", "に", "は", "を", "が", "で", "と", "も", "から", "まで", "へ",
+        "より", "こと", "する", "した", "して", "れる", "られ", "ため", "など",
+        "よう", "その", "この", "ある", "いる", "なる", "おく", "みる",
+        # English
+        "the", "and", "for", "with", "from", "that", "this", "was", "are",
+        "not", "but", "all", "has", "had", "have", "been", "will", "can",
+        # Common technical noise
+        "test", "add", "fix", "update", "new", "use", "set", "get",
+    }
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        rows = conn.execute("SELECT content FROM memories").fetchall()
+
+        word_counts: dict[str, int] = {}
+        for row in rows:
+            content = row[0] or ""
+            # Get first line (title)
+            title = content.split("\n")[0]
+            # Remove markdown markers and category tags
+            title = re.sub(r"^#+\s*", "", title)
+            title = re.sub(r"\[[A-Z]+\]\s*", "", title)
+            title = re.sub(r"[*_`#\[\](){}|]", "", title)
+            # Split into words
+            words = re.findall(r"[a-zA-Z]{3,}|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]{2,}", title)
+            for w in words:
+                w_lower = w.lower()
+                if w_lower not in stop_words and len(w_lower) >= 3:
+                    # Preserve original case for display
+                    word_counts[w] = word_counts.get(w, 0) + 1
+
+        # Sort by count desc, take top N
+        sorted_words = sorted(word_counts.items(), key=lambda x: -x[1])
+        return [{"word": w, "count": c} for w, c in sorted_words[:limit]]
+
+    except sqlite3.Error:
+        return []
+    finally:
+        conn.close()
+
+
 def get_memory_summary(config: CogMemConfig) -> dict:
     """Lightweight summary: just counts and daily distribution."""
     db_path = config.database_path

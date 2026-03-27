@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 
-from ..services.personality_service import get_personality_data
+from ..services.personality_service import get_personality_data, update_section
 
 router = APIRouter()
+
+
+class SectionUpdate(BaseModel):
+    target: str  # "user" or "soul"
+    section: str
+    content: str
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -24,3 +31,14 @@ async def personality_page(request: Request):
             "data": data,
         },
     )
+
+
+@router.post("/api/section", response_class=JSONResponse)
+async def update_personality_section(request: Request, body: SectionUpdate):
+    """Update a single section of user or soul identity."""
+    config = request.app.state.config
+    try:
+        update_section(config, body.target, body.section, body.content)
+        return {"status": "ok"}
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})

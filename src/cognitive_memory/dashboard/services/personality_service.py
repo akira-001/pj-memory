@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, List
 
 from ...config import CogMemConfig
-from ...identity import parse_identity_md
+from ...identity import parse_identity_md, update_identity_section
 
 
 def get_personality_data(config: CogMemConfig) -> dict[str, Any]:
@@ -23,6 +23,17 @@ def get_personality_data(config: CogMemConfig) -> dict[str, Any]:
         "learning": learning,
         "knowledge": knowledge,
     }
+
+
+def update_section(config: CogMemConfig, target: str, section: str, content: str) -> None:
+    """Update a section in user or soul identity file."""
+    if target == "user":
+        path = config.identity_user_path
+    elif target == "soul":
+        path = config.identity_soul_path
+    else:
+        raise ValueError(f"Invalid target: {target}. Must be 'user' or 'soul'.")
+    update_identity_section(path, section, content)
 
 
 def _read_file_or_empty(path: Path) -> str:

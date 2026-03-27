@@ -15,22 +15,22 @@
     <nav class="sidebar">
         <div class="sidebar-brand"><img src="/static/logo.svg" alt="cogmem" class="sidebar-logo"></div>
         <a href="/" class="nav-link {% if active_page == 'memory' %}active{% endif %}">
-            <span class="nav-icon">&#9679;</span> {{ t('nav.memory', lang) }}
-        </a>
-        <a href="/skills" class="nav-link {% if active_page == 'skills' %}active{% endif %}">
-            <span class="nav-icon">&#9733;</span> {{ t('nav.skills', lang) }}
+            <span class="nav-icon">&#9679;</span> <span class="nav-text">{{ t('nav.memory', lang) }}</span>
         </a>
         <a href="/logs" class="nav-link {% if active_page == 'logs' %}active{% endif %}">
-            <span class="nav-icon nav-icon-log">&#9776;</span> {{ t('nav.logs', lang) }}
-        </a>
-        <a href="/search" class="nav-link {% if active_page == 'search' %}active{% endif %}">
-            <span class="nav-icon nav-icon-search">&#8981;</span> {{ t('nav.search', lang) }}
-        </a>
-        <a href="/personality" class="nav-link {% if active_page == 'personality' %}active{% endif %}">
-            <span class="nav-icon">&#9824;</span> {{ t('nav.personality', lang) }}
+            <span class="nav-icon nav-icon-log">&#9776;</span> <span class="nav-text">{{ t('nav.logs', lang) }}</span>
         </a>
         <a href="/consolidation" class="nav-link {% if active_page == 'consolidation' %}active{% endif %}">
-            <span class="nav-icon nav-icon-diamond">&#9830;</span> {{ t('nav.crystallization', lang) }}
+            <span class="nav-icon nav-icon-diamond">&#9830;</span> <span class="nav-text">{{ t('nav.crystallization', lang) }}</span>
+        </a>
+        <a href="/skills" class="nav-link {% if active_page == 'skills' %}active{% endif %}">
+            <span class="nav-icon">&#9733;</span> <span class="nav-text">{{ t('nav.skills', lang) }}</span>
+        </a>
+        <a href="/personality" class="nav-link {% if active_page == 'personality' %}active{% endif %}">
+            <span class="nav-icon">&#9824;</span> <span class="nav-text">{{ t('nav.personality', lang) }}</span>
+        </a>
+        <a href="/search" class="nav-link {% if active_page == 'search' %}active{% endif %}">
+            <span class="nav-icon nav-icon-search">&#8981;</span> <span class="nav-text">{{ t('nav.search', lang) }}</span>
         </a>
         <div class="lang-switch">
             <a href="/_lang/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>

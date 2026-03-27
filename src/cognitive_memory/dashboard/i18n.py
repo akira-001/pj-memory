@@ -8,8 +8,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     # Navigation
     "nav.memory": {"en": "Memory Overview", "ja": "メモリー概要"},
     "nav.skills": {"en": "Skills", "ja": "スキル習得"},
-    "nav.logs": {"en": "Logs", "ja": "ログ"},
-    "nav.search": {"en": "Search", "ja": "検索"},
+    "nav.logs": {"en": "Episodic Memory", "ja": "エピソード記憶"},
+    "nav.search": {"en": "Memory Search", "ja": "メモリー検索"},
     "nav.personality": {"en": "Personality", "ja": "パーソナリティ"},
     "nav.crystallization": {"en": "Memory Consolidation", "ja": "記憶の定着"},
 
@@ -74,7 +74,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.close": {"en": "Close", "ja": "閉じる"},
 
     # Logs
-    "logs.title": {"en": "Session Logs", "ja": "セッションログ"},
+    "logs.title": {"en": "Episodic Memory", "ja": "エピソード記憶"},
+    "logs.subtitle": {"en": "Experiences recorded during sessions. Vivid memories retain detail; mundane ones fade to summaries after consolidation.", "ja": "セッション中に記録された体験の記憶。鮮烈な体験は詳細に残り、平凡な出来事は定着後に要点だけが残る。"},
     "logs.recent": {"en": "Recent Logs", "ja": "最近のログ"},
     "logs.earlier": {"en": "Earlier", "ja": "それ以前"},
     "logs.entries": {"en": "entries", "ja": "件"},
@@ -115,15 +116,21 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "search.memory_index": {"en": "Memory Index", "ja": "メモリーインデックス"},
     "search.indexed_across": {"en": "memories indexed across", "ja": "件のメモリー（"},
     "search.days_suffix": {"en": "days", "ja": "日間）"},
+    "search.top_keywords": {"en": "Top Keywords", "ja": "よく出るキーワード"},
 
     # Personality
     "personality.title": {"en": "Personality", "ja": "パーソナリティ"},
-    "personality.user_profile": {"en": "User Profile", "ja": "ユーザープロファイル"},
-    "personality.agent_identity": {"en": "Agent Identity", "ja": "エージェントのアイデンティティ"},
+    "personality.subtitle": {"en": "User profile and agent identity — who we are and how we work together.", "ja": "ユーザーとエージェント、それぞれの情報と協働のスタイル。"},
+    "personality.user_profile": {"en": "User", "ja": "ユーザー"},
+    "personality.user_desc": {"en": "Profile learned from interactions", "ja": "やり取りから学習したプロファイル"},
+    "personality.agent_identity": {"en": "Agent", "ja": "エージェント"},
+    "personality.agent_desc": {"en": "Identity and behavioral guidelines", "ja": "アイデンティティと行動指針"},
     "personality.learning_timeline": {"en": "Learning Timeline", "ja": "学習タイムライン"},
     "personality.knowledge_summary": {"en": "Knowledge Summary", "ja": "蓄積された知識"},
     "personality.no_data": {"en": "No data available yet.", "ja": "まだデータがありません。"},
     "personality.no_entries": {"en": "No learning entries yet.", "ja": "学習エントリがまだありません。"},
+    "personality.save": {"en": "Save", "ja": "保存"},
+    "personality.cancel": {"en": "Cancel", "ja": "キャンセル"},
 
     # Crystallization
     "crystal.title": {"en": "Memory Consolidation", "ja": "記憶の定着"},

@@ -4,17 +4,33 @@
 {% set lang = get_lang(request) %}
 <div class="page-header">
     <h1>{{ t('personality.title', lang) }}</h1>
+    <p>{{ t('personality.subtitle', lang) }}</p>
 </div>
 
-<!-- Two-column: User Profile + Agent Identity -->
-<div class="detail-grid">
-    <div>
-        <h3 style="margin-bottom: 1rem;">{{ t('personality.user_profile', lang) }}</h3>
+<!-- User & Agent panels -->
+<div class="persona-grid">
+    <!-- User panel -->
+    <div class="persona-panel persona-panel--user">
+        <div class="persona-panel__header">
+            <span class="persona-panel__icon">&#128100;</span>
+            <span class="persona-panel__title">{{ t('personality.user_profile', lang) }}</span>
+        </div>
+        <div class="persona-panel__desc">{{ t('personality.user_desc', lang) }}</div>
         {% if data.user %}
         {% for section, content in data.user.items() %}
-        <div class="stat-card" style="margin-bottom: 0.75rem;">
-            <div class="stat-label">{{ section }}</div>
-            <div style="font-size: 0.8125rem; margin-top: 0.5rem; line-height: 1.6; white-space: pre-line;">{{ content if content else t('personality.no_data', lang) }}</div>
+        <div class="persona-section" data-target="user" data-section="{{ section }}">
+            <div class="persona-section__label">
+                {{ section }}
+                <button class="persona-edit-btn" onclick="startEdit(this)" title="Edit">&#9998;</button>
+            </div>
+            <div class="persona-section__content persona-section__view">{{ content if content else t('personality.no_data', lang) }}</div>
+            <div class="persona-section__editor" style="display:none;">
+                <textarea class="persona-textarea">{{ content }}</textarea>
+                <div class="persona-editor-actions">
+                    <button class="persona-save-btn" onclick="saveSection(this)">{{ t('personality.save', lang) }}</button>
+                    <button class="persona-cancel-btn" onclick="cancelEdit(this)">{{ t('personality.cancel', lang) }}</button>
+                </div>
+            </div>
         </div>
         {% endfor %}
         {% else %}
@@ -22,13 +38,28 @@
         {% endif %}
     </div>
 
-    <div>
-        <h3 style="margin-bottom: 1rem;">{{ t('personality.agent_identity', lang) }}</h3>
+    <!-- Agent panel -->
+    <div class="persona-panel persona-panel--agent">
+        <div class="persona-panel__header">
+            <span class="persona-panel__icon">&#129302;</span>
+            <span class="persona-panel__title">{{ t('personality.agent_identity', lang) }}</span>
+        </div>
+        <div class="persona-panel__desc">{{ t('personality.agent_desc', lang) }}</div>
         {% if data.soul %}
         {% for section, content in data.soul.items() %}
-        <div class="stat-card" style="margin-bottom: 0.75rem;">
-            <div class="stat-label">{{ section }}</div>
-            <div style="font-size: 0.8125rem; margin-top: 0.5rem; line-height: 1.6; white-space: pre-line;">{{ content if content else t('personality.no_data', lang) }}</div>
+        <div class="persona-section" data-target="soul" data-section="{{ section }}">
+            <div class="persona-section__label">
+                {{ section }}
+                <button class="persona-edit-btn" onclick="startEdit(this)" title="Edit">&#9998;</button>
+            </div>
+            <div class="persona-section__content persona-section__view">{{ content if content else t('personality.no_data', lang) }}</div>
+            <div class="persona-section__editor" style="display:none;">
+                <textarea class="persona-textarea">{{ content }}</textarea>
+                <div class="persona-editor-actions">
+                    <button class="persona-save-btn" onclick="saveSection(this)">{{ t('personality.save', lang) }}</button>
+                    <button class="persona-cancel-btn" onclick="cancelEdit(this)">{{ t('personality.cancel', lang) }}</button>
+                </div>
+            </div>
         </div>
         {% endfor %}
         {% else %}
@@ -38,7 +69,7 @@
 </div>
 
 <!-- Learning Timeline -->
-<h3 style="margin-top: 2rem; margin-bottom: 1rem;">{{ t('personality.learning_timeline', lang) }}</h3>
+<h3 style="margin-top: 0.5rem; margin-bottom: 1rem;">{{ t('personality.learning_timeline', lang) }}</h3>
 {% if data.learning %}
 <div class="timeline">
     {% for entry in data.learning %}
@@ -62,4 +93,135 @@
     <div style="font-size: 0.8125rem; line-height: 1.6; white-space: pre-line;">{{ data.knowledge }}</div>
 </div>
 {% endif %}
+
+<style>
+.persona-section__label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.persona-edit-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.persona-section:hover .persona-edit-btn {
+    opacity: 1;
+}
+.persona-edit-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+.persona-textarea {
+    width: 100%;
+    min-height: 6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    padding: 0.5rem 0.75rem;
+    resize: vertical;
+    margin-top: 0.25rem;
+}
+.persona-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.persona-editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.persona-save-btn, .persona-cancel-btn {
+    padding: 0.25rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.persona-save-btn {
+    background: var(--accent);
+    color: #fff;
+}
+.persona-save-btn:hover {
+    background: var(--accent-hover, var(--accent));
+}
+.persona-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.persona-cancel-btn {
+    background: var(--border);
+    color: var(--text);
+}
+.persona-cancel-btn:hover {
+    background: var(--text-dim);
+}
+</style>
+
+<script>
+function startEdit(btn) {
+    const section = btn.closest('.persona-section');
+    section.querySelector('.persona-section__view').style.display = 'none';
+    section.querySelector('.persona-section__editor').style.display = 'block';
+    btn.style.display = 'none';
+    const textarea = section.querySelector('.persona-textarea');
+    textarea.focus();
+    // Auto-resize
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.max(textarea.scrollHeight, 96) + 'px';
+}
+
+function cancelEdit(btn) {
+    const section = btn.closest('.persona-section');
+    section.querySelector('.persona-section__view').style.display = '';
+    section.querySelector('.persona-section__editor').style.display = 'none';
+    section.querySelector('.persona-edit-btn').style.display = '';
+    // Reset textarea to original
+    const original = section.querySelector('.persona-section__view').textContent.trim();
+    section.querySelector('.persona-textarea').value = original;
+}
+
+async function saveSection(btn) {
+    const section = btn.closest('.persona-section');
+    const target = section.dataset.target;
+    const sectionName = section.dataset.section;
+    const content = section.querySelector('.persona-textarea').value;
+    const saveBtn = section.querySelector('.persona-save-btn');
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = '...';
+
+    try {
+        const resp = await fetch('/personality/api/section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target, section: sectionName, content })
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            // Update the view content
+            section.querySelector('.persona-section__view').textContent = content;
+            cancelEdit(btn);
+        } else {
+            alert(data.error || 'Save failed');
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '{{ t('personality.save', lang) }}';
+    }
+}
+</script>
 {% endblock %}

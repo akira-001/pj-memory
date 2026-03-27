@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from ...store import MemoryStore
-from ..services.memory_service import get_memory_summary
+from ..services.memory_service import get_memory_summary, get_top_keywords
 
 router = APIRouter()
 
@@ -27,6 +27,7 @@ async def search_page(request: Request):
             status = response.status
 
     summary = get_memory_summary(config)
+    top_keywords = get_top_keywords(config, limit=10)
 
     return templates.TemplateResponse(
         "search/index.html",
@@ -37,6 +38,7 @@ async def search_page(request: Request):
             "results": results,
             "status": status,
             "summary": summary,
+            "top_keywords": top_keywords,
         },
     )
 
