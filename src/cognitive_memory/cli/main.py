@@ -146,6 +146,11 @@ def main(argv: list[str] | None = None):
     skills_resolve_parser = skills_subparsers.add_parser("resolve", help="Mark skill events as resolved after SKILL.md edit")
     skills_resolve_parser.add_argument("skill_name", type=str, help="Skill name to resolve")
 
+    # decay
+    decay_parser = subparsers.add_parser("decay", help="Apply memory decay to consolidated logs")
+    decay_parser.add_argument("--dry-run", action="store_true", help="Preview changes without modifying files")
+    decay_parser.add_argument("--json", action="store_true", help="JSON output")
+
     # recall-stats
     recall_parser = subparsers.add_parser("recall-stats", help="Show recall statistics")
     recall_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
@@ -214,6 +219,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "skills":
         from .skills_cmd import run_skills
         run_skills(args)
+    elif args.command == "decay":
+        from .decay_cmd import run_decay
+        run_decay(dry_run=args.dry_run, json_output=args.json)
     elif args.command == "recall-stats":
         from .recall_cmd import run_recall_stats
         run_recall_stats(json_output=args.json_output)
