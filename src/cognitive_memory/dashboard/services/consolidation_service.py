@@ -120,6 +120,49 @@ def parse_principles(path: Path) -> list[dict[str, str]]:
     return principles
 
 
+def get_decay_settings(config: CogMemConfig) -> dict[str, Any]:
+    """Get decay settings from config."""
+    return {
+        "arousal_threshold": config.decay_arousal_threshold,
+        "recall_threshold": config.decay_recall_threshold,
+        "recall_window_months": config.decay_recall_window_months,
+        "enabled": config.decay_enabled,
+    }
+
+
+def save_decay_settings(config: CogMemConfig, settings: dict) -> None:
+    """Update [cogmem.decay] section in cogmem.toml.
+
+    Reads the existing file, replaces or appends the [cogmem.decay] section,
+    and writes back.
+    """
+    toml_path = Path(config._base_dir) / "cogmem.toml"
+    content = toml_path.read_text(encoding="utf-8")
+
+    decay_block = (
+        "[cogmem.decay]\n"
+        f"arousal_threshold = {settings['arousal_threshold']}\n"
+        f"recall_threshold = {settings['recall_threshold']}\n"
+        f"recall_window_months = {settings['recall_window_months']}\n"
+        f"enabled = {'true' if settings['enabled'] else 'false'}\n"
+    )
+
+    # Check if [cogmem.decay] section exists
+    decay_pattern = re.compile(
+        r"^\[cogmem\.decay\]\s*\n(?:(?!\[).)*",
+        re.MULTILINE | re.DOTALL,
+    )
+    if decay_pattern.search(content):
+        content = decay_pattern.sub(decay_block, content)
+    else:
+        # Append at the end
+        if not content.endswith("\n"):
+            content += "\n"
+        content += "\n" + decay_block
+
+    toml_path.write_text(content, encoding="utf-8")
+
+
 def get_crystallization_data(config: CogMemConfig) -> dict[str, Any]:
     """Get all crystallization data for the dashboard page."""
     signals = check_signals(config)

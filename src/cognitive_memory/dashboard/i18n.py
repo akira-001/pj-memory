@@ -7,7 +7,7 @@ from typing import Any
 TRANSLATIONS: dict[str, dict[str, str]] = {
     # Navigation
     "nav.memory": {"en": "Memory Overview", "ja": "メモリー概要"},
-    "nav.skills": {"en": "Skills", "ja": "スキル"},
+    "nav.skills": {"en": "Skills", "ja": "スキル習得"},
     "nav.logs": {"en": "Logs", "ja": "ログ"},
     "nav.search": {"en": "Search", "ja": "検索"},
     "nav.personality": {"en": "Personality", "ja": "パーソナリティ"},
@@ -141,6 +141,18 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "crystal.principles": {"en": "Established Principles", "ja": "確立された判断原則"},
     "crystal.principles_desc": {"en": "Decision-making rules extracted from repeated patterns across sessions. These guide future behavior.", "ja": "複数のセッションで繰り返し確認された意思決定のルール。今後の行動指針として機能する。"},
     "crystal.no_principles": {"en": "No principles established yet.", "ja": "判断原則はまだ確立されていません。"},
+
+    # Decay Settings
+    "decay.title": {"en": "Memory Decay Settings", "ja": "記憶の忘却設定"},
+    "decay.arousal_threshold": {"en": "Arousal Threshold", "ja": "Arousal 閾値"},
+    "decay.arousal_desc": {"en": "Entries with arousal >= this value are kept permanently", "ja": "この値以上の Arousal を持つエントリは永久保持"},
+    "decay.recall_threshold": {"en": "Recall Threshold", "ja": "想起回数閾値"},
+    "decay.recall_desc": {"en": "Entries recalled >= this many times are retention candidates", "ja": "この回数以上想起された記憶は保持候補"},
+    "decay.recall_window": {"en": "Recall Window (months)", "ja": "想起ウィンドウ（月）"},
+    "decay.recall_window_desc": {"en": "If not recalled within this period, memory fades", "ja": "この期間内に想起がなければ記憶は薄れる"},
+    "decay.enabled": {"en": "Decay Enabled", "ja": "忘却 有効"},
+    "decay.save": {"en": "Save", "ja": "保存"},
+    "decay.saved": {"en": "Settings saved", "ja": "設定を保存しました"},
 
     # Common
     "common.loading": {"en": "Loading...", "ja": "読み込み中..."},

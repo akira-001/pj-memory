@@ -100,6 +100,38 @@
     {% endif %}
 </section>
 
+{# --- Decay Settings Section --- #}
+<section class="card">
+    <h2>{{ t('decay.title', lang) }}</h2>
+    <form method="post" action="/consolidation/decay">
+        <div class="form-group">
+            <label for="arousal_threshold">{{ t('decay.arousal_threshold', lang) }}</label>
+            <p class="section-desc">{{ t('decay.arousal_desc', lang) }}</p>
+            <input type="number" id="arousal_threshold" name="arousal_threshold"
+                   value="{{ decay.arousal_threshold }}" step="0.1" min="0.0" max="1.0">
+        </div>
+        <div class="form-group">
+            <label for="recall_threshold">{{ t('decay.recall_threshold', lang) }}</label>
+            <p class="section-desc">{{ t('decay.recall_desc', lang) }}</p>
+            <input type="number" id="recall_threshold" name="recall_threshold"
+                   value="{{ decay.recall_threshold }}" step="1" min="0">
+        </div>
+        <div class="form-group">
+            <label for="recall_window_months">{{ t('decay.recall_window', lang) }}</label>
+            <p class="section-desc">{{ t('decay.recall_window_desc', lang) }}</p>
+            <input type="number" id="recall_window_months" name="recall_window_months"
+                   value="{{ decay.recall_window_months }}" step="1" min="1">
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="enabled" {% if decay.enabled %}checked{% endif %}>
+                {{ t('decay.enabled', lang) }}
+            </label>
+        </div>
+        <button type="submit" class="btn">{{ t('decay.save', lang) }}</button>
+    </form>
+</section>
+
 {# --- Principles Section --- #}
 <section class="card">
     <h2>{{ t('crystal.principles', lang) }}</h2>
