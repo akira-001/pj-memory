@@ -1,0 +1,187 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.13.0] - 2026-03-27
+
+### Added
+
+- Memory decay system with configurable `[cogmem.decay]` config section
+- `cogmem decay` CLI command to apply time-based decay to memories
+- Decay settings UI on the dashboard consolidation page
+- Dashboard Logs page: summary cards, status badges, category chart, enriched table
+
+## [0.12.0] - 2026-03-26
+
+### Added
+
+- SUMMARY index: extract session overviews as `[SUMMARY]` category entries for contextual binding
+- Usage example (typical session flow) added to EN/JA READMEs
+
+### Changed
+
+- Dashboard: warm cream content area + dark sidebar split color scheme
+- Dashboard search bypasses adaptive gate for user-initiated queries
+- `grep_search` reuses `parse_entries()` for consistency
+- LLM abstraction tests switched from Ollama to MLX Qwen3-32B
+
+## [0.11.0] - 2026-03-26
+
+### Added
+
+- SVG logo, favicon, and logo-icon static assets
+
+### Changed
+
+- Dashboard: full teal color theme matching cogmem logo
+- Rename "Crystallization" to "Memory Consolidation" across URLs, routes, templates, and i18n
+
+### Fixed
+
+- Remove stale entries on re-index when content changes
+- Prefer smallest qwen3 model in LLM tests to avoid 31GB memory usage
+
+## [0.10.0] - 2026-03-26
+
+### Added
+
+- Recall reinforcement: search and context_search automatically reinforce recalled memories
+- `recall_count` and `last_recalled` columns in memories table
+- `reinforce_recall()` method on MemoryStore
+- `content_hash` on SearchResult; semantic_search and grep_search return hashes
+- `cogmem recall-stats` CLI command
+- Most recalled memories widget on dashboard overview
+
+## [0.9.0] - 2026-03-26
+
+### Added
+
+- `cogmem identity update` command to update user/soul markdown files
+- `cogmem identity show` command to display identity sections
+- `cogmem identity detect` command to find placeholder fields
+- Identity module: parse, write, update, and detect for identity markdown files
+
+## [0.8.0] - 2026-03-25
+
+### Added
+
+- `resolved` flag for skill track events
+- Automatic version increment on SKILL.md updates via `cogmem skills resolve`
+
+## [0.7.0] - 2026-03-25
+
+### Added
+
+- `cogmem watch`: detect repeated workflow patterns for skill creation signals
+
+### Changed
+
+- Dashboard: improved touch targets, tabular-nums, search empty state
+
+## [0.6.0] - 2026-03-25
+
+### Added
+
+- `cogmem watch` command for git history pattern detection
+- Watch: revert detection, log gap analysis, i18n commit support
+- Watch: skill creation signal detection
+- Watch: `--auto-log` flag to auto-append missed log entries
+- Web dashboard with i18n, personality page, and modal skill details
+- Skill auto-improvement loop with track events and improvement detection
+- `skill_start` / `skill_end` lifecycle events for usage tracking
+- "ask" mode for skill auto-improvement approval
+- Audit: detect low-effectiveness new skills and never-used skills
+
+### Fixed
+
+- Deduplicate skills list; show `.claude/skills/` only
+- Reliable skill matching via `claude_skill_name` DB column
+- Reduce false positives in declining trend detection
+
+## [0.5.0] - 2026-03-25
+
+### Added
+
+- Vector-based skill search and learning loop
+- Skill auto-improvement: track events and detect improvement needs
+- Templates: skill auto-improvement and parallel execution instructions
+
+## [0.4.0] - 2026-03-25
+
+### Added
+
+- Memento-Skills system: skill management CLI and learning loop (`cogmem skills`)
+
+## [0.3.2] - 2026-03-21
+
+### Changed
+
+- Documentation: added concrete conversation examples for Contextual Search
+
+## [0.3.1] - 2026-03-21
+
+### Added
+
+- `cogmem context-search` CLI command
+- `context_search()` on MemoryStore with caching, gating, and flashback filtering
+- `should_context_search` gate and `[cogmem.context_search]` config section
+- SearchCache and `filter_flashbacks` in context module
+
+## [0.3.0] - 2026-03-21
+
+### Added
+
+- Japanese language support for `cogmem init`
+- `cogmem migrate` command with backward compatibility for `agent=` key
+
+### Changed
+
+- Identity: replaced `agent.md` with `soul.md`, consolidated identity templates
+- Extracted behavior rules to `identity/agents.md`, slimmed CLAUDE.md to 16 lines
+
+### Fixed
+
+- Gitignore line matching, templates guard, depth limit
+
+## [0.2.0] - 2026-03-21
+
+### Added
+
+- Claude Code framework: Session Init, Live Logging, Wrap, Crystallization
+- `cogmem init` scaffolding command
+- `cogmem signals` for memory consolidation triggers
+- Design doc and Japanese README
+
+## [0.1.0] - 2026-03-21
+
+### Added
+
+- Initial release of cognitive-memory library
+- Vector search with Ollama embeddings
+- Log parser for markdown session logs
+- `cogmem index` and `cogmem search` CLI commands
+- SQLite-backed memory store
+
+### Fixed
+
+- Python 3.9 compatibility
+- Renamed package to `cogmem-agent` for PyPI
+
+[0.13.0]: https://github.com/akira/cogmem-agent/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/akira/cogmem-agent/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/akira/cogmem-agent/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/akira/cogmem-agent/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/akira/cogmem-agent/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/akira/cogmem-agent/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/akira/cogmem-agent/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/akira/cogmem-agent/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/akira/cogmem-agent/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/akira/cogmem-agent/compare/v0.3.2...v0.4.0
+[0.3.2]: https://github.com/akira/cogmem-agent/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/akira/cogmem-agent/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/akira/cogmem-agent/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/akira/cogmem-agent/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/akira/cogmem-agent/releases/tag/v0.1.0
