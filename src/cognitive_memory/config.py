@@ -52,6 +52,11 @@ _DEFAULTS = {
     "context_flashback_arousal": 0.5,
     "context_cache_max_size": 20,
     "context_cache_sim_threshold": 0.9,
+    # Decay
+    "decay_arousal_threshold": 0.7,
+    "decay_recall_threshold": 2,
+    "decay_recall_window_months": 18,
+    "decay_enabled": True,
     # Metrics
     "total_sessions": 0,
 }
@@ -105,6 +110,12 @@ class CogMemConfig:
     context_flashback_arousal: float = _DEFAULTS["context_flashback_arousal"]
     context_cache_max_size: int = _DEFAULTS["context_cache_max_size"]
     context_cache_sim_threshold: float = _DEFAULTS["context_cache_sim_threshold"]
+
+    # Decay
+    decay_arousal_threshold: float = _DEFAULTS["decay_arousal_threshold"]
+    decay_recall_threshold: int = _DEFAULTS["decay_recall_threshold"]
+    decay_recall_window_months: int = _DEFAULTS["decay_recall_window_months"]
+    decay_enabled: bool = _DEFAULTS["decay_enabled"]
 
     # Skills
     skills_auto_improve: str = "auto"  # "auto" | "ask" | "off"
@@ -199,6 +210,7 @@ class CogMemConfig:
         session = section.get("session", {})
         crystallization = section.get("crystallization", {})
         context_search = section.get("context_search", {})
+        decay = section.get("decay", {})
         metrics = section.get("metrics", {})
         skills = section.get("skills", {})
 
@@ -265,6 +277,16 @@ class CogMemConfig:
             context_cache_sim_threshold=context_search.get(
                 "cache_sim_threshold", _DEFAULTS["context_cache_sim_threshold"]
             ),
+            decay_arousal_threshold=decay.get(
+                "arousal_threshold", _DEFAULTS["decay_arousal_threshold"]
+            ),
+            decay_recall_threshold=decay.get(
+                "recall_threshold", _DEFAULTS["decay_recall_threshold"]
+            ),
+            decay_recall_window_months=decay.get(
+                "recall_window_months", _DEFAULTS["decay_recall_window_months"]
+            ),
+            decay_enabled=decay.get("enabled", _DEFAULTS["decay_enabled"]),
             total_sessions=metrics.get(
                 "total_sessions", _DEFAULTS["total_sessions"]
             ),

@@ -24,6 +24,12 @@ checkpoint_interval_days = 21
 last_checkpoint = ""
 checkpoint_count = 0
 
+[cogmem.decay]
+arousal_threshold = 0.7          # この値以上の Arousal は詳細を永久保持
+recall_threshold = 2             # この回数以上想起された記憶は保持候補
+recall_window_months = 18        # この期間内に想起がなければ削除
+enabled = true                   # false で忘却を無効化
+
 [cogmem.skills]
 auto_improve = "auto"  # "auto" | "ask" | "off"
 
