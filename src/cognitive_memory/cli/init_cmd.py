@@ -17,6 +17,8 @@ _MSG = {
         "claude_skip": "CLAUDE.md already contains Cognitive Memory section, skipping",
         "claude_append": "Appended Cognitive Memory section to {}",
         "updated": "Updated {}",
+        "skills_installed": "Installed {} agent skills to ~/.claude/skills/",
+        "skills_skipped": "Skipped existing skill: {}",
         "done_title": "Setup complete! Next steps:",
         "step1": "  1. Edit identity/soul.md to define your agent's personality",
         "step2": "  2. Start Claude Code — CLAUDE.md will be loaded automatically",
@@ -37,6 +39,8 @@ _MSG = {
         "claude_skip": "CLAUDE.md には既に Cognitive Memory セクションがあります。スキップします",
         "claude_append": "CLAUDE.md に Cognitive Memory セクションを追記しました: {}",
         "updated": "更新しました: {}",
+        "skills_installed": "エージェントスキル {} 件を ~/.claude/skills/ にインストールしました",
+        "skills_skipped": "既存スキルをスキップ: {}",
         "done_title": "セットアップ完了！次のステップ:",
         "step1": "  1. identity/soul.md を編集してエージェントの人格を定義してください",
         "step2": "  2. Claude Code を起動 — CLAUDE.md が自動的に読み込まれます",
@@ -100,6 +104,33 @@ _DEFAULT_MEMORY_RECALL_SKILL = {
 - 「わからない」と答える前に必ず検索すること
 """,
 }
+
+
+def _install_agent_skills(tmpl_dir: Path, msg: dict) -> None:
+    """Install agent protocol skills to ~/.claude/skills/."""
+    global_skills_dir = Path.home() / ".claude" / "skills"
+    skills_src = tmpl_dir / "skills"
+    if not skills_src.is_dir():
+        # Fallback to base template skills dir
+        skills_src = _SCAFFOLD_DIR / "skills"
+    if not skills_src.is_dir():
+        return
+
+    installed = 0
+    for skill_dir in sorted(skills_src.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        dest_dir = global_skills_dir / skill_dir.name
+        dest_skill = dest_dir / "SKILL.md"
+        if dest_skill.exists():
+            print(msg["skills_skipped"].format(skill_dir.name))
+            continue
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(skill_dir / "SKILL.md", dest_skill)
+        installed += 1
+
+    if installed:
+        print(msg["skills_installed"].format(installed))
 
 
 def _install_skill_creator(msg: dict) -> None:
@@ -300,6 +331,9 @@ def run_init(target_dir: str = ".", lang: str | None = None):
         else:
             gitignore.write_text(f"# Cognitive Memory\n{db_entry}\n")
             print(msg["created"].format(gitignore))
+
+    # Install agent protocol skills to ~/.claude/skills/
+    _install_agent_skills(tmpl_dir, msg)
 
     # Install Anthropic official skill-creator plugin
     _install_skill_creator(msg)
