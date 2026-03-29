@@ -1,6 +1,6 @@
 ---
 name: session-init
-description: セッション開始時に実行。コンテキストファイル読み込み・cogmem index/search/signals/audit を並列実行し、フラッシュバック・シグナルを通知する
+description: セッション開始時に実行。contexts/ ブリーフィング優先読み込み・cogmem index/signals を実行し、フラッシュバック・シグナルを通知する
 user-invocable: false
 ---
 
@@ -14,26 +14,34 @@ user-invocable: false
 
 ---
 
-## Step 1: 本日のコンテキストファイルを確認
-
-```
-Read: memory/contexts/YYYY-MM-DD.md（本日の日付）
-```
-- 存在すれば Read → ユーザーの今日の状態・タスク・気分を把握
-- 存在しなければスキップ
-
-## Step 2: 直近ログ2ファイルを Read
+## Step 1: 最新 contexts ブリーフィングを確認
 
 ```bash
-ls -t memory/logs/*.md | head -3
+ls -t memory/contexts/*.md | grep -v .gitkeep | head -1
 ```
-- `.compact.md` が存在するファイルは `.compact.md` を優先して Read
-- `.compact.md` がなければ通常の `.md` を Read
 
-**【遅延ラップ検知】** Read 後、「## 引き継ぎ」セクションが空または存在しない場合（= wrap 未実行）:
-1. ログエントリ全体を走査してセッション概要（1〜2行）を生成
+- **ファイルが存在し、2日以内**のもの → Read してコンテキスト復元 → Step 2 をスキップ
+- **存在しない / 古い** → Step 2 へ（フォールバック）
+
+## Step 2: 引き継ぎセクションのみ Read（フォールバック）
+
+*Step 1 で contexts ファイルが取得できた場合はスキップ*
+
+```bash
+ls -t memory/logs/*.md | head -2
+```
+
+最新ログ1ファイルのみ対象（`.compact.md` 優先）。
+ファイル全体ではなく「## 引き継ぎ」セクション付近（末尾 40 行）のみ Read する:
+```
+Read: <ファイルパス>  offset=-40行分
+```
+
+**【遅延ラップ検知】** 「## 引き継ぎ」セクションが空または存在しない場合（= wrap 未実行）:
+1. ログ全体を Read してセッション概要（1〜2行）を生成
 2. 「## セッション概要」を記入
 3. 「## 引き継ぎ」を生成・記入
+4. `memory/contexts/YYYY-MM-DD.md` を生成（wrap スキルの Step 2.5 と同様）
 ※ 本日分のログは対象外（現セッション中のため）
 
 ## Step 3: cogmem index を実行
@@ -44,20 +52,19 @@ cogmem index
 - Ollama 未起動時はスキップ
 - cogmem 未インストール時は `pip install cogmem-agent` を実行
 
-## Step 4-5.5: 並列実行（Step 3 完了後）
+## Step 4: 並列実行（Step 3 完了後）
 
-以下の3つを**並列**で実行する:
+以下の2つを**並列**で実行する:
 
 ```bash
-# 1. キーワード検索（フラッシュバック判定）
-cogmem search "<現在の会話コンテキストのキーワード>"
-
-# 2. 記憶の定着シグナルチェック
+# 1. 記憶の定着シグナルチェック
 cogmem signals
 
-# 3. スキル audit
-cogmem skills audit --json --brief
+# 2. キーワード検索（会話に具体的なトピックがある場合のみ）
+cogmem search "<現在の会話コンテキストのキーワード>"
 ```
+
+**cogmem search の実行条件**: 会話に「再開」「こんにちは」のような汎用フレーズしかない場合はスキップ。具体的なプロジェクト名・技術名・タスク名が含まれる場合のみ実行。
 
 ### フラッシュバック判定
 - `score >= 0.75` かつ `arousal >= 0.6` のエントリ → フラッシュバックとして提示
@@ -68,10 +75,9 @@ cogmem skills audit --json --brief
 ### signals 判定
 - 条件を満たす場合のみ通知（Wrap まで待つ、Init では実行しない）
 
-### audit 判定
-- `recommendations` があれば通知に追加
+> **Note**: `cogmem skills audit` は Init では実行しない。Wrap の Step 3 に移動済み。
 
-## Step 6: トークン予算チェック
+## Step 5: トークン予算チェック
 
 目標: 合計 6k tokens。超過時は `/compact` を推奨。
 
@@ -84,7 +90,6 @@ cogmem skills audit --json --brief
 ```
 ⚠️ 記憶の定着シグナル検知: [条件内容]（該当時のみ）
 💭 フラッシュバック: [過去エントリの抜粋]（該当時のみ）
-🔧 Skill audit: [推奨内容]（該当時のみ）
 📊 トークン予算超過: [推奨アクション]（超過時のみ）
 ---
 [通常の応答]

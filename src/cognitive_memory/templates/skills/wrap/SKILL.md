@@ -38,6 +38,27 @@ Scan all log entries and generate "## Handoff":
 - **Notes**: [risks, things to verify]
 ```
 
+## Step 2.5: Generate contexts briefing file
+
+Write `memory/contexts/YYYY-MM-DD.md` (today's date):
+
+```markdown
+# YYYY-MM-DD Session Briefing
+
+## Summary
+[1-sentence session summary (use content from Step 1)]
+
+## Handoff
+- Continuing themes: [1-2 items]
+- Next actions: [up to 3 items, in priority order]
+- Notes: [if any]
+
+## Key decisions
+- [Up to 3 DECISION / MILESTONE entries from today]
+```
+
+Keep under 20 lines. Write so the next Session Init can restore full context from this file alone.
+
 ## Step 3: Parallel execution
 
 Run these 2 **in parallel**:
