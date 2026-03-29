@@ -161,6 +161,22 @@ def main(argv: list[str] | None = None):
     watch_parser.add_argument("--json", action="store_true", help="JSON output")
     watch_parser.add_argument("--auto-log", action="store_true", help="Auto-append detected patterns to session log")
 
+    # wrap subcommand group
+    wrap_parser = subparsers.add_parser("wrap", help="Manage wrap lock for concurrent session safety")
+    wrap_subparsers = wrap_parser.add_subparsers(dest="wrap_command")
+
+    # wrap lock
+    wrap_lock_parser = wrap_subparsers.add_parser("lock", help="Acquire the wrap lock")
+    wrap_lock_parser.add_argument("--project", type=str, default="", help="Project path (for identification)")
+    wrap_lock_parser.add_argument("--timeout", type=float, default=60.0, help="Max wait seconds (default: 60)")
+
+    # wrap unlock
+    wrap_subparsers.add_parser("unlock", help="Release the wrap lock")
+
+    # wrap status
+    wrap_status_parser = wrap_subparsers.add_parser("status", help="Show current lock status")
+    wrap_status_parser.add_argument("--json", action="store_true", help="JSON output")
+
     # identity subcommand group
     identity_parser = subparsers.add_parser("identity", help="View and update identity files")
     identity_subparsers = identity_parser.add_subparsers(dest="identity_command")
@@ -228,6 +244,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "watch":
         from .watch_cmd import run_watch
         run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)
+    elif args.command == "wrap":
+        from .wrap_cmd import run_wrap
+        run_wrap(args)
     elif args.command == "identity":
         from .identity_cmd import run_identity_update, run_identity_show, run_identity_detect
         if args.identity_command == "update":
