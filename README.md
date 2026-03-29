@@ -21,6 +21,7 @@ Unlike traditional vector databases that treat all memories equally, Cognitive M
 - **Skill learning system**: Tracks skill usage, detects improvement opportunities, and auto-generates new skills
 - **Git history analysis**: `cogmem watch` analyzes commit patterns to detect workflow habits and protocol gaps
 - **Identity management**: Maintains and auto-updates agent personality (`soul.md`) and user profile (`user.md`)
+- **SUMMARY indexing**: Session summaries are indexed as a separate category, enabling contextual retrieval of "what was done and why" across sessions
 - **Web dashboard**: FastAPI + HTMX dashboard for browsing memories, skills, logs, and personality (EN/JA)
 
 ## Why Cognitive Memory?
@@ -217,7 +218,10 @@ pip install cogmem-agent
 cogmem init        # Scaffolds project structure (see below)
 ```
 
-`cogmem init` automatically installs the [Anthropic official skill-creator plugin](https://github.com/anthropics/claude-plugins-official) for Claude Code. This enables creating and iteratively improving skills with built-in evaluation workflows.
+`cogmem init` automatically installs two sets of tools into your Claude Code environment:
+
+1. **Agent skills** (v0.14.0): Five required protocol skills are installed to `~/.claude/skills/` — `session-init`, `live-logging`, `skill-tracking`, `wrap`, and `crystallize`. These power the agent's behavioral protocols and work across all your projects.
+2. **skill-creator plugin**: The [Anthropic official skill-creator plugin](https://github.com/anthropics/claude-plugins-official) is installed, enabling iterative skill creation and evaluation workflows.
 
 ### Project Structure
 
