@@ -146,6 +146,11 @@ def main(argv: list[str] | None = None):
     skills_resolve_parser = skills_subparsers.add_parser("resolve", help="Mark skill events as resolved after SKILL.md edit")
     skills_resolve_parser.add_argument("skill_name", type=str, help="Skill name to resolve")
 
+    # readme
+    readme_parser = subparsers.add_parser("readme", help="Display the package README")
+    readme_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",
+                               help="Language (default: en)")
+
     # decay
     decay_parser = subparsers.add_parser("decay", help="Apply memory decay to consolidated logs")
     decay_parser.add_argument("--dry-run", action="store_true", help="Preview changes without modifying files")
@@ -235,6 +240,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "skills":
         from .skills_cmd import run_skills
         run_skills(args)
+    elif args.command == "readme":
+        from .readme_cmd import run_readme
+        run_readme(lang=args.lang)
     elif args.command == "decay":
         from .decay_cmd import run_decay
         run_decay(dry_run=args.dry_run, json_output=args.json)

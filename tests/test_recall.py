@@ -200,8 +200,12 @@ class TestGrepSearchHash:
             encoding="utf-8",
         )
 
-        # Index so DB has the hash
-        store.index_file(log_file, force=True)
+        # Insert directly into DB (index_file requires embedding which may not be available)
+        store.conn.execute(
+            "INSERT OR IGNORE INTO memories (content_hash, date, content, arousal, vector) VALUES (?, ?, ?, ?, ?)",
+            (content_hash, "2026-03-26", content_clean, 0.9, b""),
+        )
+        store.conn.commit()
 
         from cognitive_memory.search import grep_search
         results = grep_search("テスト用エラー", store.config.logs_path, store.config)

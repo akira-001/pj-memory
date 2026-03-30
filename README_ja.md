@@ -1,6 +1,6 @@
 # Cognitive Memory
 
-[English](README.md)
+[English](https://github.com/akira/cognitive-memory/blob/main/README.md)
 
 AIエージェントのための人間らしい認知的記憶 — 情動ゲーティングと適応的忘却。
 
