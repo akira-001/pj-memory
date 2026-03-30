@@ -1,6 +1,6 @@
 # Cognitive Memory
 
-[日本語](https://github.com/akira/cognitive-memory/blob/main/README_ja.md)
+[日本語](https://github.com/akira-001/pj-memory/blob/main/README_ja.md)
 
 Human-like cognitive memory for AI agents — emotion-gated recall, adaptive forgetting, skill learning, and identity evolution.
 

@@ -40,8 +40,8 @@ dev = ["pytest>=7.0", "httpx>=0.24"]
 cogmem = "cognitive_memory.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/akira/cognitive-memory"
-Repository = "https://github.com/akira/cognitive-memory"
+Homepage = "https://github.com/akira-001/pj-memory"
+Repository = "https://github.com/akira-001/pj-memory"
 
 [tool.hatch.version]
 path = "src/cognitive_memory/_version.py"
