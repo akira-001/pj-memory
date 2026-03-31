@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-_DEFAULT_LOCK_FILE = Path.home() / ".claude" / "wrap.lock"
+_DEFAULT_LOCK_FILE = Path("/tmp") / "cogmem-wrap.lock"
 
 
 def _get_lock_file() -> Path:
