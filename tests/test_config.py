@@ -203,3 +203,214 @@ cache_sim_threshold = 0.95
         cfg = CogMemConfig.from_toml(toml_file)
         assert cfg.context_search_enabled is True
         assert cfg.context_flashback_sim == 0.65
+
+
+class TestUserIdIsolation:
+    """Tests for per-user log isolation via user_id."""
+
+    def test_default_user_id_empty_for_programmatic_use(self):
+        """Direct CogMemConfig() has empty user_id (no path modification)."""
+        cfg = CogMemConfig()
+        assert cfg.user_id == ""
+
+    def test_from_toml_without_user_id_is_empty(self, tmp_path):
+        """from_toml without user_id leaves it empty (no path modification)."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.user_id == ""
+        assert cfg.logs_path == tmp_path / "memory" / "logs"
+
+    def test_find_and_load_warns_when_no_user_id(self, tmp_path, capsys):
+        """find_and_load warns when user_id is not set in TOML."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        cfg = CogMemConfig.find_and_load(start_dir=tmp_path)
+        assert cfg.user_id == ""
+        assert cfg.logs_path == tmp_path / "memory" / "logs"
+        captured = capsys.readouterr().err
+        assert "user_id is not set" in captured
+        assert "cogmem migrate" in captured
+
+    def test_logs_path_with_user_id_in_local_toml(self, tmp_path):
+        """user_id in cogmem.local.toml is picked up."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "akira"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.logs_path == tmp_path / "memory" / "logs" / "akira"
+
+    def test_contexts_path_with_user_id(self, tmp_path):
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "akira"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.contexts_path == tmp_path / "memory" / "contexts" / "akira"
+
+    def test_user_id_from_local_toml(self, tmp_path):
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "bob"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.user_id == "bob"
+
+    def test_local_toml_overrides_main_toml(self, tmp_path):
+        """cogmem.local.toml takes precedence over cogmem.toml."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text('[cogmem]\nuser_id = "old_user"\n')
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "local_user"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.user_id == "local_user"
+
+    def test_db_path_not_affected_by_user_id(self, tmp_path):
+        """DB is shared across users (search across users is useful)."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "akira"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.database_path == tmp_path / "memory" / "vectors.db"
+
+    def test_identity_user_path_with_user_id(self, tmp_path):
+        """user_id set → identity/users/{user_id}.md"""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "alice"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.identity_user_path == tmp_path / "identity" / "users" / "alice.md"
+
+    def test_identity_user_path_without_user_id(self, tmp_path):
+        """No user_id → default identity/user.md"""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.identity_user_path == tmp_path / "identity" / "user.md"
+
+    def test_identity_soul_path_not_affected_by_user_id(self, tmp_path):
+        """Soul identity is shared across users."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "alice"\n')
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.identity_soul_path == tmp_path / "identity" / "soul.md"
+
+    def test_no_local_toml_still_works(self, tmp_path):
+        """Missing cogmem.local.toml does not break loading."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.user_id == ""
+
+
+class TestInitUserIdIsolation:
+    """Tests for user_id handling in cogmem init."""
+
+    def test_init_creates_user_specific_logs_dir(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path), lang="en", user_id="alice")
+        assert (tmp_path / "memory" / "logs" / "alice" / ".gitkeep").exists()
+        assert (tmp_path / "memory" / "contexts" / "alice" / ".gitkeep").exists()
+
+    def test_init_creates_per_user_identity(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path), lang="en", user_id="alice")
+        assert (tmp_path / "identity" / "users" / "alice.md").exists()
+        # Shared user.md template also created
+        assert (tmp_path / "identity" / "user.md").exists()
+
+    def test_init_writes_user_id_to_local_toml(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import run_init
+        run_init(str(tmp_path), lang="en", user_id="alice")
+        # user_id should be in cogmem.local.toml, not cogmem.toml
+        local_content = (tmp_path / "cogmem.local.toml").read_text()
+        assert 'user_id = "alice"' in local_content
+        main_content = (tmp_path / "cogmem.toml").read_text()
+        assert 'user_id = "alice"' not in main_content
+
+    def test_get_existing_user_ids(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import _get_existing_user_ids
+        logs_dir = tmp_path / "memory" / "logs"
+        # Create user dirs with logs
+        (logs_dir / "alice").mkdir(parents=True)
+        (logs_dir / "alice" / "2026-01-01.md").write_text("# log")
+        (logs_dir / "bob").mkdir(parents=True)
+        (logs_dir / "bob" / "2026-01-01.md").write_text("# log")
+        # Empty dir should not count
+        (logs_dir / "empty").mkdir(parents=True)
+
+        ids = _get_existing_user_ids(logs_dir)
+        assert ids == {"alice", "bob"}
+
+    def test_get_existing_user_ids_no_dir(self, tmp_path):
+        from cognitive_memory.cli.init_cmd import _get_existing_user_ids
+        ids = _get_existing_user_ids(tmp_path / "nonexistent")
+        assert ids == set()
+
+    def test_prompt_rejects_taken_id(self, tmp_path, monkeypatch):
+        """_prompt_user_id rejects IDs with existing logs."""
+        from cognitive_memory.cli.init_cmd import _prompt_user_id
+        logs_dir = tmp_path / "memory" / "logs"
+        (logs_dir / "alice").mkdir(parents=True)
+        (logs_dir / "alice" / "2026-01-01.md").write_text("# log")
+
+        # First input "alice" (taken), then "carol" (available)
+        inputs = iter(["alice", "carol"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        msg = {
+            "user_id_prompt": "Enter user ID (default: {}): ",
+            "user_id_taken": "ID '{}' taken ({})",
+        }
+        result = _prompt_user_id(logs_dir, msg)
+        assert result == "carol"
+
+    def test_prompt_rejects_invalid_chars(self, tmp_path, monkeypatch):
+        """_prompt_user_id rejects IDs with special characters."""
+        from cognitive_memory.cli.init_cmd import _prompt_user_id
+
+        inputs = iter(["a b c", "../evil", "good-id"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        msg = {
+            "user_id_prompt": "Enter user ID (default: {}): ",
+            "user_id_taken": "ID '{}' taken ({})",
+        }
+        result = _prompt_user_id(tmp_path, msg)
+        assert result == "good-id"
+
+
+class TestBehaviorConfig:
+    """Tests for [cogmem.behavior] and [[cogmem.skill_triggers]] config."""
+
+    def test_behavior_defaults(self, tmp_path):
+        """behavior セクション未定義でもデフォルト値が設定される"""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+        config = CogMemConfig.from_toml(toml_file)
+        assert config.consecutive_failure_threshold == 2
+        assert config.skill_triggers == []
+        assert config.skill_gate_enabled is True
+
+    def test_behavior_from_toml(self, tmp_path):
+        """behavior セクションが正しく読み込まれる"""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text('''[cogmem]
+logs_dir = "memory/logs"
+
+[cogmem.behavior]
+consecutive_failure_threshold = 3
+skill_gate = false
+
+[[cogmem.skill_triggers]]
+pattern = "src/dashboard/**"
+skills = ["tdd-dashboard-dev"]
+
+[[cogmem.skill_triggers]]
+pattern = "cron-jobs.json"
+skills = ["cron-automation"]
+''')
+        config = CogMemConfig.from_toml(toml_file)
+        assert config.consecutive_failure_threshold == 3
+        assert config.skill_gate_enabled is False
+        assert len(config.skill_triggers) == 2
+        assert config.skill_triggers[0]["pattern"] == "src/dashboard/**"
+        assert config.skill_triggers[0]["skills"] == ["tdd-dashboard-dev"]

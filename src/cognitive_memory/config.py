@@ -17,6 +17,7 @@ else:
         tomllib = None  # type: ignore[assignment]
 
 _DEFAULTS = {
+    "user_id": "",  # Set via cogmem init or cogmem.toml
     "logs_dir": "memory/logs",
     "db_path": "memory/vectors.db",
     "handover_delimiter": "## 引き継ぎ",
@@ -62,10 +63,20 @@ _DEFAULTS = {
 }
 
 
+def _deep_merge(base: dict, override: dict) -> None:
+    """Recursively merge *override* into *base* in place."""
+    for key, val in override.items():
+        if key in base and isinstance(base[key], dict) and isinstance(val, dict):
+            _deep_merge(base[key], val)
+        else:
+            base[key] = val
+
+
 @dataclass
 class CogMemConfig:
     """Cognitive Memory configuration."""
 
+    user_id: str = ""
     logs_dir: str = _DEFAULTS["logs_dir"]
     db_path: str = _DEFAULTS["db_path"]
     handover_delimiter: str = _DEFAULTS["handover_delimiter"]
@@ -120,6 +131,11 @@ class CogMemConfig:
     # Skills
     skills_auto_improve: str = "auto"  # "auto" | "ask" | "off"
 
+    # Behavior enforcement
+    consecutive_failure_threshold: int = 2
+    skill_gate_enabled: bool = True
+    skill_triggers: list = field(default_factory=list)
+
     # Metrics
     total_sessions: int = _DEFAULTS["total_sessions"]
 
@@ -130,8 +146,12 @@ class CogMemConfig:
     def logs_path(self) -> Path:
         p = Path(self.logs_dir)
         if p.is_absolute():
-            return p
-        return Path(self._base_dir) / self.logs_dir
+            base = p
+        else:
+            base = Path(self._base_dir) / self.logs_dir
+        if self.user_id:
+            return base / self.user_id
+        return base
 
     @property
     def database_path(self) -> Path:
@@ -144,8 +164,12 @@ class CogMemConfig:
     def contexts_path(self) -> Path:
         p = Path(self.contexts_dir)
         if p.is_absolute():
-            return p
-        return Path(self._base_dir) / self.contexts_dir
+            base = p
+        else:
+            base = Path(self._base_dir) / self.contexts_dir
+        if self.user_id:
+            return base / self.user_id
+        return base
 
     @property
     def identity_soul_path(self) -> Path:
@@ -156,6 +180,9 @@ class CogMemConfig:
 
     @property
     def identity_user_path(self) -> Path:
+        if self.user_id:
+            # Per-user identity: identity/users/{user_id}.md
+            return Path(self._base_dir) / "identity" / "users" / f"{self.user_id}.md"
         p = Path(self.identity_user)
         if p.is_absolute():
             return p
@@ -192,7 +219,12 @@ class CogMemConfig:
 
     @classmethod
     def from_toml(cls, path: str | Path) -> CogMemConfig:
-        """Load config from a TOML file."""
+        """Load config from a TOML file.
+
+        Also reads cogmem.local.toml (if present in the same directory)
+        and merges its values, giving local overrides higher priority.
+        This allows user_id and other per-user settings to stay out of git.
+        """
         if tomllib is None:
             raise ImportError(
                 "tomli is required for Python < 3.11. "
@@ -201,6 +233,13 @@ class CogMemConfig:
         p = Path(path)
         with open(p, "rb") as f:
             data = tomllib.load(f)
+
+        # Merge cogmem.local.toml overrides (gitignored, per-user settings)
+        local_path = p.parent / "cogmem.local.toml"
+        if local_path.exists():
+            with open(local_path, "rb") as f:
+                local_data = tomllib.load(f)
+            _deep_merge(data, local_data)
 
         section = data.get("cogmem", {})
         scoring = section.get("scoring", {})
@@ -213,8 +252,11 @@ class CogMemConfig:
         decay = section.get("decay", {})
         metrics = section.get("metrics", {})
         skills = section.get("skills", {})
+        behavior = section.get("behavior", {})
+        skill_triggers_raw = section.get("skill_triggers", [])
 
         return cls(
+            user_id=section.get("user_id", ""),
             logs_dir=section.get("logs_dir", _DEFAULTS["logs_dir"]),
             db_path=section.get("db_path", _DEFAULTS["db_path"]),
             handover_delimiter=section.get(
@@ -291,6 +333,11 @@ class CogMemConfig:
                 "total_sessions", _DEFAULTS["total_sessions"]
             ),
             skills_auto_improve=str(skills.get("auto_improve", "auto")),
+            consecutive_failure_threshold=behavior.get(
+                "consecutive_failure_threshold", 2
+            ),
+            skill_gate_enabled=behavior.get("skill_gate", True),
+            skill_triggers=skill_triggers_raw,
             _base_dir=str(p.parent),
         )
 
@@ -299,13 +346,29 @@ class CogMemConfig:
         """Search for cogmem.toml from start_dir upward. Falls back to env var or defaults."""
         env_path = os.environ.get("COGMEM_CONFIG")
         if env_path:
-            return cls.from_toml(env_path)
+            cfg = cls.from_toml(env_path)
+            if not cfg.user_id:
+                print(
+                    "WARNING: [cogmem] user_id is not set. "
+                    "Logs will not be isolated per user. "
+                    "Run 'cogmem migrate' to set up user isolation.",
+                    file=sys.stderr,
+                )
+            return cfg
 
         d = Path(start_dir) if start_dir else Path.cwd()
         for _ in range(64):  # depth limit to avoid hangs on network mounts
             candidate = d / "cogmem.toml"
             if candidate.exists():
-                return cls.from_toml(candidate)
+                cfg = cls.from_toml(candidate)
+                if not cfg.user_id:
+                    print(
+                        "WARNING: [cogmem] user_id is not set. "
+                        "Logs will not be isolated per user. "
+                        "Run 'cogmem migrate' to set up user isolation.",
+                        file=sys.stderr,
+                    )
+                return cfg
             parent = d.parent
             if parent == d:
                 break
