@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 
-def run_dashboard(host: str = "127.0.0.1", port: int = 8765, no_browser: bool = False):
+def run_dashboard(host: str = "0.0.0.0", port: int = 8765, no_browser: bool = False):
     try:
         import uvicorn  # noqa: F401
     except ImportError:

@@ -9,10 +9,23 @@ user-invocable: false
 **トリガー**: 会話開始（挨拶、「はじめよう」、新しいトピック）
 **目的**: 前回セッションの文脈を復元し、記憶・シグナルを確認する
 
-> identity/soul.md、identity/user.md、knowledge/summary.md は
-> @参照で既にコンテキストにあるため、ここでは Read しない。
+> identity/soul.md、knowledge/summary.md は @参照で既にコンテキストにあるため Read しない。
+> identity/user.md は共有テンプレート。per-user プロファイルは Step 0 で読み込む。
 
 ---
+
+## Step 0: Per-user プロファイル読み込み
+
+`cogmem.local.toml` から `user_id` を取得し、per-user プロファイルを読み込む:
+
+```bash
+# user_id を取得（cogmem.local.toml → cogmem.toml の順で探す）
+grep -m1 'user_id' cogmem.local.toml 2>/dev/null || grep -m1 'user_id' cogmem.toml 2>/dev/null
+```
+
+- `user_id` が見つかった場合 → `identity/users/{user_id}.md` を Read
+- ファイルが存在しない場合 → スキップ（@identity/user.md がフォールバック）
+- `user_id` が空 / 未設定 → スキップ
 
 ## Step 1: 最新 contexts ブリーフィングを確認
 

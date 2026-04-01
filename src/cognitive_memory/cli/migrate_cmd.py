@@ -99,6 +99,13 @@ def run_migrate(target_dir: str = ".", user_id: str | None = None):
     # 5. Migrate user_id: add to cogmem.toml and move logs/contexts
     changes.extend(_migrate_user_id(target, user_id=user_id))
 
+    # 6. Setup Claude Code hooks
+    from .init_cmd import setup_hooks
+    claude_dir = target / ".claude"
+    if claude_dir.exists() or (target / "CLAUDE.md").exists():
+        setup_hooks(str(claude_dir))
+        changes.append(f"Registered hooks → {claude_dir / 'settings.json'}")
+
     if changes:
         print("Migration complete:")
         for c in changes:

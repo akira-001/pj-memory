@@ -144,10 +144,23 @@ class SkillReflectionLoop:
 
             self.store.save_skill(new_skill)
 
+            # Delete superseded low-performing similar skills
+            superseded = should_create.get("existing_skills", [])
+            superseded_ids = []
+            for old_skill in superseded:
+                if (hasattr(old_skill, 'id')
+                        and old_skill.usage_stats.average_effectiveness <= 0.6):
+                    self.store.delete_skill(old_skill.id)
+                    superseded_ids.append(old_skill.id)
+
             return LearningLoopResult(
                 action="create",
                 skill=new_skill,
-                improvement_details=should_create["reason"],
+                improvement_details=(
+                    should_create["reason"]
+                    + (f" (superseded {len(superseded_ids)} old skill(s))"
+                       if superseded_ids else "")
+                ),
                 next_steps=[
                     "Test new skill in similar contexts",
                     "Monitor effectiveness over time",

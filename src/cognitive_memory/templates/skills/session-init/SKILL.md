@@ -9,10 +9,23 @@ user-invocable: false
 **Trigger**: Conversation starts (greeting, "let's begin", new topic)
 **Purpose**: Restore context from previous session, check memory and signals
 
-> identity/soul.md, identity/user.md, knowledge/summary.md are
-> already in context via @ references — do NOT Read them here.
+> identity/soul.md, knowledge/summary.md are already in context via @ references — do NOT Read them here.
+> identity/user.md is the shared template. Per-user profile is loaded in Step 0.
 
 ---
+
+## Step 0: Load per-user profile
+
+Get `user_id` from `cogmem.local.toml` and load the per-user profile:
+
+```bash
+# Get user_id (cogmem.local.toml → cogmem.toml fallback)
+grep -m1 'user_id' cogmem.local.toml 2>/dev/null || grep -m1 'user_id' cogmem.toml 2>/dev/null
+```
+
+- `user_id` found → Read `identity/users/{user_id}.md`
+- File does not exist → skip (@identity/user.md serves as fallback)
+- `user_id` empty or not set → skip
 
 ## Step 1: Check latest contexts briefing
 

@@ -127,7 +127,7 @@ def _load_db_skills(config: CogMemConfig) -> list[dict]:
                 "last_used_at": row["last_used_at"],
                 "trend": _determine_trend(effs),
                 "version": row["version"],
-                "improvements": 0,
+                "improvements": max(0, row["version"] - 1),
             })
         conn.close()
     except sqlite3.Error:
@@ -256,4 +256,35 @@ def get_audit_results(config: CogMemConfig) -> dict:
     """Run SkillAuditor.audit() and return results."""
     store = SkillsStore(config)
     auditor = SkillAuditor(store)
-    return auditor.audit()
+    result = auditor.audit()
+
+    # Add auto-improvement stats
+    db_path = Path(config._base_dir) / "memory" / "skills.db"
+    total_improvements = 0
+    unresolved_events = 0
+    auto_created = 0
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            row = conn.execute(
+                "SELECT COUNT(*) FROM skill_session_events WHERE resolved = 1"
+            ).fetchone()
+            total_improvements = row[0] if row else 0
+            row2 = conn.execute(
+                "SELECT COUNT(*) FROM skill_session_events WHERE resolved = 0"
+            ).fetchone()
+            unresolved_events = row2[0] if row2 else 0
+            row3 = conn.execute(
+                "SELECT COUNT(DISTINCT context) FROM skill_suggestions WHERE promoted = 1"
+            ).fetchone()
+            auto_created = row3[0] if row3 else 0
+            conn.close()
+        except sqlite3.Error:
+            pass
+    result["summary"]["total_improvements"] = total_improvements
+    result["summary"]["unresolved_events"] = unresolved_events
+    result["summary"]["auto_created"] = auto_created
+    # Override total_skills with .claude/skills/ count (not DB count)
+    claude_skills = _scan_claude_skills()
+    result["summary"]["total_skills"] = len(claude_skills)
+    return result

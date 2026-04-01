@@ -127,8 +127,13 @@ git commit -m "session: YYYY-MM-DD wrap
 [session summary 1 line]
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
+git pull --rebase origin main
 git push origin main
 ```
+
+If `git pull --rebase` fails with conflicts:
+1. `git rebase --abort`
+2. Report to user and ask for manual resolution (don't force-push or retry)
 
 Report error to user on push failure; don't retry.
 

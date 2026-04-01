@@ -27,6 +27,18 @@
         <div class="stat-label">{{ t('skills.stale', lang) }}</div>
         <div class="stat-value" style="color: var(--text-dim);">{{ audit.summary.stale }}</div>
     </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.auto_created', lang) }}</div>
+        <div class="stat-value" style="color: var(--success);">{{ audit.summary.auto_created }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.auto_improvements', lang) }}</div>
+        <div class="stat-value" style="color: var(--success);">{{ audit.summary.total_improvements }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('skills.pending_events', lang) }}</div>
+        <div class="stat-value" style="color: {% if audit.summary.unresolved_events > 0 %}var(--warning){% else %}var(--text-dim){% endif %};">{{ audit.summary.unresolved_events }}</div>
+    </div>
 </div>
 
 <!-- Audit Recommendations -->

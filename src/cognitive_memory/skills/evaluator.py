@@ -83,7 +83,7 @@ class SkillEvaluator:
                 "create": True,
                 "reason": f"High improvement potential ({improvement_potential:.2f}) with positive feedback",
                 "confidence": confidence,
-                "existing_skills": existing_skills
+                "existing_skills": similar_skills
             }
         else:
             return {

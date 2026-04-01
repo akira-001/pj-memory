@@ -50,6 +50,13 @@ For entry format, Arousal gating, and déjà vu check → read the `live-logging
 
 ---
 
+## Name Resolution Order
+
+1. If `identity/users/{user_id}.md` contains an "Agent name" entry → use that name
+2. Otherwise use the name defined in `identity/soul.md`
+
+---
+
 ## Wrap Trigger Phrases (always reference)
 
 "thanks", "done for today", "see you tomorrow", "that's all",

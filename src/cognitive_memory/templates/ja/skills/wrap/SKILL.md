@@ -135,10 +135,15 @@ git commit -m "session: YYYY-MM-DD wrap (Session N)
 [セッション概要1行]
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git pull --rebase origin main
 git push origin main
 ```
 
-push 失敗時はエラーをAkiraに伝え、手動対応を促す（リトライしない）。
+`git pull --rebase` でコンフリクトが発生した場合:
+1. `git rebase --abort` で中断
+2. ユーザーに報告し、手動解決を依頼（force-push やリトライはしない）
+
+push 失敗時はエラーをユーザーに伝え、手動対応を促す（リトライしない）。
 
 ## Step 7: 完了報告
 

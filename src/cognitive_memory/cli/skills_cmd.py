@@ -56,8 +56,20 @@ def run_skills(args):
     elif args.skills_command == "track-summary":
         run_skills_track_summary(skills_manager, args)
     elif args.skills_command == "resolve":
-        count = skills_manager.store.resolve_events(args.skill_name)
-        print(f"Resolved {count} events for {args.skill_name}")
+        increment = not getattr(args, 'no_version', False)
+        count = skills_manager.store.resolve_events(args.skill_name, increment_version=increment)
+        version_note = " (version incremented)" if increment and count > 0 else " (version unchanged)"
+        print(f"Resolved {count} events for {args.skill_name}{version_note}")
+    elif args.skills_command == "suggest":
+        run_skills_suggest(skills_manager, args)
+    elif args.skills_command == "suggest-summary":
+        run_skills_suggest_summary(skills_manager, args)
+    elif args.skills_command == "promote":
+        count = skills_manager.store.promote_suggestion(args.context)
+        if count > 0:
+            print(f"Promoted {count} suggestion(s) for '{args.context}'")
+        else:
+            print(f"No unpromoted suggestions found for '{args.context}'")
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)
@@ -605,6 +617,36 @@ def run_skills_track_summary(skills_manager: SkillsManager, args):
 
         if summary["skills_ok"]:
             print(f"\nSkills OK (no issues): {', '.join(summary['skills_ok'])}")
+
+
+def run_skills_suggest(skills_manager: SkillsManager, args):
+    """Record a skill creation suggestion."""
+    suggestion_id = skills_manager.store.add_suggestion(
+        context=args.context,
+        description=args.description,
+    )
+    print(f"Suggestion #{suggestion_id}: {args.context}")
+
+
+def run_skills_suggest_summary(skills_manager: SkillsManager, args):
+    """Show suggestion clusters ready for promotion."""
+    min_count = args.min_count if hasattr(args, 'min_count') else 2
+    clusters = skills_manager.store.get_suggestion_summary(min_count)
+
+    if args.json:
+        print(json.dumps(clusters, indent=2, default=str))
+        return
+
+    if not clusters:
+        print("No recurring suggestions found.")
+        return
+
+    print(f"\nRecurring skill suggestions (>= {min_count} occurrences):\n")
+    for c in clusters:
+        print(f"  [{c['count']}x] {c['context']}")
+        print(f"       {c['description']}")
+        print(f"       first: {c['first_seen']}  last: {c['last_seen']}")
+        print()
 
 
 def _display_width(s: str) -> int:
