@@ -50,7 +50,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.audit_summary": {"en": "Audit Summary", "ja": "監査サマリー"},
     "skills.total": {"en": "Total", "ja": "合計"},
     "skills.needs_improvement": {"en": "Needs Improvement", "ja": "改善が必要"},
-    "skills.suggested_new": {"en": "Suggested New", "ja": "新規提案"},
+    "skills.pending_suggestions": {"en": "Pending Suggestions", "ja": "提案中"},
     "skills.stale": {"en": "Stale", "ja": "未使用"},
     "skills.name": {"en": "Name", "ja": "名前"},
     "skills.category": {"en": "Category", "ja": "カテゴリ"},
@@ -72,7 +72,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.recent_usage": {"en": "Recent Usage", "ja": "最近の使用"},
     "skills.context": {"en": "Context", "ja": "コンテキスト"},
     "skills.close": {"en": "Close", "ja": "閉じる"},
-    "skills.auto_created": {"en": "Auto-created", "ja": "自動作成数"},
+    "skills.auto_created": {"en": "Promoted", "ja": "スキル化済み"},
     "skills.auto_improvements": {"en": "Auto-improvements", "ja": "自動改善数"},
     "skills.pending_events": {"en": "Pending events", "ja": "未解決イベント"},
 

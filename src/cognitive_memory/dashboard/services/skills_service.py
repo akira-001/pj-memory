@@ -263,6 +263,7 @@ def get_audit_results(config: CogMemConfig) -> dict:
     total_improvements = 0
     unresolved_events = 0
     auto_created = 0
+    pending_suggestions = 0
     if db_path.exists():
         try:
             conn = sqlite3.connect(str(db_path))
@@ -278,12 +279,17 @@ def get_audit_results(config: CogMemConfig) -> dict:
                 "SELECT COUNT(DISTINCT context) FROM skill_suggestions WHERE promoted = 1"
             ).fetchone()
             auto_created = row3[0] if row3 else 0
+            row4 = conn.execute(
+                "SELECT COUNT(DISTINCT context) FROM skill_suggestions WHERE promoted = 0"
+            ).fetchone()
+            pending_suggestions = row4[0] if row4 else 0
             conn.close()
         except sqlite3.Error:
             pass
     result["summary"]["total_improvements"] = total_improvements
     result["summary"]["unresolved_events"] = unresolved_events
     result["summary"]["auto_created"] = auto_created
+    result["summary"]["pending_suggestions"] = pending_suggestions
     # Override total_skills with .claude/skills/ count (not DB count)
     claude_skills = _scan_claude_skills()
     result["summary"]["total_skills"] = len(claude_skills)
