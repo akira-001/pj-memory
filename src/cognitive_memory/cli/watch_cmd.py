@@ -12,7 +12,7 @@ from ..config import CogMemConfig
 from ..watch import analyze_git_history, detect_log_gaps
 
 
-def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = False):
+def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = False, auto_suggest: bool = False):
     config = CogMemConfig.find_and_load()
 
     # Get git log
@@ -74,6 +74,10 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
     if auto_log and analysis["entries"]:
         _append_to_log(config, analysis["entries"])
 
+    # Auto-suggest: record detected patterns as skill suggestions
+    if auto_suggest:
+        _auto_suggest(config, analysis)
+
 
 def _append_to_log(config: CogMemConfig, entries: list[dict]):
     """Append detected patterns to today's session log."""
@@ -92,3 +96,39 @@ def _append_to_log(config: CogMemConfig, entries: list[dict]):
             f.write("\n".join(lines))
     else:
         print(f"No session log for today ({log_file}), skipping auto-log.", file=sys.stderr)
+
+
+def _auto_suggest(config: CogMemConfig, analysis: dict):
+    """Record detected patterns as skill suggestions via SkillsStore."""
+    from ..skills.store import SkillsStore
+
+    signals = analysis.get("skill_signals", [])
+    patterns = analysis.get("workflow_patterns", [])
+
+    if not signals and not patterns:
+        return
+
+    try:
+        store = SkillsStore(config)
+    except Exception:
+        return
+
+    count = 0
+    for sig in signals:
+        context = sig.get("pattern", "")
+        if not context:
+            continue
+        desc = sig.get("suggestion", "")
+        store.add_suggestion(context=context, description=desc)
+        count += 1
+
+    for pat in patterns:
+        context = pat.get("prefix", "").rstrip(":")
+        if not context:
+            continue
+        desc = f"Repeated '{pat['prefix']}' workflow ({pat['count']} times)"
+        store.add_suggestion(context=context, description=desc)
+        count += 1
+
+    if count:
+        print(f"Auto-suggested {count} pattern(s) for skill creation.", file=sys.stderr)

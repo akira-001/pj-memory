@@ -13,14 +13,14 @@ user-invocable: true
 ## Step 0: Retroactive check (run first)
 
 ```bash
-cogmem watch --since "8 hours ago" --json
+cogmem watch --since "8 hours ago" --json --auto-suggest
 ```
 
 Based on results:
 - `fix_count >= 3` → append [PATTERN] entry to log (if not already recorded)
 - `revert_count >= 1` → append [ERROR] entry to log (if not already recorded)
 - `log_gap.has_gap == true` → notify user of logging gap
-- `skill_signals` present → notify user of skill auto-generation candidates
+- `skill_signals` / `workflow_patterns` → auto-recorded as suggestions (via `--auto-suggest`)
 - If any of the above: `cogmem watch --auto-log`
 
 ## Step 1: Write session summary
@@ -90,12 +90,22 @@ d. For each skill to improve:
      2. `cogmem skills learn`
 e. Record "Skill auto-improved: [skill-name] (reason)" in handoff
 
-## Step 3.8: Behavior pattern review
+## Step 3.8: Skill creation candidate review (suggest-summary)
 
 a. `auto_improve = "off"` → skip
-b. Check `workflow_patterns` from `cogmem watch --since "8 hours ago" --json` (threshold=2)
-c. Also reflect on own actions (repeated same steps 2+ times? ran workflow not in any skill?)
-d. If applicable: ask ("ask") or auto-create ("auto") a new skill
+b. Check suggestion clusters:
+   ```bash
+   cogmem skills suggest-summary --json
+   ```
+c. Empty result → skip
+d. If candidates exist (2+ occurrences from `cogmem skills suggest` + `--auto-suggest`):
+   - `"ask"`: Ask user "Create skill for [pattern] (Nx)?" — create only approved ones
+   - `"auto"`: Auto-create `.claude/skills/[name]/SKILL.md`
+   - After creation, promote:
+     ```bash
+     cogmem skills promote "[context]"
+     ```
+   - Record in handoff: "New skill created: [name] (suggest Nx)"
 
 ## Step 4: Update memory/knowledge/summary.md (if changes exist)
 

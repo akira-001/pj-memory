@@ -260,3 +260,72 @@ def test_full_watch_with_auto_log(tmp_path, monkeypatch):
     content = log_file.read_text()
     assert "[PATTERN]" in content
     assert "auto-detected" in content
+
+
+class TestAutoSuggest:
+    def test_auto_suggest_records_skill_signals(self, tmp_path):
+        """skill_signals from watch should be recorded as suggestions."""
+        from cognitive_memory.cli.watch_cmd import _auto_suggest
+        from cognitive_memory.config import CogMemConfig
+        from cognitive_memory.skills.store import SkillsStore
+
+        # Setup minimal cogmem project
+        (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+        (tmp_path / "memory").mkdir()
+
+        config = CogMemConfig(_base_dir=str(tmp_path))
+        store = SkillsStore(config)
+
+        analysis = {
+            "skill_signals": [
+                {"pattern": "Repeated fixes related to: dashboard", "suggestion": "Consider creating a skill for dashboard handling"},
+            ],
+            "workflow_patterns": [],
+        }
+        _auto_suggest(config, analysis)
+
+        summaries = store.get_suggestion_summary(min_count=1)
+        assert len(summaries) == 1
+        assert "dashboard" in summaries[0]["context"]
+
+    def test_auto_suggest_records_workflow_patterns(self, tmp_path):
+        """workflow_patterns from watch should be recorded as suggestions."""
+        from cognitive_memory.cli.watch_cmd import _auto_suggest
+        from cognitive_memory.config import CogMemConfig
+        from cognitive_memory.skills.store import SkillsStore
+
+        (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+        (tmp_path / "memory").mkdir()
+
+        config = CogMemConfig(_base_dir=str(tmp_path))
+        store = SkillsStore(config)
+
+        analysis = {
+            "skill_signals": [],
+            "workflow_patterns": [
+                {"prefix": "release:", "count": 4, "messages": ["release: v1", "release: v2", "release: v3", "release: v4"]},
+            ],
+        }
+        _auto_suggest(config, analysis)
+
+        summaries = store.get_suggestion_summary(min_count=1)
+        assert len(summaries) == 1
+        assert summaries[0]["context"] == "release"
+
+    def test_auto_suggest_noop_when_empty(self, tmp_path):
+        """No suggestions recorded when analysis has no patterns."""
+        from cognitive_memory.cli.watch_cmd import _auto_suggest
+        from cognitive_memory.config import CogMemConfig
+        from cognitive_memory.skills.store import SkillsStore
+
+        (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
+        (tmp_path / "memory").mkdir()
+
+        config = CogMemConfig(_base_dir=str(tmp_path))
+        store = SkillsStore(config)
+
+        analysis = {"skill_signals": [], "workflow_patterns": []}
+        _auto_suggest(config, analysis)
+
+        summaries = store.get_suggestion_summary(min_count=1)
+        assert len(summaries) == 0

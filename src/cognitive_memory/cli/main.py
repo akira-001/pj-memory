@@ -184,6 +184,7 @@ def main(argv: list[str] | None = None):
     watch_parser.add_argument("--since", type=str, default="today", help="Git log --since value")
     watch_parser.add_argument("--json", action="store_true", help="JSON output")
     watch_parser.add_argument("--auto-log", action="store_true", help="Auto-append detected patterns to session log")
+    watch_parser.add_argument("--auto-suggest", action="store_true", help="Auto-record detected patterns as skill suggestions")
 
     # hook subcommand group
     hook_parser = subparsers.add_parser("hook", help="Claude Code hook handlers")
@@ -276,7 +277,7 @@ def main(argv: list[str] | None = None):
         run_recall_stats(json_output=args.json_output)
     elif args.command == "watch":
         from .watch_cmd import run_watch
-        run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)
+        run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log, auto_suggest=args.auto_suggest)
     elif args.command == "hook":
         from .hook_cmd import run_hook
         run_hook(args)
