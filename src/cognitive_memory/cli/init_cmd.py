@@ -2,12 +2,51 @@
 
 from __future__ import annotations
 
+import getpass
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 _SCAFFOLD_DIR = Path(__file__).resolve().parent.parent / "templates"
+
+
+def setup_hooks(settings_dir: str) -> None:
+    """Register cogmem hooks in .claude/settings.json."""
+    import json
+    settings_path = Path(settings_dir) / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings: dict = {}
+    if settings_path.exists():
+        try:
+            settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    hooks = settings.setdefault("hooks", {})
+
+    # Add skill-gate hook (PreToolUse)
+    pre_hooks = hooks.setdefault("PreToolUse", [])
+    if not any("cogmem hook skill-gate" in h.get("command", "") for h in pre_hooks):
+        pre_hooks.append({
+            "matcher": "Edit|Write",
+            "command": "cogmem hook skill-gate",
+        })
+
+    # Add failure-breaker hook (PostToolUse)
+    post_hooks = hooks.setdefault("PostToolUse", [])
+    if not any("cogmem hook failure-breaker" in h.get("command", "") for h in post_hooks):
+        post_hooks.append({
+            "matcher": "Bash",
+            "command": "cogmem hook failure-breaker",
+        })
+
+    settings_path.write_text(
+        json.dumps(settings, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 # Messages per language
 _MSG = {
@@ -32,6 +71,9 @@ _MSG = {
         "skill_creator_exists": "skill-creator plugin already installed",
         "skill_creator_skip": "Claude Code not found — install skill-creator manually: claude plugins install skill-creator@claude-plugins-official",
         "skill_creator_fail": "Failed to install skill-creator plugin (install manually: claude plugins install skill-creator@claude-plugins-official)",
+        "user_id_prompt": "Enter your user ID for log isolation (default: {}): ",
+        "user_id_taken": "User ID '{}' is already in use (logs exist at {}). Choose a different ID.",
+        "user_id_set": "User ID set to: {}",
     },
     "ja": {
         "created": "作成しました: {}",
@@ -54,6 +96,9 @@ _MSG = {
         "skill_creator_exists": "skill-creator プラグインはインストール済みです",
         "skill_creator_skip": "Claude Code が見つかりません — 手動でインストールしてください: claude plugins install skill-creator@claude-plugins-official",
         "skill_creator_fail": "skill-creator プラグインのインストールに失敗しました（手動: claude plugins install skill-creator@claude-plugins-official）",
+        "user_id_prompt": "ログ分離用のユーザーIDを入力してください (デフォルト: {}): ",
+        "user_id_taken": "ユーザーID '{}' は既に使用されています (ログが {} に存在)。別のIDを選んでください。",
+        "user_id_set": "ユーザーIDを設定しました: {}",
     },
 }
 
@@ -182,6 +227,44 @@ def _select_language() -> str:
     return "en"
 
 
+def _get_existing_user_ids(logs_dir: Path) -> set[str]:
+    """Return set of user IDs that already have logs in the logs directory."""
+    if not logs_dir.is_dir():
+        return set()
+    ids = set()
+    for child in logs_dir.iterdir():
+        if child.is_dir() and not child.name.startswith("."):
+            # Check if the subdirectory contains log files
+            has_logs = any(f.suffix == ".md" for f in child.iterdir() if f.is_file())
+            if has_logs:
+                ids.add(child.name)
+    return ids
+
+
+def _prompt_user_id(logs_dir: Path, msg: dict) -> str:
+    """Prompt user for their user_id, rejecting IDs already in use."""
+    default_id = getpass.getuser()
+    existing_ids = _get_existing_user_ids(logs_dir)
+
+    while True:
+        try:
+            raw = input(msg["user_id_prompt"].format(default_id)).strip()
+        except (EOFError, KeyboardInterrupt):
+            raw = ""
+        user_id = raw or default_id
+
+        # Sanitize: only allow alphanumeric, dash, underscore
+        if not re.match(r"^[a-zA-Z0-9_-]+$", user_id):
+            print("Invalid ID. Use only letters, numbers, dashes, and underscores.")
+            continue
+
+        if user_id in existing_ids:
+            print(msg["user_id_taken"].format(user_id, logs_dir / user_id))
+            continue
+
+        return user_id
+
+
 def _get_template_dir(lang: str) -> Path:
     """Return the template directory for the given language."""
     if lang == "ja":
@@ -191,7 +274,7 @@ def _get_template_dir(lang: str) -> Path:
     return _SCAFFOLD_DIR
 
 
-def run_init(target_dir: str = ".", lang: str | None = None):
+def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None = None):
     if not _SCAFFOLD_DIR.is_dir():
         raise RuntimeError(
             f"cogmem templates directory not found at {_SCAFFOLD_DIR}. "
@@ -210,6 +293,12 @@ def run_init(target_dir: str = ".", lang: str | None = None):
     target = Path(target_dir).resolve()
     target.mkdir(parents=True, exist_ok=True)
 
+    # Determine user_id
+    logs_dir = target / "memory" / "logs"
+    if user_id is None:
+        user_id = _prompt_user_id(logs_dir, msg)
+    print(msg["user_id_set"].format(user_id))
+
     # Write cogmem.toml (language-independent, always from base dir)
     toml_path = target / "cogmem.toml"
     if toml_path.exists():
@@ -218,6 +307,13 @@ def run_init(target_dir: str = ".", lang: str | None = None):
         template = (_SCAFFOLD_DIR / "cogmem.toml").read_text(encoding="utf-8")
         toml_path.write_text(template, encoding="utf-8")
         print(msg["created"].format(toml_path))
+
+    # Write user_id to cogmem.local.toml (gitignored, per-user)
+    local_toml_path = target / "cogmem.local.toml"
+    local_toml_path.write_text(
+        f'[cogmem]\nuser_id = "{user_id}"\n', encoding="utf-8"
+    )
+    print(msg["created"].format(local_toml_path))
 
     # Create identity directory
     identity_dir = target / "identity"
@@ -233,13 +329,26 @@ def run_init(target_dir: str = ".", lang: str | None = None):
             dest.write_text(template, encoding="utf-8")
             print(msg["created"].format(dest))
 
-    # Create logs directory
-    logs_dir = target / "memory" / "logs"
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    gitkeep = logs_dir / ".gitkeep"
+    # Create per-user identity file: identity/users/{user_id}.md
+    users_dir = identity_dir / "users"
+    users_dir.mkdir(parents=True, exist_ok=True)
+    user_identity = users_dir / f"{user_id}.md"
+    if not user_identity.exists():
+        # Copy from user.md template
+        src = tmpl_dir / "user.md"
+        if not src.exists():
+            src = _SCAFFOLD_DIR / "user.md"
+        template = src.read_text(encoding="utf-8")
+        user_identity.write_text(template, encoding="utf-8")
+        print(msg["created"].format(user_identity))
+
+    # Create logs directory (with user_id subdirectory)
+    user_logs_dir = target / "memory" / "logs" / user_id
+    user_logs_dir.mkdir(parents=True, exist_ok=True)
+    gitkeep = user_logs_dir / ".gitkeep"
     if not gitkeep.exists():
         gitkeep.touch()
-    print(msg["created"].format(str(logs_dir) + "/"))
+    print(msg["created"].format(str(user_logs_dir) + "/"))
 
     # Create knowledge directory
     knowledge_dir = target / "memory" / "knowledge"
@@ -255,13 +364,13 @@ def run_init(target_dir: str = ".", lang: str | None = None):
             dest.write_text(template, encoding="utf-8")
             print(msg["created"].format(dest))
 
-    # Create contexts directory
-    contexts_dir = target / "memory" / "contexts"
-    contexts_dir.mkdir(parents=True, exist_ok=True)
-    gitkeep = contexts_dir / ".gitkeep"
+    # Create contexts directory (with user_id subdirectory)
+    user_contexts_dir = target / "memory" / "contexts" / user_id
+    user_contexts_dir.mkdir(parents=True, exist_ok=True)
+    gitkeep = user_contexts_dir / ".gitkeep"
     if not gitkeep.exists():
         gitkeep.touch()
-    print(msg["created"].format(str(contexts_dir) + "/"))
+    print(msg["created"].format(str(user_contexts_dir) + "/"))
 
     # Create .claude/skills/ directory with sample skill
     skills_dir = target / ".claude" / "skills"
@@ -337,6 +446,11 @@ def run_init(target_dir: str = ".", lang: str | None = None):
 
     # Install Anthropic official skill-creator plugin
     _install_skill_creator(msg)
+
+    # Setup Claude Code hooks
+    claude_dir = Path(target_dir) / ".claude"
+    setup_hooks(str(claude_dir))
+    print(f"  hooks → {claude_dir / 'settings.json'}")
 
     print()
     print(msg["done_title"])

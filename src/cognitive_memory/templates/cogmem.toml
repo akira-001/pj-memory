@@ -1,4 +1,6 @@
 [cogmem]
+# user_id is stored in cogmem.local.toml (gitignored) per user.
+# Run 'cogmem init' to set up user isolation.
 logs_dir = "memory/logs"
 contexts_dir = "memory/contexts"
 db_path = "memory/vectors.db"
@@ -47,3 +49,12 @@ provider = "ollama"
 model = "zylonai/multilingual-e5-large"
 url = "http://localhost:11434/api/embed"
 timeout = 10
+
+[cogmem.behavior]
+consecutive_failure_threshold = 2
+# skill_gate = true  # デフォルト有効
+
+# ファイル編集時にスキル使用を促すトリガー設定
+# [[cogmem.skill_triggers]]
+# pattern = "src/components/**"
+# skills = ["your-skill-name"]
