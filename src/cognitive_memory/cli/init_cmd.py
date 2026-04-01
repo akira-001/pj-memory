@@ -29,18 +29,26 @@ def setup_hooks(settings_dir: str) -> None:
 
     # Add skill-gate hook (PreToolUse)
     pre_hooks = hooks.setdefault("PreToolUse", [])
-    if not any("cogmem hook skill-gate" in h.get("command", "") for h in pre_hooks):
+    if not any(
+        "cogmem hook skill-gate" in cmd.get("command", "")
+        for h in pre_hooks
+        for cmd in h.get("hooks", [])
+    ):
         pre_hooks.append({
             "matcher": "Edit|Write",
-            "command": "cogmem hook skill-gate",
+            "hooks": [{"type": "command", "command": "cogmem hook skill-gate"}],
         })
 
     # Add failure-breaker hook (PostToolUse)
     post_hooks = hooks.setdefault("PostToolUse", [])
-    if not any("cogmem hook failure-breaker" in h.get("command", "") for h in post_hooks):
+    if not any(
+        "cogmem hook failure-breaker" in cmd.get("command", "")
+        for h in post_hooks
+        for cmd in h.get("hooks", [])
+    ):
         post_hooks.append({
             "matcher": "Bash",
-            "command": "cogmem hook failure-breaker",
+            "hooks": [{"type": "command", "command": "cogmem hook failure-breaker"}],
         })
 
     settings_path.write_text(

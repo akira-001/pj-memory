@@ -472,7 +472,8 @@ class TestSetupHooks:
         assert "PostToolUse" in settings["hooks"]
         pre = settings["hooks"]["PreToolUse"][0]
         assert pre["matcher"] == "Edit|Write"
-        assert "cogmem hook skill-gate" in pre["command"]
+        assert pre["hooks"][0]["type"] == "command"
+        assert "cogmem hook skill-gate" in pre["hooks"][0]["command"]
 
     def test_init_merges_existing_settings_json(self, tmp_path, monkeypatch):
         """既存の settings.json がある場合はマージする"""
