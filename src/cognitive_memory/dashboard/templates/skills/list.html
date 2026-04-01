@@ -54,8 +54,12 @@
 </div>
 {% endif %}
 
-<!-- Skills Table -->
-{% if skills %}
+<!-- Improvable Skills -->
+{% set improvable_skills = skills | selectattr('improvable') | list %}
+{% set external_skills = skills | rejectattr('improvable') | list %}
+
+{% if improvable_skills %}
+<h3 style="margin: 1.5rem 0 0.75rem;">{{ t('skills.improvable_skills', lang) }}</h3>
 <div class="chart-card">
     <table class="data-table">
         <thead>
@@ -71,12 +75,13 @@
             </tr>
         </thead>
         <tbody>
-            {% for skill in skills %}
+            {% for skill in improvable_skills %}
             <tr hx-get="/skills/api/detail/{{ skill.id }}" hx-target="#skill-modal" hx-swap="innerHTML" style="cursor: pointer;">
                 <td>
                     <div style="font-weight: 500;">{{ skill.name }}</div>
-                    {% if skill.summary %}
-                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ skill.summary[:80] }}{% if skill.summary|length > 80 %}...{% endif %}</div>
+                    {% set sdesc = skill.summary_ja if (lang == 'ja' and skill.summary_ja) else skill.summary %}
+                    {% if sdesc %}
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ sdesc[:80] }}{% if sdesc|length > 80 %}...{% endif %}</div>
                     {% endif %}
                 </td>
                 <td>
@@ -133,7 +138,115 @@
         </tbody>
     </table>
 </div>
-{% else %}
+{% endif %}
+
+<!-- External Skills -->
+{% if external_skills %}
+{% set src_update = update_status.get(external_skills[0].source, {}) if external_skills else {} %}
+<h3 style="margin: 1.5rem 0 0.75rem;">
+    {{ t('skills.external_skills', lang) }}
+    {% if src_update and not src_update.get('up_to_date', true) %}
+    <span class="badge badge-error" style="font-size: 0.75rem; margin-left: 0.5rem;">{{ src_update.get('behind', 0) }} commits behind</span>
+    {% elif src_update and src_update.get('up_to_date') %}
+    <span class="badge badge-milestone" style="font-size: 0.75rem; margin-left: 0.5rem;">up to date</span>
+    {% endif %}
+</h3>
+<div class="chart-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('skills.name', lang) }}</th>
+                <th>{{ t('skills.source', lang) }}</th>
+                <th>{{ t('skills.version', lang) }}</th>
+                <th>{{ t('skills.last_used', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for skill in external_skills %}
+            <tr hx-get="/skills/api/detail/{{ skill.id }}" hx-target="#skill-modal" hx-swap="innerHTML" style="cursor: pointer;">
+                <td>
+                    <div style="font-weight: 500;">{{ skill.name }}</div>
+                    {% set sdesc = skill.summary_ja if (lang == 'ja' and skill.summary_ja) else skill.summary %}
+                    {% if sdesc %}
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ sdesc[:80] }}{% if sdesc|length > 80 %}...{% endif %}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if skill.source %}
+                    <span class="badge badge-skill">{{ skill.source }}{% if skill.source_version %} v{{ skill.source_version }}{% endif %}</span>
+                    {% else %}
+                    <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.8125rem;">
+                    {% if skill.skill_version %}
+                        v{{ skill.skill_version }}
+                    {% else %}
+                        <span style="color: var(--text-dim);">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td style="color: var(--text-dim); font-size: 0.8125rem;">
+                    {% if skill.last_used_at %}
+                        {{ skill.last_used_at[:10] }}
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Plugin Skills -->
+{% if plugin_skills %}
+{% set plugin_names = plugin_skills | map(attribute='plugin') | unique | list %}
+<h3 style="margin: 1.5rem 0 0.75rem;">
+    {{ t('skills.plugin_skills', lang) }}
+    {% for pname in plugin_names %}
+    {% set pstatus = update_status.get('plugin:' ~ pname, {}) %}
+    {% if pstatus and not pstatus.get('up_to_date', true) %}
+    <span class="badge badge-error" style="font-size: 0.75rem; margin-left: 0.5rem;">{{ pname }}: {{ pstatus.get('version', '?') }} &rarr; {{ pstatus.get('latest_version', '?') }}</span>
+    {% endif %}
+    {% endfor %}
+</h3>
+<div class="chart-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('skills.name', lang) }}</th>
+                <th>{{ t('skills.plugin', lang) }}</th>
+                <th>{{ t('skills.version', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for skill in plugin_skills %}
+            <tr>
+                <td>
+                    <div style="font-weight: 500;">{{ skill.name }}</div>
+                    {% set desc = skill.description_ja if (lang == 'ja' and skill.description_ja) else skill.description %}
+                    {% if desc %}
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.125rem;">{{ desc[:80] }}{% if desc|length > 80 %}...{% endif %}</div>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-insight">{{ skill.plugin }}</span></td>
+                <td style="font-size: 0.8125rem;">
+                    {% if skill.latest_version and not skill.up_to_date %}
+                    <span style="color: var(--text-dim); text-decoration: line-through;">v{{ skill.version }}</span>
+                    <span style="color: var(--error);">&rarr; v{{ skill.latest_version }}</span>
+                    {% else %}
+                    <span style="color: var(--text-dim);">v{{ skill.version or '—' }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if not skills and not plugin_skills %}
 <div class="empty-state">
     <p>{{ t('skills.no_skills', lang) }}</p>
 </div>

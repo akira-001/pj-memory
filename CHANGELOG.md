@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-04-01
+
+### Added
+
+- **Dashboard skills page: 3-section layout**
+  - Improvable Skills: full stats table (category, effectiveness, executions, version, trend)
+  - External Skills: name, source with version badge, skill version, last used
+  - Plugin Skills: name, plugin badge, version with diff display
+- **`cogmem skills check-updates`** — check external skills (git) and plugins for updates
+  - Git-based sources: `git fetch` + commit diff detection
+  - Plugins: marketplace version comparison
+  - Results cached to `memory/skill-updates.json` for dashboard display
+- **Session Init integration** — `check-updates` runs once daily (background)
+- **Dashboard i18n**: Japanese descriptions for all external/plugin skills via built-in mapping
+- **YAML multiline description parsing** — `description: |` syntax now correctly parsed
+
+### Changed
+
+- Dashboard "Total" stat card → "Improvable" (excludes external skills from count)
+- Dashboard skill version reads from SKILL.md frontmatter when DB entry is absent
+
+### Fixed
+
+- YAML `description: |` multiline literal returned `|` instead of full text (31 skills affected)
+
 ## [0.19.1] - 2026-04-01
 
 ### Added

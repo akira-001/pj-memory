@@ -169,6 +169,10 @@ def main(argv: list[str] | None = None):
     skills_dismiss_parser = skills_subparsers.add_parser("dismiss", help="Dismiss a suggestion (user rejected)")
     skills_dismiss_parser.add_argument("context", type=str, help="The suggestion context label to dismiss")
 
+    # skills check-updates
+    skills_check_updates_parser = skills_subparsers.add_parser("check-updates", help="Check external skills and plugins for updates")
+    skills_check_updates_parser.add_argument("--json", action="store_true", help="Output as JSON")
+
     # readme
     readme_parser = subparsers.add_parser("readme", help="Display the package README")
     readme_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",

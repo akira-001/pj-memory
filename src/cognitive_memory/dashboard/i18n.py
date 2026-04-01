@@ -48,7 +48,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.title": {"en": "Skills", "ja": "スキル"},
     "skills.subtitle": {"en": "Monitor skill effectiveness and improvement status", "ja": "スキルの改善状況を確認"},
     "skills.audit_summary": {"en": "Audit Summary", "ja": "監査サマリー"},
-    "skills.total": {"en": "Total", "ja": "合計"},
+    "skills.total": {"en": "Improvable", "ja": "対象スキル"},
     "skills.needs_improvement": {"en": "Needs Improvement", "ja": "改善が必要"},
     "skills.pending_suggestions": {"en": "Pending Suggestions", "ja": "提案中"},
     "skills.stale": {"en": "Stale", "ja": "未使用"},
@@ -75,6 +75,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.auto_created": {"en": "Auto-created", "ja": "自動生成数"},
     "skills.auto_improvements": {"en": "Auto-improvements", "ja": "自動改善数"},
     "skills.pending_events": {"en": "Pending events", "ja": "未解決イベント"},
+    "skills.improvable": {"en": "Improvable", "ja": "改善対象"},
+    "skills.improvable_skills": {"en": "Improvable Skills", "ja": "改善対象スキル"},
+    "skills.external_skills": {"en": "External Skills", "ja": "外部スキル"},
+    "skills.source": {"en": "Source", "ja": "ソース"},
+    "skills.plugin_skills": {"en": "Plugin Skills", "ja": "プラグインスキル"},
+    "skills.plugin": {"en": "Plugin", "ja": "プラグイン"},
 
     # Logs
     "logs.title": {"en": "Episodic Memory", "ja": "エピソード記憶"},

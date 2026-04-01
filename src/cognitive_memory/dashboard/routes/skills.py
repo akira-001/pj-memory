@@ -7,9 +7,11 @@ from fastapi.responses import HTMLResponse
 
 from ..services.skills_service import (
     get_audit_results,
+    get_plugin_skills,
     get_skill_detail,
     get_skill_trend,
     get_skills_list,
+    get_update_status,
 )
 
 router = APIRouter()
@@ -23,6 +25,8 @@ async def skills_list(request: Request):
 
     skills = get_skills_list(config)
     audit = get_audit_results(config)
+    plugin_skills = get_plugin_skills(config)
+    update_status = get_update_status(config)
 
     return templates.TemplateResponse(
         "skills/list.html",
@@ -32,6 +36,8 @@ async def skills_list(request: Request):
             "skills": skills,
             "audit": audit,
             "auto_improve": config.skills_auto_improve,
+            "plugin_skills": plugin_skills,
+            "update_status": update_status,
         },
     )
 

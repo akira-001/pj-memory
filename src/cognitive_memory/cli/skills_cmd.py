@@ -76,6 +76,8 @@ def run_skills(args):
             print(f"Dismissed {count} suggestion(s) for '{args.context}'")
         else:
             print(f"No pending suggestions found for '{args.context}'")
+    elif args.skills_command == "check-updates":
+        run_skills_check_updates(config, args)
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)
@@ -681,6 +683,145 @@ def _truncate_to_width(s: str, max_width: int) -> str:
     text = ''.join(result)
     padding = max_width - _display_width(text)
     return text + ' ' * padding
+
+
+def run_skills_check_updates(config: CogMemConfig, args):
+    """Check for updates on external skill sources and plugins."""
+    import subprocess
+    from datetime import datetime
+
+    cache_path = Path(config._base_dir) / "memory" / "skill-updates.json"
+    results: dict[str, Any] = {"checked_at": datetime.now().isoformat(), "sources": {}}
+
+    # Check git-based sources under ~/.claude/skills/
+    skills_dir = Path.home() / ".claude" / "skills"
+    if skills_dir.exists():
+        for entry in skills_dir.iterdir():
+            if not entry.is_dir() or entry.name.startswith("."):
+                continue
+            git_dir = entry / ".git"
+            if not git_dir.exists():
+                continue
+            try:
+                subprocess.run(
+                    ["git", "fetch", "-q"],
+                    cwd=str(entry), capture_output=True, timeout=15,
+                )
+                local = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=str(entry), capture_output=True, text=True, timeout=5,
+                ).stdout.strip()
+                # Try main, then master
+                remote = ""
+                for branch in ("origin/main", "origin/master"):
+                    r = subprocess.run(
+                        ["git", "rev-parse", branch],
+                        cwd=str(entry), capture_output=True, text=True, timeout=5,
+                    )
+                    if r.returncode == 0:
+                        remote = r.stdout.strip()
+                        break
+                # Get version from package.json if exists
+                pkg = entry / "package.json"
+                version = ""
+                if pkg.exists():
+                    try:
+                        version = json.loads(pkg.read_text())["version"]
+                    except Exception:
+                        pass
+                behind = 0
+                if remote and local != remote:
+                    r = subprocess.run(
+                        ["git", "rev-list", "--count", f"{local}..{remote}"],
+                        cwd=str(entry), capture_output=True, text=True, timeout=5,
+                    )
+                    if r.returncode == 0:
+                        behind = int(r.stdout.strip())
+
+                results["sources"][entry.name] = {
+                    "type": "git",
+                    "version": version,
+                    "local_sha": local[:8],
+                    "remote_sha": remote[:8] if remote else "",
+                    "up_to_date": local == remote if remote else True,
+                    "behind": behind,
+                }
+            except (subprocess.TimeoutExpired, Exception) as e:
+                results["sources"][entry.name] = {
+                    "type": "git",
+                    "error": str(e),
+                    "up_to_date": True,
+                }
+
+    # Build marketplace version index
+    marketplace_versions: dict[str, str] = {}  # plugin_name -> latest version
+    marketplaces_dir = Path.home() / ".claude" / "plugins" / "marketplaces"
+    if marketplaces_dir.exists():
+        # superpowers-marketplace style (marketplace.json with plugins array)
+        for mp_dir in marketplaces_dir.iterdir():
+            mj = mp_dir / ".claude-plugin" / "marketplace.json"
+            if mj.exists():
+                try:
+                    md = json.loads(mj.read_text())
+                    for p in md.get("plugins", []):
+                        v = p.get("version", "")
+                        if v:
+                            marketplace_versions[p["name"]] = v
+                except Exception:
+                    pass
+            # claude-plugins-official style (per-plugin plugin.json)
+            plugins_dir = mp_dir / "plugins"
+            if plugins_dir.exists():
+                for pdir in plugins_dir.iterdir():
+                    pj = pdir / ".claude-plugin" / "plugin.json"
+                    if pj.exists():
+                        try:
+                            pd = json.loads(pj.read_text())
+                            v = pd.get("version", "")
+                            if v:
+                                marketplace_versions[pdir.name] = v
+                        except Exception:
+                            pass
+
+    # Check plugins
+    plugins_json = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+    if plugins_json.exists():
+        try:
+            data = json.loads(plugins_json.read_text())
+            for key, installs in data.get("plugins", {}).items():
+                name = key.split("@")[0]
+                for inst in installs:
+                    installed_ver = inst.get("version", "")
+                    latest_ver = marketplace_versions.get(name, "")
+                    up_to_date = True
+                    if installed_ver and latest_ver and installed_ver != latest_ver:
+                        up_to_date = False
+                    results["sources"][f"plugin:{name}"] = {
+                        "type": "plugin",
+                        "version": installed_ver,
+                        "latest_version": latest_ver,
+                        "up_to_date": up_to_date,
+                    }
+        except Exception:
+            pass
+
+    cache_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+
+    if getattr(args, 'json', False):
+        print(json.dumps(results, indent=2))
+    else:
+        for name, info in results["sources"].items():
+            if info.get("error"):
+                status = "error"
+            elif info["up_to_date"]:
+                status = "up to date"
+            else:
+                if info["type"] == "git":
+                    status = f"{info['behind']} commits behind"
+                else:
+                    status = f"{info['version']} -> {info.get('latest_version', '?')}"
+            ver = f" v{info['version']}" if info.get("version") else ""
+            print(f"  {name}{ver}: {status}")
 
 
 def run_skills_review(skills_manager: SkillsManager, args):
