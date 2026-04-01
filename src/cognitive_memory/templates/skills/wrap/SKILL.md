@@ -99,12 +99,17 @@ b. Check suggestion clusters:
    ```
 c. Empty result → skip
 d. If candidates exist (2+ occurrences from `cogmem skills suggest` + `--auto-suggest`):
-   - `"ask"`: Ask user "Create skill for [pattern] (Nx)?" — create only approved ones
-   - `"auto"`: Auto-create `.claude/skills/[name]/SKILL.md`
-   - After creation, promote:
-     ```bash
-     cogmem skills promote "[context]"
-     ```
+   - `"ask"`: Ask user "Create skill for [pattern] (Nx)?"
+     - Approved → create skill, then promote:
+       ```bash
+       cogmem skills promote "[context]"
+       ```
+     - Rejected → dismiss to remove from future summaries:
+       ```bash
+       cogmem skills dismiss "[context]"
+       ```
+   - `"auto"`: Auto-create `.claude/skills/[name]/SKILL.md` → promote
+   - YAML frontmatter (name, description) required for new skills
    - Record in handoff: "New skill created: [name] (suggest Nx)"
 
 ## Step 4: Update memory/knowledge/summary.md (if changes exist)

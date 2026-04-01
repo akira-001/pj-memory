@@ -612,6 +612,20 @@ class SkillsStore:
             )
             return cursor.rowcount
 
+    def dismiss_suggestion(self, context: str) -> int:
+        """Mark suggestions as dismissed (user rejected).
+
+        Sets promoted = -1 so they no longer appear in suggest-summary.
+        Returns count of dismissed rows.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "UPDATE skill_suggestions SET promoted = -1 "
+                "WHERE context = ? AND promoted = 0",
+                (context,),
+            )
+            return cursor.rowcount
+
     def get_track_summary(self, session_date: str) -> dict:
         """Get track summary with improvement recommendations for a session."""
         # Get ALL unresolved events regardless of date

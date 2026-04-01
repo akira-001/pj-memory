@@ -70,6 +70,12 @@ def run_skills(args):
             print(f"Promoted {count} suggestion(s) for '{args.context}'")
         else:
             print(f"No unpromoted suggestions found for '{args.context}'")
+    elif args.skills_command == "dismiss":
+        count = skills_manager.store.dismiss_suggestion(args.context)
+        if count > 0:
+            print(f"Dismissed {count} suggestion(s) for '{args.context}'")
+        else:
+            print(f"No pending suggestions found for '{args.context}'")
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)

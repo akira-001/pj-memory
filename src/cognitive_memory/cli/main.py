@@ -165,6 +165,10 @@ def main(argv: list[str] | None = None):
     skills_promote_parser = skills_subparsers.add_parser("promote", help="Mark a suggestion as promoted (skill was created)")
     skills_promote_parser.add_argument("context", type=str, help="The suggestion context label to promote")
 
+    # skills dismiss
+    skills_dismiss_parser = skills_subparsers.add_parser("dismiss", help="Dismiss a suggestion (user rejected)")
+    skills_dismiss_parser.add_argument("context", type=str, help="The suggestion context label to dismiss")
+
     # readme
     readme_parser = subparsers.add_parser("readme", help="Display the package README")
     readme_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",

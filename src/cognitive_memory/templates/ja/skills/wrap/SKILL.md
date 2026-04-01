@@ -103,13 +103,17 @@ b. 候補を集計:
    ```
 c. 結果が空なら → スキップ
 d. 候補がある場合（2回以上の繰り返しパターン — `cogmem skills suggest` + `--auto-suggest` で蓄積）:
-   - `"ask"`: 「[パターン名]（N回）をスキル化する？」とユーザーに確認。承認分のみ作成
-   - `"auto"`: 自動で `.claude/skills/[name]/SKILL.md` を作成
+   - `"ask"`: 「[パターン名]（N回）をスキル化する？」とユーザーに確認
+     - 承認 → スキル作成後に promote:
+       ```bash
+       cogmem skills promote "[context]"
+       ```
+     - 拒否 → dismiss で候補から除外:
+       ```bash
+       cogmem skills dismiss "[context]"
+       ```
+   - `"auto"`: 自動で `.claude/skills/[name]/SKILL.md` を作成 → promote
    - スキル作成時は YAML frontmatter（name, description）必須
-   - 作成後に promote:
-     ```bash
-     cogmem skills promote "[context]"
-     ```
    - 引き継ぎに「スキル新規作成: [名前]（suggest N回）」と記録
 
 ## Step 4: memory/knowledge/summary.md を更新（変化があれば）
