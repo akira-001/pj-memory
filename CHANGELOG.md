@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] - 2026-04-01
+
+### Added
+
+- `cogmem watch --auto-suggest` — auto-record detected git patterns as skill suggestions
+- `cogmem skills dismiss` — reject suggestions so they stop appearing in suggest-summary
+- Wrap Step 0 now passes `--auto-suggest` to connect watch → suggest pipeline
+
+### Fixed
+
+- Dashboard: symlinked skills (via gstack) now included in total count
+- Dashboard: removed redundant "Needs Improvement" and "Pending Suggestions" stat cards
+- Dashboard: "Pending events" only shown when `auto_improve = "off"`
+
 ## [0.19.0] - 2026-04-01
 
 ### Added
