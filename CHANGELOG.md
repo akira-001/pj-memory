@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-04-01
+
+### Added
+
+- **Agent behavior enforcement via Claude Code hooks**
+  - `cogmem hook skill-gate` — PreToolUse hook that warns when editing files matching skill_triggers without loading the skill
+  - `cogmem hook failure-breaker` — PostToolUse hook that detects consecutive Bash failures and prompts to stop and think
+  - Config-driven `[[cogmem.skill_triggers]]` in cogmem.toml for file-pattern → skill mapping
+  - Built-in default triggers for skill-improve and live-logging
+  - `cogmem init` auto-registers hooks in `.claude/settings.json`
+  - `cogmem migrate` auto-registers hooks for existing users
+- **Skill suggestions workflow**
+  - `cogmem skills suggest` — record a skill creation suggestion
+  - `cogmem skills suggest-summary` — show recurring suggestions ready for promotion
+  - `cogmem skills promote` — mark a suggestion as promoted
+- **cogmem watch skill gap detection** — compares git diff files against skill_triggers to detect unused skills
+- **Dashboard skills page** — auto-created, auto-improvements, pending events stat cards
+- `cogmem skills resolve --no-version` flag for user-directed fixes
+
+### Changed
+
+- Dashboard total_skills now counts `.claude/skills/` directories (not DB entries)
+- Dashboard total_improvements counts resolved events (not version increments)
+
 ## [0.13.0] - 2026-03-27
 
 ### Added
