@@ -10,6 +10,7 @@ from typing import List, Optional
 import pytest
 
 from cognitive_memory.config import CogMemConfig
+from cognitive_memory.skills.manager import SkillsManager
 
 
 class MockEmbedder:
@@ -109,3 +110,15 @@ def config_with_tmp(tmp_path, sample_log_file):
         db_path=str(db_path),
         _base_dir="",
     )
+
+
+@pytest.fixture
+def skills_manager(tmp_path):
+    """Create a SkillsManager with temp storage for testing."""
+    config = CogMemConfig(
+        logs_dir=str(tmp_path / "memory" / "logs"),
+        db_path=str(tmp_path / "memory" / "vectors.db"),
+        _base_dir=str(tmp_path),
+    )
+    (tmp_path / "memory" / "logs").mkdir(parents=True, exist_ok=True)
+    return SkillsManager(config)

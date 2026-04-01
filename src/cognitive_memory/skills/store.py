@@ -120,6 +120,17 @@ class SkillsStore:
             except sqlite3.OperationalError:
                 pass  # Column already exists
 
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS skill_suggestions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    context TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    session_date TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    promoted INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+
     def save_skill(self, skill: Skill) -> None:
         """Save skill to both file system and database."""
         # Save to file system
@@ -522,10 +533,12 @@ class SkillsStore:
             ).fetchall()
             return [dict(r) for r in rows]
 
-    def resolve_events(self, skill_name: str) -> int:
+    def resolve_events(self, skill_name: str, increment_version: bool = True) -> int:
         """Mark all unresolved events for a skill as resolved.
 
-        Called after SKILL.md is actually edited. Also increments skill version.
+        Called after SKILL.md is actually edited. Increments skill version
+        only when increment_version=True (auto-improvement). User-directed
+        corrections should pass increment_version=False.
         Returns count of resolved events.
         """
         from datetime import datetime
@@ -538,8 +551,8 @@ class SkillsStore:
             )
             resolved_count = cursor.rowcount
 
-            if resolved_count > 0:
-                # Increment version — skill was actually improved
+            if resolved_count > 0 and increment_version:
+                # Increment version — skill was auto-improved
                 conn.execute(
                     "UPDATE skills SET version = version + 1, updated_at = ? "
                     "WHERE name = ?",
@@ -548,18 +561,67 @@ class SkillsStore:
 
             return resolved_count
 
+    def add_suggestion(self, context: str, description: str) -> int:
+        """Record a skill creation suggestion.
+
+        Called by the agent mid-session when it notices a repeatable pattern
+        that isn't yet a skill.
+        Returns the suggestion id.
+        """
+        from datetime import datetime, date as date_mod
+
+        now = datetime.now()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "INSERT INTO skill_suggestions "
+                "(context, description, session_date, timestamp, promoted) "
+                "VALUES (?, ?, ?, ?, 0)",
+                (context, description, date_mod.today().isoformat(),
+                 now.isoformat()),
+            )
+            return cursor.lastrowid
+
+    def get_suggestion_summary(self, min_count: int = 2) -> list:
+        """Get suggestion clusters that appear min_count+ times.
+
+        Groups by similar context (exact match on context field).
+        Returns list of {context, description, count, first_seen, last_seen}.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT context, description, COUNT(*) as cnt, "
+                "MIN(session_date) as first_seen, MAX(session_date) as last_seen "
+                "FROM skill_suggestions WHERE promoted = 0 "
+                "GROUP BY context HAVING cnt >= ? "
+                "ORDER BY cnt DESC",
+                (min_count,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def promote_suggestion(self, context: str) -> int:
+        """Mark suggestions as promoted (skill was created).
+
+        Returns count of promoted rows.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "UPDATE skill_suggestions SET promoted = 1 "
+                "WHERE context = ? AND promoted = 0",
+                (context,),
+            )
+            return cursor.rowcount
+
     def get_track_summary(self, session_date: str) -> dict:
         """Get track summary with improvement recommendations for a session."""
-        # Get unresolved events for the session (or all sessions if checking broadly)
+        # Get ALL unresolved events regardless of date
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT skill_name, event_type, description, step_ref, timestamp "
                 "FROM skill_session_events "
-                "WHERE (session_date = ? OR resolved = 0) "
-                "AND resolved = 0 "
+                "WHERE resolved = 0 "
                 "ORDER BY timestamp ASC",
-                (session_date,),
             ).fetchall()
             events = [dict(r) for r in rows]
 
@@ -598,25 +660,134 @@ class SkillsStore:
             "skills_ok": skills_ok,
         }
 
-    @staticmethod
-    def _needs_improvement(events: List[dict]) -> Tuple[bool, str]:
-        """Determine if a skill needs improvement based on session events."""
-        corrections = [e for e in events if e["event_type"] == "user_correction"]
+    # Default file-pattern → skill mappings for gap detection
+    _DEFAULT_SKILL_TRIGGERS = [
+        {"pattern": ".claude/skills/**/SKILL.md", "skills": ["skill-improve"]},
+        {"pattern": "memory/logs/**", "skills": ["live-logging"]},
+    ]
+
+    # Keywords indicating a situational/transient event (not worth codifying)
+    _SITUATIONAL_KEYWORDS = [
+        "タイムアウト", "timeout", "一時的", "transient", "retry",
+        "ネットワーク", "network", "接続", "connection",
+        "api エラー", "api error", "rate limit", "503", "502", "500",
+    ]
+
+    @classmethod
+    def _is_situational(cls, description: str) -> bool:
+        """Check if an event describes a situational/transient issue."""
+        desc_lower = description.lower()
+        return any(kw in desc_lower for kw in cls._SITUATIONAL_KEYWORDS)
+
+    @classmethod
+    def _needs_improvement(cls, events: List[dict]) -> Tuple[bool, str]:
+        """Determine if a skill needs improvement based on session events.
+
+        - user_correction: excluded from auto-improvement (user-directed fixes
+          don't need version increment; resolve only).
+        - extra_step: 1+ generalizable event triggers improvement.
+          Situational events (timeouts, network errors) are skipped.
+        - error_recovery: 1+ triggers improvement.
+        - skipped_step: 2+ triggers improvement.
+        """
         errors = [e for e in events if e["event_type"] == "error_recovery"]
         extras = [e for e in events if e["event_type"] == "extra_step"]
         skipped = [e for e in events if e["event_type"] == "skipped_step"]
 
+        # Filter extra_steps: keep only generalizable ones
+        generalizable_extras = [
+            e for e in extras
+            if not cls._is_situational(e.get("description", ""))
+        ]
+
         reasons = []
-        if corrections:
-            reasons.append(f"{len(corrections)} user_correction(s)")
+        # user_correction is intentionally excluded — handled by user, no auto-improve
         if errors:
             reasons.append(f"{len(errors)} error_recovery(s)")
-        if len(extras) >= 2:
-            reasons.append(f"{len(extras)} extra_step(s)")
+        if generalizable_extras:
+            reasons.append(
+                f"{len(generalizable_extras)} extra_step(s) "
+                f"[generalizable]"
+            )
         if len(skipped) >= 2:
             reasons.append(f"{len(skipped)} skipped_step(s)")
 
         return (len(reasons) > 0, ", ".join(reasons))
+
+    # --- Skill Triggers ---
+
+    @classmethod
+    def get_all_triggers(cls, user_triggers: list[dict] | None = None) -> list[dict]:
+        """Merge default and user-defined skill triggers."""
+        triggers = list(cls._DEFAULT_SKILL_TRIGGERS)
+        if user_triggers:
+            triggers.extend(user_triggers)
+        return triggers
+
+    @staticmethod
+    def match_triggers(file_path: str, triggers: list[dict]) -> list[str]:
+        """Return skill names that match the given file path."""
+        from fnmatch import fnmatch
+
+        matched_skills: list[str] = []
+        for trigger in triggers:
+            if fnmatch(file_path, trigger["pattern"]):
+                for skill in trigger["skills"]:
+                    if skill not in matched_skills:
+                        matched_skills.append(skill)
+        return matched_skills
+
+    def check_skill_gaps(
+        self, edited_files: list[str], triggers: list[dict]
+    ) -> list[dict]:
+        """Check which expected skills were not used today."""
+        import sqlite3
+
+        expected_skills: dict[str, str] = {}
+        for f in edited_files:
+            for skill in self.match_triggers(f, triggers):
+                if skill not in expected_skills:
+                    expected_skills[skill] = f
+
+        if not expected_skills:
+            return []
+
+        gaps = []
+        with sqlite3.connect(self.db_path) as conn:
+            for skill_name, example_file in expected_skills.items():
+                row = conn.execute(
+                    "SELECT 1 FROM skill_session_events "
+                    "WHERE skill_name = ? AND event_type = 'skill_start' "
+                    "AND date(timestamp) = date('now', 'localtime')",
+                    (skill_name,),
+                ).fetchone()
+                if row is None:
+                    gaps.append(
+                        {
+                            "file": example_file,
+                            "expected_skill": skill_name,
+                            "reason": "skill_start not found for today",
+                        }
+                    )
+        return gaps
+
+    def add_session_event(
+        self,
+        skill_name: str,
+        event_type: str,
+        description: str,
+        step_ref: Optional[str] = None,
+    ) -> None:
+        """Convenience wrapper: record a skill event with today's date."""
+        from datetime import date
+
+        self.track_event(
+            session_date=date.today().isoformat(),
+            skill_name=skill_name,
+            event_type=event_type,
+            description=description,
+            step_ref=step_ref,
+        )
 
     def _skill_from_dict(self, data: dict) -> Skill:
         """Convert dictionary to Skill object."""

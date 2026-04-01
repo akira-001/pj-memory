@@ -398,13 +398,13 @@ class TestSkillTracking:
         assert summary["skills_used"] == []
         assert summary["skills_ok"] == []
 
-    def test_track_summary_user_correction_triggers_improve(self, store):
+    def test_track_summary_user_correction_excluded_from_improve(self, store):
+        """user_correction is excluded from auto-improvement (user-directed)."""
         store.track_event("2026-03-25", "schedule-registration",
                           "user_correction", "Calendar name wrong")
         summary = store.get_track_summary("2026-03-25")
-        assert len(summary["skills_used"]) == 1
-        assert summary["skills_used"][0]["needs_improvement"] is True
-        assert "user_correction" in summary["skills_used"][0]["reason"]
+        assert summary["skills_used"] == []
+        assert "schedule-registration" in summary["skills_ok"]
 
     def test_track_summary_error_recovery_triggers_improve(self, store):
         store.track_event("2026-03-25", "cron-automation",
@@ -413,13 +413,21 @@ class TestSkillTracking:
         assert len(summary["skills_used"]) == 1
         assert summary["skills_used"][0]["needs_improvement"] is True
 
-    def test_track_summary_single_extra_step_ok(self, store):
-        """One extra_step should NOT trigger improvement."""
+    def test_track_summary_single_extra_step_generalizable(self, store):
+        """One generalizable extra_step SHOULD trigger improvement."""
         store.track_event("2026-03-25", "paper-summary",
                           "extra_step", "Added related work section")
         summary = store.get_track_summary("2026-03-25")
+        assert len(summary["skills_used"]) == 1
+        assert "extra_step" in summary["skills_used"][0]["reason"]
+
+    def test_track_summary_single_extra_step_situational(self, store):
+        """One situational extra_step should NOT trigger improvement."""
+        store.track_event("2026-03-25", "morning-briefing",
+                          "extra_step", "天気APIがタイムアウトしたのでWebSearchにフォールバック")
+        summary = store.get_track_summary("2026-03-25")
         assert summary["skills_used"] == []
-        assert "paper-summary" in summary["skills_ok"]
+        assert "morning-briefing" in summary["skills_ok"]
 
     def test_track_summary_two_extra_steps_triggers(self, store):
         """Two extra_steps SHOULD trigger improvement."""
@@ -432,15 +440,15 @@ class TestSkillTracking:
         assert "extra_step" in summary["skills_used"][0]["reason"]
 
     def test_track_summary_mixed_skills(self, store):
-        """Multiple skills: one needs improvement, one is OK."""
-        store.track_event("2026-03-25", "skill-bad",
+        """Multiple skills: extra_step needs improvement, user_correction is OK."""
+        store.track_event("2026-03-25", "skill-user-fix",
                           "user_correction", "Wrong output")
-        store.track_event("2026-03-25", "skill-good",
-                          "extra_step", "Minor addition")
+        store.track_event("2026-03-25", "skill-auto-fix",
+                          "extra_step", "Added validation step")
         summary = store.get_track_summary("2026-03-25")
         assert len(summary["skills_used"]) == 1
-        assert summary["skills_used"][0]["skill_name"] == "skill-bad"
-        assert "skill-good" in summary["skills_ok"]
+        assert summary["skills_used"][0]["skill_name"] == "skill-auto-fix"
+        assert "skill-user-fix" in summary["skills_ok"]
 
     def test_track_skill_start_end(self, store):
         """skill_start/end should be recorded but not trigger improvement."""
@@ -453,10 +461,21 @@ class TestSkillTracking:
         assert summary["skills_used"] == []
         assert "recall" in summary["skills_ok"]
 
-    def test_track_start_with_deviation(self, store):
-        """skill_start + deviation events: start/end excluded from judgment."""
+    def test_track_start_with_user_correction_not_auto_improve(self, store):
+        """skill_start + user_correction: user_correction excluded from auto-improve."""
         store.track_event("2026-03-25", "morning-briefing", "skill_start", "朝のブリーフィング")
         store.track_event("2026-03-25", "morning-briefing", "user_correction", "天気の場所が違う")
+        store.track_event("2026-03-25", "morning-briefing", "skill_end", "完了")
+
+        summary = store.get_track_summary("2026-03-25")
+        # user_correction alone does not trigger auto-improvement
+        assert summary["skills_used"] == []
+        assert "morning-briefing" in summary["skills_ok"]
+
+    def test_track_start_with_error_recovery(self, store):
+        """skill_start + error_recovery: error_recovery triggers improvement."""
+        store.track_event("2026-03-25", "morning-briefing", "skill_start", "朝のブリーフィング")
+        store.track_event("2026-03-25", "morning-briefing", "error_recovery", "API失敗のリカバリ")
         store.track_event("2026-03-25", "morning-briefing", "skill_end", "完了")
 
         summary = store.get_track_summary("2026-03-25")
@@ -473,7 +492,7 @@ class TestResolveEvents:
 
     def test_resolve_events(self, store):
         """resolve_events should mark events as resolved."""
-        store.track_event("2026-03-25", "test-skill", "user_correction", "wrong time")
+        store.track_event("2026-03-25", "test-skill", "error_recovery", "API failed")
         store.track_event("2026-03-25", "test-skill", "extra_step", "added step")
 
         # Before resolve: needs_improvement should be True
@@ -489,10 +508,16 @@ class TestResolveEvents:
         summary = store.get_track_summary("2026-03-25")
         assert len(summary["skills_used"]) == 0
 
+    def test_resolve_user_correction_no_version_increment(self, store):
+        """user_correction resolve should not increment version."""
+        store.track_event("2026-03-25", "test-skill", "user_correction", "wrong time")
+        count = store.resolve_events("test-skill", increment_version=False)
+        assert count == 1
+
     def test_unresolved_events_persist_across_sessions(self, store):
         """Unresolved events from previous sessions should still trigger needs_improvement."""
-        # Event from yesterday, never resolved
-        store.track_event("2026-03-24", "test-skill", "user_correction", "wrong time")
+        # Event from yesterday, never resolved (extra_step, not user_correction)
+        store.track_event("2026-03-24", "test-skill", "extra_step", "added validation step")
 
         # Check today's summary — should still show unresolved event
         summary = store.get_track_summary("2026-03-25")
@@ -501,7 +526,7 @@ class TestResolveEvents:
 
     def test_resolved_events_dont_trigger(self, store):
         """Resolved events should not trigger needs_improvement."""
-        store.track_event("2026-03-24", "test-skill", "user_correction", "wrong time")
+        store.track_event("2026-03-24", "test-skill", "extra_step", "added step")
         store.resolve_events("test-skill")
 
         summary = store.get_track_summary("2026-03-25")
@@ -514,11 +539,63 @@ class TestResolveEvents:
 
     def test_resolve_only_affects_target_skill(self, store):
         """resolve_events only resolves events for the specified skill."""
-        store.track_event("2026-03-25", "skill-a", "user_correction", "issue a")
-        store.track_event("2026-03-25", "skill-b", "user_correction", "issue b")
+        store.track_event("2026-03-25", "skill-a", "extra_step", "added check")
+        store.track_event("2026-03-25", "skill-b", "extra_step", "added validation")
 
         store.resolve_events("skill-a")
 
         summary = store.get_track_summary("2026-03-25")
         assert len(summary["skills_used"]) == 1
         assert summary["skills_used"][0]["skill_name"] == "skill-b"
+
+
+# --- Skill Triggers tests ---
+
+
+class TestSkillTriggers:
+    def test_get_all_triggers_merges_defaults_and_user(self, skills_manager):
+        """組み込みデフォルト + ユーザー定義がマージされる"""
+        user_triggers = [{"pattern": "dashboard/**", "skills": ["tdd"]}]
+        triggers = skills_manager.store.get_all_triggers(user_triggers)
+        patterns = [t["pattern"] for t in triggers]
+        assert ".claude/skills/**/SKILL.md" in patterns  # デフォルト
+        assert "memory/logs/**" in patterns  # デフォルト
+        assert "dashboard/**" in patterns  # ユーザー定義
+
+    def test_match_triggers_finds_matching_skill(self, skills_manager):
+        """ファイルパスにマッチするスキルが返される"""
+        triggers = [
+            {"pattern": "dashboard/templates/**", "skills": ["tdd-dashboard-dev"]},
+            {"pattern": "cron-jobs.json", "skills": ["cron-automation"]},
+        ]
+        result = skills_manager.store.match_triggers(
+            "dashboard/templates/skills/list.html", triggers
+        )
+        assert result == ["tdd-dashboard-dev"]
+
+    def test_match_triggers_no_match(self, skills_manager):
+        """マッチしない場合は空リスト"""
+        triggers = [{"pattern": "dashboard/**", "skills": ["tdd"]}]
+        result = skills_manager.store.match_triggers("src/config.py", triggers)
+        assert result == []
+
+    def test_check_skill_gaps_detects_unused(self, skills_manager):
+        """skill_start がないスキルがギャップとして検出される"""
+        triggers = [{"pattern": "dashboard/**", "skills": ["tdd-dashboard-dev"]}]
+        edited_files = ["dashboard/templates/list.html", "dashboard/i18n.py"]
+        gaps = skills_manager.store.check_skill_gaps(edited_files, triggers)
+        assert len(gaps) == 1
+        assert gaps[0]["expected_skill"] == "tdd-dashboard-dev"
+
+    def test_check_skill_gaps_no_gap_when_used(self, skills_manager):
+        """skill_start がある場合はギャップなし"""
+        skills_manager.store.add_session_event(
+            skill_name="tdd-dashboard-dev",
+            event_type="skill_start",
+            description="test",
+        )
+        triggers = [{"pattern": "dashboard/**", "skills": ["tdd-dashboard-dev"]}]
+        gaps = skills_manager.store.check_skill_gaps(
+            ["dashboard/templates/list.html"], triggers
+        )
+        assert len(gaps) == 0
