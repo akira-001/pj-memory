@@ -29,8 +29,8 @@ def _scan_claude_skills() -> dict[str, dict]:
         for entry in skills_dir.iterdir():
             if not entry.is_dir() or entry.name.startswith("."):
                 continue
-            # Skip marketplace/framework skills
-            if entry.name.startswith("agency-") or entry.is_symlink():
+            # Skip marketplace/framework/internal directories
+            if entry.name.startswith("agency-"):
                 continue
             if entry.name in ("learned", "gstack", "__pycache__"):
                 continue
