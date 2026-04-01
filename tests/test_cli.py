@@ -475,6 +475,36 @@ class TestSetupHooks:
         assert pre["hooks"][0]["type"] == "command"
         assert "cogmem hook skill-gate" in pre["hooks"][0]["command"]
 
+    def test_hooks_schema_validation_catches_old_format(self, tmp_path):
+        """古い形式 { matcher, command } はバリデーションエラーになる"""
+        from cognitive_memory.cli.init_cmd import _validate_hooks_schema
+        import pytest
+
+        bad_settings = {
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "Edit|Write",
+                    "command": "cogmem hook skill-gate",
+                }]
+            }
+        }
+        with pytest.raises(ValueError, match="missing 'hooks' array"):
+            _validate_hooks_schema(bad_settings)
+
+    def test_hooks_schema_validation_accepts_correct_format(self, tmp_path):
+        """正しい形式はバリデーションを通過する"""
+        from cognitive_memory.cli.init_cmd import _validate_hooks_schema
+
+        good_settings = {
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "Edit|Write",
+                    "hooks": [{"type": "command", "command": "cogmem hook skill-gate"}],
+                }]
+            }
+        }
+        _validate_hooks_schema(good_settings)  # no error
+
     def test_init_merges_existing_settings_json(self, tmp_path, monkeypatch):
         """既存の settings.json がある場合はマージする"""
         monkeypatch.chdir(tmp_path)

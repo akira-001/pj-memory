@@ -12,6 +12,42 @@ from pathlib import Path
 _SCAFFOLD_DIR = Path(__file__).resolve().parent.parent / "templates"
 
 
+def _validate_hooks_schema(settings: dict) -> None:
+    """Validate that hooks in settings follow Claude Code's expected schema.
+
+    Expected: { hooks: { EventName: [{ matcher: str, hooks: [{ type: str, command: str }] }] } }
+    Raises ValueError if the structure is invalid.
+    """
+    hooks = settings.get("hooks")
+    if hooks is None:
+        return
+    if not isinstance(hooks, dict):
+        raise ValueError(f"hooks must be a dict, got {type(hooks).__name__}")
+    for event_name, entries in hooks.items():
+        if not isinstance(entries, list):
+            raise ValueError(f"hooks.{event_name} must be a list")
+        for i, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise ValueError(f"hooks.{event_name}[{i}] must be a dict")
+            if "hooks" not in entry:
+                raise ValueError(
+                    f"hooks.{event_name}[{i}]: missing 'hooks' array. "
+                    f"Got keys: {list(entry.keys())}"
+                )
+            if not isinstance(entry["hooks"], list):
+                raise ValueError(f"hooks.{event_name}[{i}].hooks must be a list")
+            for j, hook in enumerate(entry["hooks"]):
+                if not isinstance(hook, dict):
+                    raise ValueError(f"hooks.{event_name}[{i}].hooks[{j}] must be a dict")
+                if hook.get("type") not in ("command",):
+                    raise ValueError(
+                        f"hooks.{event_name}[{i}].hooks[{j}].type must be 'command', "
+                        f"got {hook.get('type')!r}"
+                    )
+                if "command" not in hook:
+                    raise ValueError(f"hooks.{event_name}[{i}].hooks[{j}]: missing 'command'")
+
+
 def setup_hooks(settings_dir: str) -> None:
     """Register cogmem hooks in .claude/settings.json."""
     import json
@@ -50,6 +86,8 @@ def setup_hooks(settings_dir: str) -> None:
             "matcher": "Bash",
             "hooks": [{"type": "command", "command": "cogmem hook failure-breaker"}],
         })
+
+    _validate_hooks_schema(settings)
 
     settings_path.write_text(
         json.dumps(settings, indent=2, ensure_ascii=False) + "\n",
