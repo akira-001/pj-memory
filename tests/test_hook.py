@@ -113,3 +113,31 @@ skills = ["tdd-dashboard-dev"]
         from cognitive_memory.cli.hook_cmd import run_skill_gate
         run_skill_gate(hook_input, base_dir=str(config_dir))
         assert capsys.readouterr().err == ""
+
+
+class TestHookEndToEnd:
+    def test_failure_breaker_via_cli(self, tmp_path):
+        """CLI 経由で failure-breaker が動作する"""
+        import subprocess
+        hook_input = json.dumps({
+            "tool_name": "Bash",
+            "tool_result": {"exit_code": 1},
+        })
+        env = os.environ.copy()
+        env["COGMEM_HOOK_STATE"] = str(tmp_path / "state")
+
+        # 1回目: 警告なし
+        r1 = subprocess.run(
+            ["cogmem", "hook", "failure-breaker"],
+            input=hook_input, capture_output=True, text=True, env=env,
+        )
+        assert r1.returncode == 0
+        assert r1.stderr == ""
+
+        # 2回目: 警告あり
+        r2 = subprocess.run(
+            ["cogmem", "hook", "failure-breaker"],
+            input=hook_input, capture_output=True, text=True, env=env,
+        )
+        assert r2.returncode == 0
+        assert "連続で失敗" in r2.stderr
