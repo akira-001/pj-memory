@@ -121,6 +121,34 @@ def detect_workflow_patterns(
     return results
 
 
+def get_changed_files_since(since: str, cwd: str = ".") -> list[str]:
+    """Get list of files changed in commits since the given time + staged changes."""
+    import subprocess
+    files: set[str] = set()
+
+    # Committed changes
+    result = subprocess.run(
+        ["git", "log", f"--since={since}", "--name-only", "--pretty=format:"],
+        capture_output=True, text=True, cwd=cwd,
+    )
+    if result.returncode == 0:
+        for line in result.stdout.strip().split("\n"):
+            if line.strip():
+                files.add(line.strip())
+
+    # Staged but uncommitted
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only"],
+        capture_output=True, text=True, cwd=cwd,
+    )
+    if result.returncode == 0:
+        for line in result.stdout.strip().split("\n"):
+            if line.strip():
+                files.add(line.strip())
+
+    return sorted(files)
+
+
 def detect_log_gaps(commit_count: int, log_entry_count: int) -> dict[str, Any]:
     """Detect if session has too few log entries relative to commits.
 

@@ -44,6 +44,20 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
     analysis["commit_count"] = len(log_lines)
     analysis["log_entry_count"] = log_entry_count
 
+    # Skill gap detection
+    from ..watch import get_changed_files_since
+    from ..skills.store import SkillsStore
+    changed_files = get_changed_files_since(since, config._base_dir)
+    skill_gaps = []
+    if changed_files:
+        try:
+            store = SkillsStore(config)
+            triggers = store.get_all_triggers(config.skill_triggers)
+            skill_gaps = store.check_skill_gaps(changed_files, triggers)
+        except Exception:
+            pass
+    analysis["skill_gaps"] = skill_gaps
+
     if json_output:
         print(json.dumps(analysis, ensure_ascii=False, indent=2))
     else:
@@ -52,6 +66,9 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
             print(f"⚠️  Log gap detected (severity: {gap['severity']})")
         for entry in analysis["entries"]:
             print(f"  [{entry['category']}] {entry['title']}")
+        if skill_gaps:
+            for sg in skill_gaps:
+                print(f"  ⚠ Skill gap: [{sg['expected_skill']}] not used (file: {sg['file']})")
 
     # Auto-log to session log if requested
     if auto_log and analysis["entries"]:

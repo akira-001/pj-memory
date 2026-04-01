@@ -213,6 +213,24 @@ def test_workflow_excludes_common_prefixes():
     assert not any(p["prefix"] in ("fix:", "feat:") for p in result)
 
 
+class TestSkillGapDetection:
+    def test_get_changed_files_since(self, tmp_path):
+        """git log + staged changes からファイル一覧を取得"""
+        import subprocess
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
+
+        (tmp_path / "dashboard" / "templates").mkdir(parents=True)
+        (tmp_path / "dashboard" / "templates" / "list.html").write_text("<h1>test</h1>")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "feat: add dashboard"], cwd=tmp_path, capture_output=True)
+
+        from cognitive_memory.watch import get_changed_files_since
+        files = get_changed_files_since("1 day ago", str(tmp_path))
+        assert "dashboard/templates/list.html" in files
+
+
 def test_full_watch_with_auto_log(tmp_path, monkeypatch):
     """cogmem watch --auto-log should append entries to session log."""
     import subprocess as sp
