@@ -18,6 +18,8 @@ def main(argv: list[str] | None = None):
     init_parser.add_argument("--dir", type=str, default=".", help="Target directory")
     init_parser.add_argument("--lang", type=str, choices=["en", "ja"], default=None,
                              help="Language for templates (en/ja). Prompts interactively if omitted.")
+    init_parser.add_argument("--user-id", type=str, default=None,
+                             help="User ID for log isolation (prompts interactively if omitted)")
 
     # index
     index_parser = subparsers.add_parser("index", help="Build/update the memory index")
@@ -46,10 +48,12 @@ def main(argv: list[str] | None = None):
     # migrate
     migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions")
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
+    migrate_parser.add_argument("--user-id", type=str, default=None,
+                                help="User ID for log isolation (prompts interactively if omitted)")
 
     # dashboard
     dash_parser = subparsers.add_parser("dashboard", help="Start the web dashboard")
-    dash_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind")
+    dash_parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind")
     dash_parser.add_argument("--port", type=int, default=8765, help="Port to bind")
     dash_parser.add_argument("--no-browser", action="store_true", help="Don't auto-open browser")
 
@@ -145,6 +149,21 @@ def main(argv: list[str] | None = None):
     # skills resolve
     skills_resolve_parser = skills_subparsers.add_parser("resolve", help="Mark skill events as resolved after SKILL.md edit")
     skills_resolve_parser.add_argument("skill_name", type=str, help="Skill name to resolve")
+    skills_resolve_parser.add_argument("--no-version", action="store_true", help="Resolve without incrementing version (for user-directed fixes)")
+
+    # skills suggest
+    skills_suggest_parser = skills_subparsers.add_parser("suggest", help="Record a skill creation suggestion")
+    skills_suggest_parser.add_argument("context", type=str, help="Short label for the pattern (e.g. 'PM2デバッグ')")
+    skills_suggest_parser.add_argument("--description", type=str, default="", help="What the pattern involves")
+
+    # skills suggest-summary
+    skills_ss_parser = skills_subparsers.add_parser("suggest-summary", help="Show recurring suggestions ready for promotion")
+    skills_ss_parser.add_argument("--min-count", type=int, default=2, dest="min_count", help="Minimum occurrences (default: 2)")
+    skills_ss_parser.add_argument("--json", action="store_true", help="JSON output")
+
+    # skills promote
+    skills_promote_parser = skills_subparsers.add_parser("promote", help="Mark a suggestion as promoted (skill was created)")
+    skills_promote_parser.add_argument("context", type=str, help="The suggestion context label to promote")
 
     # readme
     readme_parser = subparsers.add_parser("readme", help="Display the package README")
@@ -165,6 +184,12 @@ def main(argv: list[str] | None = None):
     watch_parser.add_argument("--since", type=str, default="today", help="Git log --since value")
     watch_parser.add_argument("--json", action="store_true", help="JSON output")
     watch_parser.add_argument("--auto-log", action="store_true", help="Auto-append detected patterns to session log")
+
+    # hook subcommand group
+    hook_parser = subparsers.add_parser("hook", help="Claude Code hook handlers")
+    hook_subparsers = hook_parser.add_subparsers(dest="hook_command")
+    hook_subparsers.add_parser("failure-breaker", help="Detect consecutive command failures")
+    hook_subparsers.add_parser("skill-gate", help="Check skill usage for edited files")
 
     # wrap subcommand group
     wrap_parser = subparsers.add_parser("wrap", help="Manage wrap lock for concurrent session safety")
@@ -215,7 +240,7 @@ def main(argv: list[str] | None = None):
 
     if args.command == "init":
         from .init_cmd import run_init
-        run_init(args.dir, lang=args.lang)
+        run_init(args.dir, lang=args.lang, user_id=args.user_id)
     elif args.command == "index":
         from .index_cmd import run_index
         run_index(all_files=args.all, single_file=args.file)
@@ -233,7 +258,7 @@ def main(argv: list[str] | None = None):
         run_signals()
     elif args.command == "migrate":
         from .migrate_cmd import run_migrate
-        run_migrate(args.dir)
+        run_migrate(args.dir, user_id=args.user_id)
     elif args.command == "dashboard":
         from .dashboard_cmd import run_dashboard
         run_dashboard(host=args.host, port=args.port, no_browser=args.no_browser)
@@ -252,6 +277,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "watch":
         from .watch_cmd import run_watch
         run_watch(since=args.since, json_output=args.json, auto_log=args.auto_log)
+    elif args.command == "hook":
+        from .hook_cmd import run_hook
+        run_hook(args)
     elif args.command == "wrap":
         from .wrap_cmd import run_wrap
         run_wrap(args)
