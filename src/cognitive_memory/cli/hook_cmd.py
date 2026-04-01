@@ -48,6 +48,43 @@ def run_failure_breaker(hook_input: dict, threshold: int = 2) -> None:
         print(msg, file=sys.stderr)
 
 
+def run_skill_gate(hook_input: dict, base_dir: str | None = None) -> None:
+    """Handle PreToolUse Edit|Write — check skill usage for the file."""
+    file_path = hook_input.get("tool_input", {}).get("file_path", "")
+    if not file_path:
+        return
+
+    try:
+        from ..config import CogMemConfig
+        from ..skills.store import SkillsStore
+
+        config = CogMemConfig.find_and_load(start_dir=base_dir)
+        store = SkillsStore(config)
+
+        # Make file_path relative to base_dir for matching
+        try:
+            rel_path = str(Path(file_path).relative_to(config._base_dir))
+        except ValueError:
+            rel_path = file_path
+
+        triggers = store.get_all_triggers(config.skill_triggers)
+        matched_skills = store.match_triggers(rel_path, triggers)
+
+        if not matched_skills:
+            return
+
+        # Check which matched skills have skill_start today
+        gaps = store.check_skill_gaps([rel_path], triggers)
+        for gap in gaps:
+            msg = (
+                f"\u26a0 このファイルに関連するスキル [{gap['expected_skill']}] "
+                "が未使用です。先にスキルを確認してください。"
+            )
+            print(msg, file=sys.stderr)
+    except Exception:
+        pass  # Hook must never break the editor
+
+
 def run_hook(args) -> None:
     """Entry point for cogmem hook subcommands."""
     hook_input = json.load(sys.stdin)
@@ -61,6 +98,6 @@ def run_hook(args) -> None:
             threshold = 2
         run_failure_breaker(hook_input, threshold=threshold)
     elif args.hook_command == "skill-gate":
-        pass  # Will be implemented in Task 4
+        run_skill_gate(hook_input)
     else:
         pass

@@ -52,3 +52,64 @@ class TestFailureBreaker:
                 run_failure_breaker(hook_input, threshold=2)
         err = capsys.readouterr().err
         assert err.count("連続で失敗") == 2  # 2回目と4回目
+
+
+class TestSkillGate:
+    @pytest.fixture
+    def config_dir(self, tmp_path):
+        """cogmem.toml + skills.db がある一時ディレクトリ"""
+        toml = tmp_path / "cogmem.toml"
+        toml.write_text('''[cogmem]
+logs_dir = "memory/logs"
+user_id = "test"
+
+[[cogmem.skill_triggers]]
+pattern = "dashboard/templates/**"
+skills = ["tdd-dashboard-dev"]
+''')
+        (tmp_path / "memory").mkdir()
+        return tmp_path
+
+    def test_warns_when_skill_not_used(self, config_dir, capsys, monkeypatch):
+        """スキル未使用時に警告が出る"""
+        monkeypatch.chdir(config_dir)
+        hook_input = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(config_dir / "dashboard/templates/list.html")},
+        }
+        from cognitive_memory.cli.hook_cmd import run_skill_gate
+        run_skill_gate(hook_input, base_dir=str(config_dir))
+        err = capsys.readouterr().err
+        assert "tdd-dashboard-dev" in err
+        assert "未使用" in err
+
+    def test_no_warn_when_skill_used(self, config_dir, capsys, monkeypatch):
+        """skill_start 記録済みなら警告なし"""
+        monkeypatch.chdir(config_dir)
+        from cognitive_memory.config import CogMemConfig
+        from cognitive_memory.skills.store import SkillsStore
+        config = CogMemConfig.from_toml(config_dir / "cogmem.toml")
+        store = SkillsStore(config)
+        store.add_session_event(
+            skill_name="tdd-dashboard-dev",
+            event_type="skill_start",
+            description="test",
+        )
+        hook_input = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(config_dir / "dashboard/templates/list.html")},
+        }
+        from cognitive_memory.cli.hook_cmd import run_skill_gate
+        run_skill_gate(hook_input, base_dir=str(config_dir))
+        assert capsys.readouterr().err == ""
+
+    def test_no_warn_for_unmatched_file(self, config_dir, capsys, monkeypatch):
+        """マッチしないファイルでは警告なし"""
+        monkeypatch.chdir(config_dir)
+        hook_input = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(config_dir / "src/main.py")},
+        }
+        from cognitive_memory.cli.hook_cmd import run_skill_gate
+        run_skill_gate(hook_input, base_dir=str(config_dir))
+        assert capsys.readouterr().err == ""
