@@ -72,7 +72,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "skills.recent_usage": {"en": "Recent Usage", "ja": "最近の使用"},
     "skills.context": {"en": "Context", "ja": "コンテキスト"},
     "skills.close": {"en": "Close", "ja": "閉じる"},
-    "skills.auto_created": {"en": "Promoted", "ja": "スキル化済み"},
+    "skills.auto_created": {"en": "Auto-created", "ja": "自動生成数"},
     "skills.auto_improvements": {"en": "Auto-improvements", "ja": "自動改善数"},
     "skills.pending_events": {"en": "Pending events", "ja": "未解決イベント"},
 
