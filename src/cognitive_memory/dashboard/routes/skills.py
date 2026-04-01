@@ -31,6 +31,7 @@ async def skills_list(request: Request):
             "active_page": "skills",
             "skills": skills,
             "audit": audit,
+            "auto_improve": config.skills_auto_improve,
         },
     )
 

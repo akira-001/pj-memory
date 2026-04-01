@@ -16,10 +16,6 @@
         <div class="stat-value">{{ audit.summary.total_skills }}</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">{{ t('skills.needs_improvement', lang) }}</div>
-        <div class="stat-value" style="color: var(--warning);">{{ audit.summary.needs_improvement }}</div>
-    </div>
-    <div class="stat-card">
         <div class="stat-label">{{ t('skills.suggested_new', lang) }}</div>
         <div class="stat-value" style="color: var(--info);">{{ audit.summary.suggested_new }}</div>
     </div>
@@ -35,10 +31,12 @@
         <div class="stat-label">{{ t('skills.auto_improvements', lang) }}</div>
         <div class="stat-value" style="color: var(--success);">{{ audit.summary.total_improvements }}</div>
     </div>
+    {% if auto_improve == "off" %}
     <div class="stat-card">
         <div class="stat-label">{{ t('skills.pending_events', lang) }}</div>
         <div class="stat-value" style="color: {% if audit.summary.unresolved_events > 0 %}var(--warning){% else %}var(--text-dim){% endif %};">{{ audit.summary.unresolved_events }}</div>
     </div>
+    {% endif %}
 </div>
 
 <!-- Audit Recommendations -->
