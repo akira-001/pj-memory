@@ -349,7 +349,8 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
             import tomli
             try:
                 data = tomli.loads(local_toml.read_text(encoding="utf-8"))
-                current_user_id = data.get("user_id")
+                section = data.get("cogmem", data)
+                current_user_id = section.get("user_id") or data.get("user_id")
             except Exception:
                 pass
         user_id = _prompt_user_id(logs_dir, msg, current_user_id=current_user_id)
