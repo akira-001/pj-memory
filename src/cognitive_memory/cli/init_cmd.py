@@ -287,9 +287,9 @@ def _get_existing_user_ids(logs_dir: Path) -> set[str]:
     return ids
 
 
-def _prompt_user_id(logs_dir: Path, msg: dict) -> str:
-    """Prompt user for their user_id, rejecting IDs already in use."""
-    default_id = getpass.getuser()
+def _prompt_user_id(logs_dir: Path, msg: dict, current_user_id: str | None = None) -> str:
+    """Prompt user for their user_id, rejecting IDs already in use by others."""
+    default_id = current_user_id or getpass.getuser()
     existing_ids = _get_existing_user_ids(logs_dir)
 
     while True:
@@ -304,7 +304,7 @@ def _prompt_user_id(logs_dir: Path, msg: dict) -> str:
             print("Invalid ID. Use only letters, numbers, dashes, and underscores.")
             continue
 
-        if user_id in existing_ids:
+        if user_id in existing_ids and user_id != current_user_id:
             print(msg["user_id_taken"].format(user_id, logs_dir / user_id))
             continue
 
@@ -342,7 +342,17 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
     # Determine user_id
     logs_dir = target / "memory" / "logs"
     if user_id is None:
-        user_id = _prompt_user_id(logs_dir, msg)
+        # Read current user_id from cogmem.local.toml so re-init allows reuse
+        current_user_id = None
+        local_toml = target / "cogmem.local.toml"
+        if local_toml.exists():
+            import tomli
+            try:
+                data = tomli.loads(local_toml.read_text(encoding="utf-8"))
+                current_user_id = data.get("user_id")
+            except Exception:
+                pass
+        user_id = _prompt_user_id(logs_dir, msg, current_user_id=current_user_id)
     print(msg["user_id_set"].format(user_id))
 
     # Write cogmem.toml (language-independent, always from base dir)
