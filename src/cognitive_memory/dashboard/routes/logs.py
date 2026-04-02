@@ -18,9 +18,9 @@ async def logs_list(request: Request):
     dates = get_log_dates(config)
     summary = get_log_summary(config)
     return templates.TemplateResponse(
+        request,
         "logs/list.html",
         {
-            "request": request,
             "active_page": "logs",
             "dates": dates,
             "summary": summary,
@@ -42,9 +42,9 @@ async def filtered_entries(request: Request):
     entries = data["entries"] if data else []
 
     return templates.TemplateResponse(
+        request,
         "logs/_entries.html",
         {
-            "request": request,
             "entries": entries,
         },
     )
@@ -63,9 +63,9 @@ async def log_detail(request: Request, date: str):
 
     if data is None:
         return templates.TemplateResponse(
+            request,
             "logs/detail.html",
             {
-                "request": request,
                 "active_page": "logs",
                 "data": None,
                 "date": date,
@@ -74,9 +74,9 @@ async def log_detail(request: Request, date: str):
         )
 
     return templates.TemplateResponse(
+        request,
         "logs/detail.html",
         {
-            "request": request,
             "active_page": "logs",
             "data": data,
             "date": date,

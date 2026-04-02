@@ -29,9 +29,9 @@ async def skills_list(request: Request):
     update_status = get_update_status(config)
 
     return templates.TemplateResponse(
+        request,
         "skills/list.html",
         {
-            "request": request,
             "active_page": "skills",
             "skills": skills,
             "audit": audit,
@@ -51,9 +51,9 @@ async def audit_results(request: Request):
     audit = get_audit_results(config)
 
     return templates.TemplateResponse(
+        request,
         "skills/_audit_fragment.html",
         {
-            "request": request,
             "audit": audit,
         },
     )
@@ -75,9 +75,9 @@ async def skill_modal(request: Request, skill_id: str):
     trend_data = get_skill_trend(config, skill_id)
 
     return templates.TemplateResponse(
+        request,
         "skills/_detail_modal.html",
         {
-            "request": request,
             "skill": detail["skill"],
             "usage_log": detail["usage_log"],
             "events": detail["events"],
@@ -102,9 +102,9 @@ async def skill_detail_page(request: Request, skill_id: str):
     trend_data = get_skill_trend(config, skill_id)
 
     return templates.TemplateResponse(
+        request,
         "skills/detail.html",
         {
-            "request": request,
             "active_page": "skills",
             "skill": detail["skill"],
             "usage_log": detail["usage_log"],

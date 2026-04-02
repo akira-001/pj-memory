@@ -24,9 +24,9 @@ async def personality_page(request: Request):
     templates = request.app.state.templates
     data = get_personality_data(config)
     return templates.TemplateResponse(
+        request,
         "personality/index.html",
         {
-            "request": request,
             "active_page": "personality",
             "data": data,
         },

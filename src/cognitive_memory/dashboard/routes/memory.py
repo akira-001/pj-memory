@@ -19,9 +19,9 @@ async def overview(request: Request):
     data = get_overview_data(config)
     signals = check_signals(config)
     return templates.TemplateResponse(
+        request,
         "memory/overview.html",
         {
-            "request": request,
             "active_page": "memory",
             "data": data,
             "signals": signals,

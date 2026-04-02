@@ -30,9 +30,9 @@ async def search_page(request: Request):
     top_keywords = get_top_keywords(config, limit=10)
 
     return templates.TemplateResponse(
+        request,
         "search/index.html",
         {
-            "request": request,
             "active_page": "search",
             "query": q,
             "results": results,
@@ -57,9 +57,9 @@ async def search_results(request: Request):
         response = store._execute_search(q, top_k=10)
 
     return templates.TemplateResponse(
+        request,
         "search/_results.html",
         {
-            "request": request,
             "results": response.results,
             "status": response.status,
             "query": q,

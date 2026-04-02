@@ -22,9 +22,9 @@ async def consolidation_page(request: Request):
     decay = get_decay_settings(config)
 
     return templates.TemplateResponse(
+        request,
         "consolidation/index.html",
         {
-            "request": request,
             "active_page": "consolidation",
             "data": data,
             "decay": decay,
