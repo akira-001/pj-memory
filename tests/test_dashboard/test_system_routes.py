@@ -67,20 +67,20 @@ def system_client(system_config, fake_ollama):
 
 class TestSystemPage:
     def test_system_returns_200(self, system_client):
-        resp = system_client.get("/system")
+        resp = system_client.get("/system/")
         assert resp.status_code == 200
         assert "System" in resp.text or "システム" in resp.text
 
     def test_system_shows_process_status(self, system_client):
-        resp = system_client.get("/system")
+        resp = system_client.get("/system/")
         assert "Running" in resp.text or "起動中" in resp.text
 
     def test_system_shows_model_info(self, system_client):
-        resp = system_client.get("/system")
+        resp = system_client.get("/system/")
         assert "multilingual-e5-large" in resp.text
 
     def test_system_shows_launchagent(self, system_client):
-        resp = system_client.get("/system")
+        resp = system_client.get("/system/")
         assert "LaunchAgent" in resp.text or "自動起動" in resp.text
 
 
