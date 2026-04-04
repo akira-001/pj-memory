@@ -710,6 +710,7 @@ def run_skills_check_updates(config: CogMemConfig, args):
                 local = subprocess.run(
                     ["git", "rev-parse", "HEAD"],
                     cwd=str(entry), capture_output=True, text=True, timeout=5,
+                    encoding="utf-8", errors="replace",
                 ).stdout.strip()
                 # Try main, then master
                 remote = ""
@@ -717,6 +718,7 @@ def run_skills_check_updates(config: CogMemConfig, args):
                     r = subprocess.run(
                         ["git", "rev-parse", branch],
                         cwd=str(entry), capture_output=True, text=True, timeout=5,
+                        encoding="utf-8", errors="replace",
                     )
                     if r.returncode == 0:
                         remote = r.stdout.strip()
@@ -734,6 +736,7 @@ def run_skills_check_updates(config: CogMemConfig, args):
                     r = subprocess.run(
                         ["git", "rev-list", "--count", f"{local}..{remote}"],
                         cwd=str(entry), capture_output=True, text=True, timeout=5,
+                        encoding="utf-8", errors="replace",
                     )
                     if r.returncode == 0:
                         behind = int(r.stdout.strip())

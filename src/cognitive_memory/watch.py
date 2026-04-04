@@ -130,6 +130,7 @@ def get_changed_files_since(since: str, cwd: str = ".") -> list[str]:
     result = subprocess.run(
         ["git", "log", f"--since={since}", "--name-only", "--pretty=format:"],
         capture_output=True, text=True, cwd=cwd,
+        encoding="utf-8", errors="replace",
     )
     if result.returncode == 0:
         for line in result.stdout.strip().split("\n"):
@@ -140,6 +141,7 @@ def get_changed_files_since(since: str, cwd: str = ".") -> list[str]:
     result = subprocess.run(
         ["git", "diff", "--cached", "--name-only"],
         capture_output=True, text=True, cwd=cwd,
+        encoding="utf-8", errors="replace",
     )
     if result.returncode == 0:
         for line in result.stdout.strip().split("\n"):

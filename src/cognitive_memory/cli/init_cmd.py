@@ -236,8 +236,9 @@ def _install_skill_creator(msg: dict) -> None:
         result = subprocess.run(
             [claude_bin, "plugins", "list"],
             capture_output=True, text=True, timeout=15,
+            encoding="utf-8", errors="replace",
         )
-        if "skill-creator" in result.stdout:
+        if result.stdout and "skill-creator" in result.stdout:
             print(msg["skill_creator_exists"])
             return
     except (subprocess.TimeoutExpired, OSError):
@@ -248,6 +249,7 @@ def _install_skill_creator(msg: dict) -> None:
         result = subprocess.run(
             [claude_bin, "plugins", "install", "skill-creator@claude-plugins-official"],
             capture_output=True, text=True, timeout=60,
+            encoding="utf-8", errors="replace",
         )
         if result.returncode == 0:
             print(msg["skill_creator_installed"])

@@ -20,6 +20,7 @@ def run_watch(since: str = "today", json_output: bool = False, auto_log: bool = 
         result = subprocess.run(
             ["git", "log", f"--since={since}", "--oneline"],
             capture_output=True, text=True, cwd=config._base_dir,
+            encoding="utf-8", errors="replace",
         )
         if result.returncode != 0:
             print(result.stderr.strip(), file=sys.stderr)
