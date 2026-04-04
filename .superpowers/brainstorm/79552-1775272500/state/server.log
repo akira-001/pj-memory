@@ -1,1 +1,2 @@
 {"type":"server-started","port":49242,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:49242","screen_dir":"/Users/akira/workspace/ai-dev/cognitive-memory-lib/.superpowers/brainstorm/79552-1775272500/content","state_dir":"/Users/akira/workspace/ai-dev/cognitive-memory-lib/.superpowers/brainstorm/79552-1775272500/state"}
+{"type":"screen-added","file":"/Users/akira/workspace/ai-dev/cognitive-memory-lib/.superpowers/brainstorm/79552-1775272500/content/ollama-stat-card.html"}

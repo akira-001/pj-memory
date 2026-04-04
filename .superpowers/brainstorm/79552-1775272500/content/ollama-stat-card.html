@@ -1,0 +1,53 @@
+<h2>メモリー概要 — Ollama ステータスカード</h2>
+<p class="subtitle">stats-grid の5枚目として追加するカードのデザイン</p>
+
+<div class="section">
+  <h3>正常時（Ollama起動中 + モデルあり）</h3>
+  <div class="mockup">
+    <div class="mockup-header">stat-card: Ollama Status</div>
+    <div class="mockup-body" style="padding: 1.25rem; background: #faf8f5; font-family: -apple-system, sans-serif;">
+      <div style="font-size: 0.75rem; color: #8a8078; text-transform: uppercase; letter-spacing: 0.05em;">Ollama</div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #5a9a5a;"></span>
+        <span style="font-size: 1.5rem; font-weight: 600; color: #3a3530;">Running</span>
+      </div>
+      <div style="font-size: 0.75rem; color: #8a8078; margin-top: 0.5rem;">
+        <span style="background: rgba(90,154,90,0.12); padding: 2px 8px; border-radius: 4px; color: #5a9a5a;">multilingual-e5-large</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>異常時（Ollama停止中）</h3>
+  <div class="mockup">
+    <div class="mockup-header">stat-card: Ollama Status</div>
+    <div class="mockup-body" style="padding: 1.25rem; background: #faf8f5; font-family: -apple-system, sans-serif;">
+      <div style="font-size: 0.75rem; color: #8a8078; text-transform: uppercase; letter-spacing: 0.05em;">Ollama</div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c05050;"></span>
+        <span style="font-size: 1.5rem; font-weight: 600; color: #3a3530;">Stopped</span>
+      </div>
+      <div style="font-size: 0.75rem; color: #c05050; margin-top: 0.5rem;">
+        Embedding unavailable
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>警告時（Ollama起動中 + モデル未ロード）</h3>
+  <div class="mockup">
+    <div class="mockup-header">stat-card: Ollama Status</div>
+    <div class="mockup-body" style="padding: 1.25rem; background: #faf8f5; font-family: -apple-system, sans-serif;">
+      <div style="font-size: 0.75rem; color: #8a8078; text-transform: uppercase; letter-spacing: 0.05em;">Ollama</div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c08a30;"></span>
+        <span style="font-size: 1.5rem; font-weight: 600; color: #3a3530;">Running</span>
+      </div>
+      <div style="font-size: 0.75rem; color: #c08a30; margin-top: 0.5rem;">
+        Model not found — <a href="/system" style="color: #c08a30; text-decoration: underline;">pull required</a>
+      </div>
+    </div>
+  </div>
+</div>
