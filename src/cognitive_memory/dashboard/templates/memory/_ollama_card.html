@@ -15,7 +15,7 @@
     </div>
     <div class="stat-sub">
         {% if ollama_status == 'stopped' %}
-        <span style="color: var(--error);">{{ t('system.embedding_unavailable', lang) }}</span>
+        <span style="color: var(--error);">{{ t('system.degraded_summary', lang) }}</span>
         {% elif ollama_model.status == 'loaded' %}
         <span style="background: rgba(90,154,90,0.12); padding: 2px 8px; border-radius: 4px; color: var(--success);">
             {{ ollama_model.name }}

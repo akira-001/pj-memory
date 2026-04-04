@@ -29,4 +29,14 @@
             {{ t('system.restart', lang) }}
         </button>
     </div>
+    {% if ollama_status == 'stopped' %}
+    <div class="degraded-notice" style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(200,160,60,0.10); border-left: 3px solid var(--warning); border-radius: 4px; font-size: 0.8125rem; line-height: 1.6; color: var(--text);">
+        <strong style="color: var(--warning);">{{ t('system.degraded_summary', lang) }}</strong>
+        {% for line in t('system.degraded_detail', lang).split('\n') %}
+        {% if line.strip() %}
+        <p style="margin: 0.5rem 0 0 0;">{{ line }}</p>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
 </section>

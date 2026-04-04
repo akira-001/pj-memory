@@ -215,6 +215,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "system.embedding_unavailable": {"en": "Embedding unavailable", "ja": "埋め込み利用不可"},
     "system.model_missing": {"en": "Model not found", "ja": "モデル未取得"},
     "system.pull_required": {"en": "pull required", "ja": "取得が必要"},
+    "system.degraded_summary": {"en": "Search accuracy is reduced", "ja": "検索精度が低下しています"},
+    "system.degraded_detail": {
+        "en": 'Ollama is used to search memories by meaning. While stopped, search relies on keyword matching only, so memories with different wording may not be found.\n\nExample: Searching for "tired" will not find a memory like "feeling physically exhausted."\n\nSkill similarity search is also unavailable while stopped.',
+        "ja": "Ollama は記憶を「意味」で探すために使われています。停止中はキーワードの一致だけで検索するため、表現が違う記憶を見つけられないことがあります。\n\n例:「疲れた」で検索しても「体力の限界を感じた」という記憶がヒットしません。\n\nまた、似たスキルを探す機能は停止中は利用できません。",
+    },
 
     # Common
     "common.loading": {"en": "Loading...", "ja": "読み込み中..."},
