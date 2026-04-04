@@ -1,0 +1,89 @@
+<h2>システム管理ページ — /system</h2>
+<p class="subtitle">3つのセクションで構成</p>
+
+<div class="mockup">
+  <div class="mockup-header">cogmem dashboard — システム管理</div>
+  <div class="mockup-body" style="padding: 0; background: #faf8f5; font-family: -apple-system, sans-serif;">
+
+    <!-- Page Header -->
+    <div style="padding: 1.5rem 2rem 1rem;">
+      <h2 style="margin: 0; color: #3a3530; font-size: 1.5rem;">System</h2>
+      <p style="color: #8a8078; font-size: 0.875rem; margin: 0.25rem 0 0;">Ollama process and embedding model management</p>
+    </div>
+
+    <!-- Section 1: Ollama Process -->
+    <div style="margin: 0 2rem 1.5rem; padding: 1.25rem; background: white; border-radius: 8px; border: 1px solid rgba(0,0,0,0.06);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h3 style="margin: 0; color: #3a3530; font-size: 1rem;">Ollama Process</h3>
+          <p style="color: #8a8078; font-size: 0.75rem; margin: 0.25rem 0 0;">ollama serve process control</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5a9a5a;"></span>
+          <span style="color: #5a9a5a; font-size: 0.875rem; font-weight: 500;">Running</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button style="padding: 0.5rem 1rem; background: #5a9a5a; color: white; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer; opacity: 0.5;">Start</button>
+        <button style="padding: 0.5rem 1rem; background: #c05050; color: white; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer;">Stop</button>
+        <button style="padding: 0.5rem 1rem; background: #6a6560; color: white; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer;">Restart</button>
+      </div>
+    </div>
+
+    <!-- Section 2: Embedding Model -->
+    <div style="margin: 0 2rem 1.5rem; padding: 1.25rem; background: white; border-radius: 8px; border: 1px solid rgba(0,0,0,0.06);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h3 style="margin: 0; color: #3a3530; font-size: 1rem;">Embedding Model</h3>
+          <p style="color: #8a8078; font-size: 0.75rem; margin: 0.25rem 0 0;">cogmem.toml: embedding_model</p>
+        </div>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.8125rem;">
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+            <th style="text-align: left; padding: 0.5rem 0; color: #8a8078; font-weight: 500;">Model</th>
+            <th style="text-align: left; padding: 0.5rem 0; color: #8a8078; font-weight: 500;">Size</th>
+            <th style="text-align: left; padding: 0.5rem 0; color: #8a8078; font-weight: 500;">Status</th>
+            <th style="text-align: right; padding: 0.5rem 0; color: #8a8078; font-weight: 500;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
+            <td style="padding: 0.75rem 0; color: #3a3530;">zylonai/multilingual-e5-large</td>
+            <td style="padding: 0.75rem 0; color: #8a8078;">1.2 GB</td>
+            <td style="padding: 0.75rem 0;">
+              <span style="background: rgba(90,154,90,0.12); color: #5a9a5a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">Loaded</span>
+            </td>
+            <td style="padding: 0.75rem 0; text-align: right;">
+              <button style="padding: 0.25rem 0.75rem; background: none; color: #c05050; border: 1px solid #c05050; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.06);">
+        <p style="font-size: 0.75rem; color: #8a8078; margin: 0 0 0.5rem;">Model not found? Pull it:</p>
+        <div style="display: flex; gap: 0.5rem;">
+          <button style="padding: 0.5rem 1rem; background: #5a9a5a; color: white; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer;">Pull Model</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Auto-start -->
+    <div style="margin: 0 2rem 2rem; padding: 1.25rem; background: white; border-radius: 8px; border: 1px solid rgba(0,0,0,0.06);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="margin: 0; color: #3a3530; font-size: 1rem;">Auto-start on Login</h3>
+          <p style="color: #8a8078; font-size: 0.75rem; margin: 0.25rem 0 0;">macOS LaunchAgent: ~/Library/LaunchAgents/com.ollama.serve.plist</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <!-- Toggle switch -->
+          <div style="position: relative; width: 44px; height: 24px; background: #5a9a5a; border-radius: 12px; cursor: pointer;">
+            <div style="position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: white; border-radius: 50%;"></div>
+          </div>
+          <span style="font-size: 0.8125rem; color: #5a9a5a; font-weight: 500;">Enabled</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
