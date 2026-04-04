@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import signal
+import subprocess
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
 from threading import Thread
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -13,6 +16,9 @@ from cognitive_memory.dashboard.services.ollama_service import (
     get_status,
     get_models,
     check_embedding_model,
+    is_ollama_installed,
+    start_serve,
+    stop_serve,
 )
 from cognitive_memory.config import CogMemConfig
 
@@ -102,3 +108,53 @@ class TestCheckEmbeddingModel:
         config = CogMemConfig.from_toml(tmp_path / "cogmem.toml")
         result = check_embedding_model(config, base_url="http://127.0.0.1:19999")
         assert result["status"] == "unavailable"
+
+
+# ---------------------------------------------------------------------------
+# Task 2: Process Control
+# ---------------------------------------------------------------------------
+
+
+class TestIsOllamaInstalled:
+    def test_installed(self):
+        with patch("shutil.which", return_value="/usr/local/bin/ollama"):
+            assert is_ollama_installed() is True
+
+    def test_not_installed(self):
+        with patch("shutil.which", return_value=None):
+            assert is_ollama_installed() is False
+
+
+class TestStartServe:
+    @patch("cognitive_memory.dashboard.services.ollama_service.get_status")
+    @patch("subprocess.Popen")
+    @patch("shutil.which", return_value="/usr/local/bin/ollama")
+    def test_start_success(self, mock_which, mock_popen, mock_status):
+        mock_status.return_value = "running"
+        result = start_serve()
+        assert result["ok"] is True
+        mock_popen.assert_called_once()
+
+    @patch("shutil.which", return_value=None)
+    def test_start_not_installed(self, mock_which):
+        result = start_serve()
+        assert result["ok"] is False
+        assert "not found" in result["error"].lower() or "not installed" in result["error"].lower()
+
+
+class TestStopServe:
+    @patch("subprocess.run")
+    def test_stop_success(self, mock_run):
+        mock_run.side_effect = [
+            MagicMock(returncode=0, stdout="12345\n"),  # pgrep
+            MagicMock(returncode=0),  # kill
+        ]
+        result = stop_serve()
+        assert result["ok"] is True
+
+    @patch("subprocess.run")
+    def test_stop_not_running(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        result = stop_serve()
+        assert result["ok"] is False
+        assert "not running" in result["error"].lower()
