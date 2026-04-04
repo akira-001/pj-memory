@@ -32,6 +32,9 @@
         <a href="/search" class="nav-link {% if active_page == 'search' %}active{% endif %}">
             <span class="nav-icon nav-icon-search">&#8981;</span> <span class="nav-text">{{ t('nav.search', lang) }}</span>
         </a>
+        <a href="/system" class="nav-link {% if active_page == 'system' %}active{% endif %}">
+            <span class="nav-icon nav-icon-gear">&#9881;</span> <span class="nav-text">{{ t('nav.system', lang) }}</span>
+        </a>
         <div class="lang-switch">
             <a href="/_lang/en" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
             <a href="/_lang/ja" class="lang-btn {% if lang == 'ja' %}active{% endif %}">JA</a>
