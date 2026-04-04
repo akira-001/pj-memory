@@ -3,17 +3,20 @@
     <div class="system-section-header">
         <div>
             <div class="system-section-title">{{ t('system.autostart', lang) }}</div>
-            <div class="system-section-desc">{{ t('system.autostart_desc', lang) }}: {{ launchagent.path }}</div>
+            <div class="system-section-desc">{{ t('system.autostart_desc', lang) }}</div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+            <span style="font-size: 0.875rem; font-weight: 500; color: var(--{{ 'success' if launchagent.enabled else 'text-dim' }});">
+                {{ t('system.enabled' if launchagent.enabled else 'system.disabled', lang) }}
+            </span>
             <button class="toggle-switch toggle-switch--{{ 'on' if launchagent.enabled else 'off' }}"
                     hx-post="/system/launchagent/toggle"
                     hx-target="#launchagent-section"
                     hx-swap="innerHTML">
             </button>
-            <span style="font-size: 0.8125rem; font-weight: 500; color: var(--{{ 'success' if launchagent.enabled else 'text-dim' }});">
-                {{ t('system.enabled' if launchagent.enabled else 'system.disabled', lang) }}
-            </span>
         </div>
+    </div>
+    <div class="system-section-desc" style="margin-top: 0.5rem; font-size: 0.6875rem; word-break: break-all;">
+        {{ launchagent.path }}
     </div>
 </div>
