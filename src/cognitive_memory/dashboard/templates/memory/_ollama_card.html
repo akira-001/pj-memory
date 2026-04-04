@@ -1,0 +1,29 @@
+{% set lang = get_lang(request) %}
+<div class="stat-card">
+    <div class="stat-label">Ollama</div>
+    <div class="ollama-status">
+        {% if ollama_status == 'running' and ollama_model.status == 'loaded' %}
+        <span class="status-dot status-dot--running"></span>
+        <span class="stat-value" style="font-size: 1.5rem;">{{ t('system.running', lang) }}</span>
+        {% elif ollama_status == 'stopped' %}
+        <span class="status-dot status-dot--stopped"></span>
+        <span class="stat-value" style="font-size: 1.5rem;">{{ t('system.stopped', lang) }}</span>
+        {% else %}
+        <span class="status-dot status-dot--warning"></span>
+        <span class="stat-value" style="font-size: 1.5rem;">{{ t('system.running', lang) }}</span>
+        {% endif %}
+    </div>
+    <div class="stat-sub">
+        {% if ollama_status == 'stopped' %}
+        <span style="color: var(--error);">{{ t('system.embedding_unavailable', lang) }}</span>
+        {% elif ollama_model.status == 'loaded' %}
+        <span style="background: rgba(90,154,90,0.12); padding: 2px 8px; border-radius: 4px; color: var(--success);">
+            {{ ollama_model.name }}
+        </span>
+        {% elif ollama_model.status == 'not_found' %}
+        <span style="color: var(--warning);">
+            {{ t('system.model_missing', lang) }} — <a href="/system" style="color: var(--warning); text-decoration: underline;">{{ t('system.pull_required', lang) }}</a>
+        </span>
+        {% endif %}
+    </div>
+</div>
