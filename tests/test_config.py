@@ -271,12 +271,23 @@ class TestUserIdIsolation:
         assert cfg.database_path == tmp_path / "memory" / "vectors.db"
 
     def test_identity_user_path_with_user_id(self, tmp_path):
-        """user_id set → identity/users/{user_id}.md"""
+        """user_id set + per-user file exists → identity/users/{user_id}.md"""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "alice"\n')
+        per_user = tmp_path / "identity" / "users" / "alice.md"
+        per_user.parent.mkdir(parents=True, exist_ok=True)
+        per_user.write_text("# Alice\n")
+        cfg = CogMemConfig.from_toml(toml_file)
+        assert cfg.identity_user_path == tmp_path / "identity" / "users" / "alice.md"
+
+    def test_identity_user_path_with_user_id_fallback(self, tmp_path):
+        """user_id set but per-user file missing → fallback to identity/user.md"""
         toml_file = tmp_path / "cogmem.toml"
         toml_file.write_text("[cogmem]\n")
         (tmp_path / "cogmem.local.toml").write_text('[cogmem]\nuser_id = "alice"\n')
         cfg = CogMemConfig.from_toml(toml_file)
-        assert cfg.identity_user_path == tmp_path / "identity" / "users" / "alice.md"
+        assert cfg.identity_user_path == tmp_path / "identity" / "user.md"
 
     def test_identity_user_path_without_user_id(self, tmp_path):
         """No user_id → default identity/user.md"""

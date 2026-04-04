@@ -182,7 +182,10 @@ class CogMemConfig:
     def identity_user_path(self) -> Path:
         if self.user_id:
             # Per-user identity: identity/users/{user_id}.md
-            return Path(self._base_dir) / "identity" / "users" / f"{self.user_id}.md"
+            per_user = Path(self._base_dir) / "identity" / "users" / f"{self.user_id}.md"
+            if per_user.exists():
+                return per_user
+            # Fallback to shared identity/user.md
         p = Path(self.identity_user)
         if p.is_absolute():
             return p
