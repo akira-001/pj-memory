@@ -2,16 +2,9 @@
 <section class="card">
     <h2>{{ t('system.ollama_process', lang) }}</h2>
     <p class="section-desc">{{ t('system.process_desc', lang) }}</p>
-    <div class="stat-row" style="margin-bottom: 1rem;">
-        <div class="stat-card">
-            <div class="stat-label">{{ t('common.status', lang) }}</div>
-            <div class="stat-value" style="display: flex; align-items: center; gap: 0.5rem;">
-                <span class="status-dot status-dot--{{ ollama_status }}"></span>
-                <span style="color: var(--{{ 'success' if ollama_status == 'running' else 'error' }});">
-                    {{ t('system.' + ollama_status, lang) }}
-                </span>
-            </div>
-        </div>
+    <div class="signal-item" style="margin-bottom: 1rem;">
+        <span class="signal-dot {{ 'active' if ollama_status == 'running' else 'inactive' }}"></span>
+        <span>{{ t('system.' + ollama_status, lang) }}</span>
     </div>
     <div class="system-actions">
         <button class="btn-sm btn-start"
