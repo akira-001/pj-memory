@@ -19,6 +19,8 @@ from cognitive_memory.dashboard.services.ollama_service import (
     is_ollama_installed,
     start_serve,
     stop_serve,
+    pull_model,
+    delete_model,
 )
 from cognitive_memory.config import CogMemConfig
 
@@ -158,3 +160,65 @@ class TestStopServe:
         result = stop_serve()
         assert result["ok"] is False
         assert "not running" in result["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Model Pull / Delete
+# ---------------------------------------------------------------------------
+
+
+class FakeOllamaPullDeleteHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = json.loads(self.rfile.read(content_length)) if content_length else {}
+        if self.path == "/api/pull":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success"}).encode())
+        else:
+            self.send_error(404)
+
+    def do_DELETE(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = json.loads(self.rfile.read(content_length)) if content_length else {}
+        if self.path == "/api/delete":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok"}).encode())
+        else:
+            self.send_error(404)
+
+    def log_message(self, *args):
+        pass
+
+
+@pytest.fixture
+def fake_ollama_pull_delete():
+    server = HTTPServer(("127.0.0.1", 0), FakeOllamaPullDeleteHandler)
+    port = server.server_address[1]
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{port}"
+    server.shutdown()
+
+
+class TestPullModel:
+    def test_pull_success(self, fake_ollama_pull_delete):
+        result = pull_model("zylonai/multilingual-e5-large", base_url=fake_ollama_pull_delete)
+        assert result["ok"] is True
+
+    def test_pull_when_stopped(self):
+        result = pull_model("some-model", base_url="http://127.0.0.1:19999")
+        assert result["ok"] is False
+
+
+class TestDeleteModel:
+    def test_delete_success(self, fake_ollama_pull_delete):
+        result = delete_model("zylonai/multilingual-e5-large", base_url=fake_ollama_pull_delete)
+        assert result["ok"] is True
+
+    def test_delete_when_stopped(self):
+        result = delete_model("some-model", base_url="http://127.0.0.1:19999")
+        assert result["ok"] is False

@@ -122,3 +122,57 @@ def restart_serve(*, base_url: str = _DEFAULT_BASE_URL) -> dict[str, Any]:
     if not stop_result["ok"] and "not running" not in stop_result.get("error", "").lower():
         return stop_result
     return start_serve(base_url=base_url)
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Model Pull / Delete
+# ---------------------------------------------------------------------------
+
+
+def pull_model(
+    model_name: str,
+    *,
+    base_url: str = _DEFAULT_BASE_URL,
+    timeout: int = 300,
+) -> dict[str, Any]:
+    """Pull a model from the Ollama registry (POST /api/pull, stream=False).
+
+    Returns {"ok": True} on success or {"ok": False, "error": str} on failure.
+    """
+    payload = json.dumps({"name": model_name, "stream": False}).encode()
+    req = urllib.request.Request(
+        f"{base_url}/api/pull",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = json.loads(resp.read())
+        return {"ok": True, "response": body}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def delete_model(
+    model_name: str,
+    *,
+    base_url: str = _DEFAULT_BASE_URL,
+) -> dict[str, Any]:
+    """Delete a model (DELETE /api/delete).
+
+    Returns {"ok": True} on success or {"ok": False, "error": str} on failure.
+    """
+    payload = json.dumps({"name": model_name}).encode()
+    req = urllib.request.Request(
+        f"{base_url}/api/delete",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="DELETE",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            body = json.loads(resp.read())
+        return {"ok": True, "response": body}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
