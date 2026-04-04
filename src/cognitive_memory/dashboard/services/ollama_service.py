@@ -176,3 +176,66 @@ def delete_model(
         return {"ok": True, "response": body}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Task 4: LaunchAgent Management
+# ---------------------------------------------------------------------------
+
+
+def get_launchagent_status(
+    *, plist_path: Path = _LAUNCHAGENT_PATH
+) -> dict[str, Any]:
+    """Return the LaunchAgent status.
+
+    Returns {"enabled": bool, "path": str}.
+    """
+    path = Path(plist_path)
+    return {"enabled": path.exists(), "path": str(path)}
+
+
+def set_launchagent(
+    enabled: bool,
+    *,
+    plist_path: Path = _LAUNCHAGENT_PATH,
+) -> dict[str, Any]:
+    """Enable or disable the ollama LaunchAgent.
+
+    When enabling, creates the plist and runs `launchctl load`.
+    When disabling, runs `launchctl unload` and removes the plist.
+    Returns {"ok": True} on success or {"ok": False, "error": str} on failure.
+    """
+    path = Path(plist_path)
+
+    if enabled:
+        ollama_path = shutil.which("ollama")
+        if not ollama_path:
+            return {"ok": False, "error": "ollama not installed (not found on PATH)"}
+        plist_data: dict[str, Any] = {
+            "Label": "com.ollama.serve",
+            "ProgramArguments": [ollama_path, "serve"],
+            "RunAtLoad": True,
+            "KeepAlive": True,
+            "StandardOutPath": str(Path.home() / "Library" / "Logs" / "ollama.log"),
+            "StandardErrorPath": str(Path.home() / "Library" / "Logs" / "ollama.err.log"),
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            plistlib.dump(plist_data, f)
+        result = subprocess.run(
+            ["launchctl", "load", str(path)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return {"ok": False, "error": result.stderr.strip() or "launchctl load failed"}
+        return {"ok": True}
+    else:
+        if path.exists():
+            subprocess.run(
+                ["launchctl", "unload", str(path)],
+                capture_output=True,
+                text=True,
+            )
+            path.unlink(missing_ok=True)
+        return {"ok": True}

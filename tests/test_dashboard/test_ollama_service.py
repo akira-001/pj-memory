@@ -21,6 +21,8 @@ from cognitive_memory.dashboard.services.ollama_service import (
     stop_serve,
     pull_model,
     delete_model,
+    get_launchagent_status,
+    set_launchagent,
 )
 from cognitive_memory.config import CogMemConfig
 
@@ -222,3 +224,40 @@ class TestDeleteModel:
     def test_delete_when_stopped(self):
         result = delete_model("some-model", base_url="http://127.0.0.1:19999")
         assert result["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# Task 4: LaunchAgent Management
+# ---------------------------------------------------------------------------
+
+
+class TestLaunchAgent:
+    def test_status_no_plist(self, tmp_path):
+        fake_path = tmp_path / "com.ollama.serve.plist"
+        result = get_launchagent_status(plist_path=fake_path)
+        assert result["enabled"] is False
+        assert result["path"] == str(fake_path)
+
+    def test_status_with_plist(self, tmp_path):
+        fake_path = tmp_path / "com.ollama.serve.plist"
+        fake_path.write_text('<?xml version="1.0"?><plist></plist>')
+        result = get_launchagent_status(plist_path=fake_path)
+        assert result["enabled"] is True
+
+    @patch("subprocess.run")
+    @patch("shutil.which", return_value="/usr/local/bin/ollama")
+    def test_enable_creates_plist(self, mock_which, mock_run, tmp_path):
+        mock_run.return_value = MagicMock(returncode=0)
+        fake_path = tmp_path / "com.ollama.serve.plist"
+        result = set_launchagent(True, plist_path=fake_path)
+        assert result["ok"] is True
+        assert fake_path.exists()
+
+    @patch("subprocess.run")
+    def test_disable_removes_plist(self, mock_run, tmp_path):
+        mock_run.return_value = MagicMock(returncode=0)
+        fake_path = tmp_path / "com.ollama.serve.plist"
+        fake_path.write_text('<?xml version="1.0"?><plist></plist>')
+        result = set_launchagent(False, plist_path=fake_path)
+        assert result["ok"] is True
+        assert not fake_path.exists()
