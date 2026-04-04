@@ -686,6 +686,118 @@ body {
 .principle-item li { margin-bottom: 0.25rem; }
 .principle-item code { font-size: 0.8125rem; background: var(--border); padding: 0.125rem 0.375rem; border-radius: 3px; }
 
+/* System page */
+.system-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.system-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.system-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.system-section-desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+}
+
+.system-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.btn-sm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-start { background: var(--success); color: white; }
+.btn-stop { background: var(--error); color: white; }
+.btn-restart { background: var(--text-dim); color: white; }
+.btn-pull { background: var(--success); color: white; }
+.btn-delete {
+    background: none;
+    color: var(--error);
+    border: 1px solid var(--error);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-dot--running { background: var(--success); }
+.status-dot--stopped { background: var(--error); }
+.status-dot--warning { background: var(--warning); }
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+}
+
+.toggle-switch--on { background: var(--success); }
+.toggle-switch--off { background: var(--text-dim); }
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+}
+
+.toggle-switch--on::after { left: 22px; }
+.toggle-switch--off::after { left: 2px; }
+
+/* Ollama stat card on overview */
+.ollama-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.nav-icon-gear { font-size: 1.1rem; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar { width: 60px; padding: 1rem 0; }
