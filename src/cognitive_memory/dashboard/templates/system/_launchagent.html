@@ -1,18 +1,20 @@
 {% set lang = get_lang(request) %}
-<div class="system-section">
-    <div class="system-section-header">
-        <div>
-            <div class="system-section-title">{{ t('system.autostart', lang) }}</div>
-            <div class="system-section-desc">{{ t('system.autostart_desc', lang) }}</div>
-        </div>
-        <div class="status-indicator">
-            {% if launchagent.enabled %}
-            <span class="status-dot status-dot--running"></span>
-            <span style="color: var(--success);">{{ t('system.enabled', lang) }}</span>
-            {% else %}
-            <span class="status-dot status-dot--stopped"></span>
-            <span style="color: var(--error);">{{ t('system.disabled', lang) }}</span>
-            {% endif %}
+<section class="card">
+    <h2>{{ t('system.autostart', lang) }}</h2>
+    <p class="section-desc">{{ t('system.autostart_desc', lang) }}</p>
+    <div class="stat-row" style="margin-bottom: 1rem;">
+        <div class="stat-card">
+            <div class="stat-label">{{ t('common.status', lang) }}</div>
+            <div class="stat-value" style="display: flex; align-items: center; gap: 0.5rem;">
+                {% if launchagent.enabled %}
+                <span class="status-dot status-dot--running"></span>
+                <span style="color: var(--success);">{{ t('system.enabled', lang) }}</span>
+                {% else %}
+                <span class="status-dot status-dot--stopped"></span>
+                <span style="color: var(--error);">{{ t('system.disabled', lang) }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-sub" style="word-break: break-all;">{{ launchagent.path }}</div>
         </div>
     </div>
     <div class="system-actions">
@@ -32,7 +34,4 @@
         </button>
         {% endif %}
     </div>
-    <div class="system-section-desc" style="margin-top: 0.75rem; font-size: 0.6875rem; word-break: break-all;">
-        {{ launchagent.path }}
-    </div>
-</div>
+</section>

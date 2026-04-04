@@ -1,15 +1,16 @@
 {% set lang = get_lang(request) %}
-<div class="system-section">
-    <div class="system-section-header">
-        <div>
-            <div class="system-section-title">{{ t('system.ollama_process', lang) }}</div>
-            <div class="system-section-desc">{{ t('system.process_desc', lang) }}</div>
-        </div>
-        <div class="status-indicator">
-            <span class="status-dot status-dot--{{ ollama_status }}"></span>
-            <span style="color: var(--{{ 'success' if ollama_status == 'running' else 'error' }});">
-                {{ t('system.' + ollama_status, lang) }}
-            </span>
+<section class="card">
+    <h2>{{ t('system.ollama_process', lang) }}</h2>
+    <p class="section-desc">{{ t('system.process_desc', lang) }}</p>
+    <div class="stat-row" style="margin-bottom: 1rem;">
+        <div class="stat-card">
+            <div class="stat-label">{{ t('common.status', lang) }}</div>
+            <div class="stat-value" style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="status-dot status-dot--{{ ollama_status }}"></span>
+                <span style="color: var(--{{ 'success' if ollama_status == 'running' else 'error' }});">
+                    {{ t('system.' + ollama_status, lang) }}
+                </span>
+            </div>
         </div>
     </div>
     <div class="system-actions">
@@ -35,4 +36,4 @@
             {{ t('system.restart', lang) }}
         </button>
     </div>
-</div>
+</section>

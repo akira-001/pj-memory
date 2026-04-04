@@ -1,11 +1,7 @@
 {% set lang = get_lang(request) %}
-<div class="system-section">
-    <div class="system-section-header">
-        <div>
-            <div class="system-section-title">{{ t('system.embedding_model', lang) }}</div>
-            <div class="system-section-desc">{{ t('system.model_desc', lang) }}</div>
-        </div>
-    </div>
+<section class="card">
+    <h2>{{ t('system.embedding_model', lang) }}</h2>
+    <p class="section-desc">{{ t('system.model_desc', lang) }}</p>
     <table class="data-table">
         <thead>
             <tr>
@@ -50,4 +46,4 @@
             </tr>
         </tbody>
     </table>
-</div>
+</section>
