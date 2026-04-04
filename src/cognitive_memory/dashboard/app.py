@@ -60,6 +60,7 @@ def create_app(config: CogMemConfig) -> FastAPI:
     from .routes.personality import router as personality_router
     from .routes.search import router as search_router
     from .routes.skills import router as skills_router
+    from .routes.system import router as system_router
 
     app.include_router(memory_router)
     app.include_router(skills_router, prefix="/skills")
@@ -67,5 +68,6 @@ def create_app(config: CogMemConfig) -> FastAPI:
     app.include_router(search_router, prefix="/search")
     app.include_router(personality_router, prefix="/personality")
     app.include_router(consolidation_router, prefix="/consolidation")
+    app.include_router(system_router, prefix="/system")
 
     return app
