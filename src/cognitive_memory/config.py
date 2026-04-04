@@ -269,8 +269,14 @@ class CogMemConfig:
             embedding_provider=embedding.get(
                 "provider", _DEFAULTS["embedding_provider"]
             ),
-            embedding_model=embedding.get("model", _DEFAULTS["embedding_model"]),
-            embedding_url=embedding.get("url", _DEFAULTS["embedding_url"]),
+            embedding_model=embedding.get(
+                "model",
+                section.get("embedding_model", _DEFAULTS["embedding_model"]),
+            ),
+            embedding_url=embedding.get(
+                "url",
+                section.get("embedding_url", _DEFAULTS["embedding_url"]),
+            ),
             embedding_timeout=embedding.get(
                 "timeout", _DEFAULTS["embedding_timeout"]
             ),
