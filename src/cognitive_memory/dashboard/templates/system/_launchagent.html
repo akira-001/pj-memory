@@ -1,0 +1,19 @@
+{% set lang = get_lang(request) %}
+<div class="system-section">
+    <div class="system-section-header">
+        <div>
+            <div class="system-section-title">{{ t('system.autostart', lang) }}</div>
+            <div class="system-section-desc">{{ t('system.autostart_desc', lang) }}: {{ launchagent.path }}</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="toggle-switch toggle-switch--{{ 'on' if launchagent.enabled else 'off' }}"
+                    hx-post="/system/launchagent/toggle"
+                    hx-target="#launchagent-section"
+                    hx-swap="innerHTML">
+            </button>
+            <span style="font-size: 0.8125rem; font-weight: 500; color: var(--{{ 'success' if launchagent.enabled else 'text-dim' }});">
+                {{ t('system.enabled' if launchagent.enabled else 'system.disabled', lang) }}
+            </span>
+        </div>
+    </div>
+</div>
