@@ -95,15 +95,34 @@ class TestWrapLockRelease:
 
         assert not lock_file.exists()
 
-    def test_unlock_only_removes_own_lock(self, tmp_path):
+    def test_unlock_only_removes_own_project_lock(self, tmp_path):
         lock_file = tmp_path / "wrap.lock"
-        # Lock held by different PID
         lock_data = {"pid": 99999, "project": "/other/project", "started_at": "2026-01-01T00:00:00"}
         lock_file.write_text(json.dumps(lock_data))
 
         lock = WrapLock(lock_file)
         with pytest.raises(WrapLockError, match="not owner"):
-            lock.release()
+            lock.release(project="/different/project")
+
+    def test_unlock_succeeds_for_same_project_different_pid(self, tmp_path):
+        lock_file = tmp_path / "wrap.lock"
+        lock_data = {"pid": 99999, "project": "/test/project", "started_at": "2026-01-01T00:00:00"}
+        lock_file.write_text(json.dumps(lock_data))
+
+        lock = WrapLock(lock_file)
+        lock.release(project="/test/project")
+
+        assert not lock_file.exists()
+
+    def test_unlock_without_project_always_succeeds(self, tmp_path):
+        lock_file = tmp_path / "wrap.lock"
+        lock_data = {"pid": 99999, "project": "/other/project", "started_at": "2026-01-01T00:00:00"}
+        lock_file.write_text(json.dumps(lock_data))
+
+        lock = WrapLock(lock_file)
+        lock.release()  # no project specified = no ownership check
+
+        assert not lock_file.exists()
 
     def test_unlock_when_no_lock_is_noop(self, tmp_path):
         lock_file = tmp_path / "wrap.lock"
@@ -158,7 +177,7 @@ class TestWrapLockCLI:
         monkeypatch.setenv("COGMEM_WRAP_LOCK_FILE", str(lock_file))
 
         cli_main(["wrap", "lock", "--project", "/test/project"])
-        cli_main(["wrap", "unlock"])
+        cli_main(["wrap", "unlock", "--project", "/test/project"])
 
         assert not lock_file.exists()
 

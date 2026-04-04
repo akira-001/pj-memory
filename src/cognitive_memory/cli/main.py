@@ -210,7 +210,8 @@ def main(argv: list[str] | None = None):
     wrap_lock_parser.add_argument("--timeout", type=float, default=60.0, help="Max wait seconds (default: 60)")
 
     # wrap unlock
-    wrap_subparsers.add_parser("unlock", help="Release the wrap lock")
+    wrap_unlock_parser = wrap_subparsers.add_parser("unlock", help="Release the wrap lock")
+    wrap_unlock_parser.add_argument("--project", type=str, default="", help="Project path (ownership check)")
 
     # wrap status
     wrap_status_parser = wrap_subparsers.add_parser("status", help="Show current lock status")

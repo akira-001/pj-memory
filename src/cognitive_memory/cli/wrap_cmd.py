@@ -24,7 +24,7 @@ def run_wrap(args) -> None:
 
     elif args.wrap_command == "unlock":
         try:
-            lock.release()
+            lock.release(project=args.project or "")
             print("Lock released")
         except WrapLockError as e:
             print(f"Error: {e}", file=sys.stderr)
@@ -42,8 +42,8 @@ def run_wrap(args) -> None:
                 print("Not locked")
             else:
                 print(
-                    f"Locked by PID {status['pid']} "
-                    f"(project: {status.get('project', 'unknown')}, "
+                    f"Locked (project: {status.get('project', 'unknown')}, "
+                    f"pid: {status.get('pid', '?')}, "
                     f"since: {status.get('started_at', 'unknown')})"
                 )
     else:

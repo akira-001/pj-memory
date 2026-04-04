@@ -65,8 +65,12 @@ class WrapLock:
 
             time.sleep(poll_interval)
 
-    def release(self, force: bool = False) -> None:
-        """Release the wrap lock."""
+    def release(self, project: str = "", force: bool = False) -> None:
+        """Release the wrap lock.
+
+        Ownership is checked by project path (not PID), so any process
+        running in the same project directory can release the lock.
+        """
         if not self._lock_file.exists():
             return  # No-op if not locked
 
@@ -74,9 +78,9 @@ class WrapLock:
         if data is None:
             return
 
-        if not force and data.get("pid") != os.getpid():
+        if not force and project and data.get("project") and data["project"] != project:
             raise WrapLockError(
-                f"not owner: lock held by PID {data.get('pid')} (project: {data.get('project')})"
+                f"not owner: lock held by project {data.get('project')}"
             )
 
         self._lock_file.unlink(missing_ok=True)
