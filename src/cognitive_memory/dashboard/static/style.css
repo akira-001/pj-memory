@@ -777,7 +777,7 @@ body {
 }
 
 .toggle-switch--on { background: var(--success); }
-.toggle-switch--off { background: var(--border); }
+.toggle-switch--off { background: var(--border); border: 1px solid var(--text-dim); }
 
 .toggle-switch::after {
     content: '';
