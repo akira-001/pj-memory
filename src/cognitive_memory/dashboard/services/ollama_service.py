@@ -65,9 +65,23 @@ def check_embedding_model(
 # ---------------------------------------------------------------------------
 
 
+_OLLAMA_FALLBACK_PATHS = ["/usr/local/bin/ollama"]
+
+
+def _find_ollama() -> str | None:
+    """Find ollama binary on PATH or well-known locations."""
+    found = shutil.which("ollama")
+    if found:
+        return found
+    for p in _OLLAMA_FALLBACK_PATHS:
+        if Path(p).is_file():
+            return p
+    return None
+
+
 def is_ollama_installed() -> bool:
-    """Return True if the ollama binary is on PATH."""
-    return shutil.which("ollama") is not None
+    """Return True if the ollama binary is found."""
+    return _find_ollama() is not None
 
 
 def start_serve(*, base_url: str = _DEFAULT_BASE_URL) -> dict[str, Any]:
@@ -76,11 +90,12 @@ def start_serve(*, base_url: str = _DEFAULT_BASE_URL) -> dict[str, Any]:
     Waits up to 2 seconds then verifies the server is reachable.
     Returns {"ok": True} on success or {"ok": False, "error": str} on failure.
     """
-    if not is_ollama_installed():
+    ollama_bin = _find_ollama()
+    if not ollama_bin:
         return {"ok": False, "error": "ollama not installed (not found on PATH)"}
     try:
         subprocess.Popen(
-            ["ollama", "serve"],
+            [ollama_bin, "serve"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
@@ -208,7 +223,7 @@ def set_launchagent(
     path = Path(plist_path)
 
     if enabled:
-        ollama_path = shutil.which("ollama")
+        ollama_path = _find_ollama()
         if not ollama_path:
             return {"ok": False, "error": "ollama not installed (not found on PATH)"}
         plist_data: dict[str, Any] = {
