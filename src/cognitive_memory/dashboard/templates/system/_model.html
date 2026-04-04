@@ -1,0 +1,53 @@
+{% set lang = get_lang(request) %}
+<div class="system-section">
+    <div class="system-section-header">
+        <div>
+            <div class="system-section-title">{{ t('system.embedding_model', lang) }}</div>
+            <div class="system-section-desc">{{ t('system.model_desc', lang) }}</div>
+        </div>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ t('system.model_name', lang) }}</th>
+                <th>{{ t('system.model_size', lang) }}</th>
+                <th>{{ t('system.model_status', lang) }}</th>
+                <th style="text-align: right;">{{ t('system.model_action', lang) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ model_info.name }}</td>
+                <td>{{ "%.1f GB"|format(model_info.size / 1e9) if model_info.size else '-' }}</td>
+                <td>
+                    {% if model_info.status == 'loaded' %}
+                    <span class="status-ready">{{ t('system.model_loaded', lang) }}</span>
+                    {% elif model_info.status == 'not_found' %}
+                    <span class="status-accumulating">{{ t('system.model_not_found', lang) }}</span>
+                    {% else %}
+                    <span class="status-accumulating">{{ t('system.model_unavailable', lang) }}</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    {% if model_info.status == 'not_found' %}
+                    <button class="btn-sm btn-pull"
+                            hx-post="/system/model/pull"
+                            hx-target="#model-section"
+                            hx-swap="innerHTML"
+                            hx-indicator="#global-indicator">
+                        {{ t('system.pull', lang) }}
+                    </button>
+                    {% elif model_info.status == 'loaded' %}
+                    <button class="btn-sm btn-delete"
+                            hx-delete="/system/model/delete"
+                            hx-target="#model-section"
+                            hx-swap="innerHTML"
+                            hx-confirm="Delete {{ model_info.name }}?">
+                        {{ t('system.delete', lang) }}
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

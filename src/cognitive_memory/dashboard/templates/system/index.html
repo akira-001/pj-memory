@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ t('system.title', get_lang(request)) }}{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('system.title', lang) }}</h1>
+    <p>{{ t('system.subtitle', lang) }}</p>
+</div>
+
+{% if not installed %}
+<div class="alert alert-warning">
+    {{ t('system.not_installed', lang) }}
+</div>
+{% endif %}
+
+<div id="process-section">
+    {% include "system/_process.html" %}
+</div>
+
+<div id="model-section">
+    {% include "system/_model.html" %}
+</div>
+
+<div id="launchagent-section">
+    {% include "system/_launchagent.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% set lang = get_lang(request) %}
+<div class="system-section">
+    <div class="system-section-header">
+        <div>
+            <div class="system-section-title">{{ t('system.ollama_process', lang) }}</div>
+            <div class="system-section-desc">{{ t('system.process_desc', lang) }}</div>
+        </div>
+        <div class="status-indicator">
+            <span class="status-dot status-dot--{{ ollama_status }}"></span>
+            <span style="color: var(--{{ 'success' if ollama_status == 'running' else 'error' }});">
+                {{ t('system.' + ollama_status, lang) }}
+            </span>
+        </div>
+    </div>
+    <div class="system-actions">
+        <button class="btn-sm btn-start"
+                hx-post="/system/ollama/start"
+                hx-target="#process-section"
+                hx-swap="innerHTML"
+                {% if ollama_status == 'running' or not installed %}disabled{% endif %}>
+            {{ t('system.start', lang) }}
+        </button>
+        <button class="btn-sm btn-stop"
+                hx-post="/system/ollama/stop"
+                hx-target="#process-section"
+                hx-swap="innerHTML"
+                {% if ollama_status == 'stopped' %}disabled{% endif %}>
+            {{ t('system.stop', lang) }}
+        </button>
+        <button class="btn-sm btn-restart"
+                hx-post="/system/ollama/restart"
+                hx-target="#process-section"
+                hx-swap="innerHTML"
+                {% if ollama_status == 'stopped' or not installed %}disabled{% endif %}>
+            {{ t('system.restart', lang) }}
+        </button>
+    </div>
+</div>
