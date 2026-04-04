@@ -763,16 +763,21 @@ body {
 /* Toggle switch */
 .toggle-switch {
     position: relative;
+    display: inline-block;
     width: 44px;
     height: 24px;
+    min-width: 44px;
+    min-height: 24px;
     border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s;
     border: none;
+    padding: 0;
+    vertical-align: middle;
 }
 
 .toggle-switch--on { background: var(--success); }
-.toggle-switch--off { background: var(--text-dim); }
+.toggle-switch--off { background: var(--border); }
 
 .toggle-switch::after {
     content: '';
@@ -783,6 +788,7 @@ body {
     background: white;
     border-radius: 50%;
     transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .toggle-switch--on::after { left: 22px; }
