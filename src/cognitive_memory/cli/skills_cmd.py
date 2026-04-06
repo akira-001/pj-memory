@@ -798,7 +798,11 @@ def run_skills_check_updates(config: CogMemConfig, args):
                     latest_ver = marketplace_versions.get(name, "")
                     up_to_date = True
                     if installed_ver and latest_ver and installed_ver != latest_ver:
-                        up_to_date = False
+                        try:
+                            from packaging.version import Version
+                            up_to_date = Version(installed_ver) >= Version(latest_ver)
+                        except Exception:
+                            up_to_date = False
                     results["sources"][f"plugin:{name}"] = {
                         "type": "plugin",
                         "version": installed_ver,
@@ -822,7 +826,14 @@ def run_skills_check_updates(config: CogMemConfig, args):
                 if info["type"] == "git":
                     status = f"{info['behind']} commits behind"
                 else:
-                    status = f"{info['version']} -> {info.get('latest_version', '?')}"
+                    try:
+                        from packaging.version import Version
+                        if Version(info['version']) > Version(info.get('latest_version', '0')):
+                            status = f"ahead of marketplace ({info.get('latest_version', '?')})"
+                        else:
+                            status = f"{info['version']} -> {info.get('latest_version', '?')}"
+                    except Exception:
+                        status = f"{info['version']} -> {info.get('latest_version', '?')}"
             ver = f" v{info['version']}" if info.get("version") else ""
             print(f"  {name}{ver}: {status}")
 
