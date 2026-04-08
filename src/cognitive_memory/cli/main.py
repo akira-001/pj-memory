@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None):
     # signals
     subparsers.add_parser("signals", help="Check crystallization signals")
 
+    # checkpoint
+    subparsers.add_parser("checkpoint", help="Record crystallization checkpoint in cogmem.toml")
+
     # migrate
     migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions")
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
@@ -266,6 +269,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "signals":
         from .signals_cmd import run_signals
         run_signals()
+    elif args.command == "checkpoint":
+        from .checkpoint_cmd import run_checkpoint
+        run_checkpoint()
     elif args.command == "migrate":
         from .migrate_cmd import run_migrate
         run_migrate(args.dir, user_id=args.user_id)

@@ -67,12 +67,13 @@ user-invocable: true
 - 「繰り返すミスのパターン」のサマリーを更新
 - 「活性化されたスキル」の状態を更新
 
-### Step 5: Config 更新
+### Step 5: チェックポイント記録
 
-`.nfd/config.json` を更新:
-- `last_checkpoint`: 実行日時
-- `checkpoint_count`: インクリメント
-- `metrics.active_skills`: アクティブスキル数を更新
+```bash
+cogmem checkpoint
+```
+
+これにより `cogmem.toml` の `last_checkpoint` と `checkpoint_count` が自動更新される。
 
 ## 出力サマリー形式
 

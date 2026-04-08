@@ -39,13 +39,13 @@ Prioritize high-Arousal memory fragments.
 Add new principles to "Established Judgment Principles" section.
 Update error pattern summary.
 
-### Step 4: Update cogmem.toml crystallization section
+### Step 4: Record checkpoint
 
-```toml
-[cogmem.crystallization]
-last_checkpoint = "YYYY-MM-DD"
-checkpoint_count = N  # increment
+```bash
+cogmem checkpoint
 ```
+
+This automatically updates `last_checkpoint` and `checkpoint_count` in cogmem.toml.
 
 ### Step 5: Decay processing
 

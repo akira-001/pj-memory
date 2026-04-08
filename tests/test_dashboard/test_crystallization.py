@@ -27,9 +27,9 @@ class TestSignals:
         assert signals.pattern_count == 0
         assert signals.error_count == 0
         assert signals.log_days == 0
-        # should_crystallize=True because days_since_checkpoint=9999
-        assert signals.should_crystallize is True
-        assert any("Days since checkpoint" in c for c in signals.triggered_conditions)
+        # should_crystallize=False because last_checkpoint is empty (skip checkpoint interval check)
+        assert signals.should_crystallize is False
+        assert not any("Days since checkpoint" in c for c in signals.triggered_conditions)
 
     def test_signals_boundary_not_triggered(self, crystal_boundary_config):
         signals = check_signals(crystal_boundary_config)

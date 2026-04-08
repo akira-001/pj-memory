@@ -107,7 +107,10 @@ def check_signals(config: CogMemConfig) -> CrystallizationSignals:
         triggered.append(
             f"Log days: {signals.log_days} >= {config.log_days_threshold}"
         )
-    if signals.days_since_checkpoint >= config.checkpoint_interval_days:
+    # Only check checkpoint interval if a checkpoint has been recorded before.
+    # When last_checkpoint is empty (never crystallized), this condition is
+    # skipped — log_days_threshold alone is sufficient to trigger the first run.
+    if config.last_checkpoint and signals.days_since_checkpoint >= config.checkpoint_interval_days:
         triggered.append(
             f"Days since checkpoint: {signals.days_since_checkpoint} >= {config.checkpoint_interval_days}"
         )
