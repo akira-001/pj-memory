@@ -125,7 +125,7 @@ class TestIsOllamaInstalled:
             assert is_ollama_installed() is True
 
     def test_not_installed(self):
-        with patch("shutil.which", return_value=None):
+        with patch("cognitive_memory.dashboard.services.ollama_service._find_ollama", return_value=None):
             assert is_ollama_installed() is False
 
 
@@ -139,8 +139,8 @@ class TestStartServe:
         assert result["ok"] is True
         mock_popen.assert_called_once()
 
-    @patch("shutil.which", return_value=None)
-    def test_start_not_installed(self, mock_which):
+    @patch("cognitive_memory.dashboard.services.ollama_service._find_ollama", return_value=None)
+    def test_start_not_installed(self, mock_find):
         result = start_serve()
         assert result["ok"] is False
         assert "not found" in result["error"].lower() or "not installed" in result["error"].lower()

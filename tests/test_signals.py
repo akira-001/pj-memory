@@ -1,5 +1,7 @@
 """Tests for crystallization signal detection."""
 
+from datetime import date
+
 import pytest
 
 from cognitive_memory.config import CogMemConfig
@@ -13,7 +15,7 @@ class TestCheckSignals:
         """No logs returns all zeros."""
         logs = tmp_path / "memory" / "logs"
         logs.mkdir(parents=True)
-        config = CogMemConfig(logs_dir=str(logs), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        config = CogMemConfig(logs_dir=str(logs), _base_dir=str(tmp_path), last_checkpoint=date.today().isoformat())
         result = check_signals(config)
         assert result.pattern_count == 0
         assert result.error_count == 0
@@ -88,7 +90,7 @@ class TestCheckSignals:
         logs = tmp_path / "memory" / "logs"
         logs.mkdir(parents=True)
         (logs / "2026-03-21.md").write_text("# Log\n## Log Entries\n### [INSIGHT] test\n*Arousal: 0.5*\nSome insight content here.\n---\n")
-        config = CogMemConfig(logs_dir=str(logs), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        config = CogMemConfig(logs_dir=str(logs), _base_dir=str(tmp_path), last_checkpoint=date.today().isoformat())
         result = check_signals(config)
         assert result.should_crystallize is False
 
@@ -109,7 +111,7 @@ class TestCheckSignals:
         logs_file = tmp_path / "memory" / "logs"
         logs_file.parent.mkdir(parents=True)
         logs_file.write_text("not a directory")
-        config = CogMemConfig(logs_dir=str(logs_file), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        config = CogMemConfig(logs_dir=str(logs_file), _base_dir=str(tmp_path), last_checkpoint=date.today().isoformat())
         result = check_signals(config)
         assert result.should_crystallize is False
         assert result.log_days == 0
@@ -117,7 +119,7 @@ class TestCheckSignals:
 
     def test_logs_path_nonexistent(self, tmp_path):
         """When logs_path doesn't exist, returns zeros without error."""
-        config = CogMemConfig(logs_dir=str(tmp_path / "nonexistent"), _base_dir=str(tmp_path), last_checkpoint="2026-03-20")
+        config = CogMemConfig(logs_dir=str(tmp_path / "nonexistent"), _base_dir=str(tmp_path), last_checkpoint=date.today().isoformat())
         result = check_signals(config)
         assert result.should_crystallize is False
         assert result.log_days == 0
