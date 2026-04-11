@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import threading
 import json
 import re
 import sqlite3
@@ -32,6 +33,11 @@ class MemoryStore:
         self.config = config or CogMemConfig()
         self._embedder = embedder
         self._conn: Optional[sqlite3.Connection] = None
+
+        # Background prefetch
+        self._prefetch_result: Optional["SearchResponse"] = None
+        self._prefetch_lock = threading.Lock()
+        self._prefetch_thread: Optional[threading.Thread] = None
 
     def __enter__(self):
         self._init_db()
@@ -309,7 +315,26 @@ class MemoryStore:
         if not should_context_search(query, session_keywords):
             return SearchResponse(status="skipped_by_gate")
 
-        # 3. Cache check (requires embedding for similarity comparison)
+        # 3. Consume background prefetch if available
+        prefetched = self.pop_prefetch_result()
+        if prefetched is not None:
+            filtered = filter_flashbacks(
+                prefetched.results,
+                self.config.context_flashback_sim,
+                self.config.context_flashback_arousal,
+            )
+            filtered_response = SearchResponse(
+                results=filtered[:top_k],
+                status=prefetched.status + " (prefetched)",
+            )
+            if cache is not None:
+                query_vec = self.embedder.embed(query)
+                if query_vec is not None:
+                    cache.put(query_vec, filtered_response)
+            self._reinforce_results(filtered_response.results)
+            return filtered_response
+
+        # 4. Cache check (requires embedding for similarity comparison)
         query_vec = self.embedder.embed(query)
         if query_vec is not None and cache is not None:
             cached = cache.get(query_vec)
@@ -319,10 +344,10 @@ class MemoryStore:
                     status = status + " (cached)"
                 return SearchResponse(results=cached.results, status=status)
 
-        # 4. Full search pipeline (bypass search() gate since we already gated above)
+        # 5. Full search pipeline (bypass search() gate since we already gated above)
         response = self._execute_search(query, top_k)
 
-        # 6. Apply flashback filtering
+        # 7. Apply flashback filtering
         filtered = filter_flashbacks(
             response.results,
             self.config.context_flashback_sim,
@@ -331,15 +356,44 @@ class MemoryStore:
 
         filtered_response = SearchResponse(results=filtered, status=response.status)
 
-        # 7. Store in cache
+        # 8. Store in cache
         if cache is not None and query_vec is not None:
             cache.put(query_vec, filtered_response)
 
-        # 8. Reinforce recall for returned results
+        # 9. Reinforce recall for returned results
         self._reinforce_results(filtered_response.results)
 
-        # 9. Return
+        # 10. Return
         return filtered_response
+
+    def queue_prefetch(self, query: str) -> None:
+        """Queue a background search for the next call.
+
+        Runs _execute_search in a daemon thread. The result is stored in
+        _prefetch_result and consumed by pop_prefetch_result().
+        If a prefetch is already in flight, it is cancelled (result discarded).
+        """
+        def _run(q: str) -> None:
+            try:
+                result = self._execute_search(q, top_k=self.config.context_cache_max_size)
+                with self._prefetch_lock:
+                    self._prefetch_result = result
+            except Exception:
+                pass  # Non-fatal: next real search will run synchronously
+
+        with self._prefetch_lock:
+            self._prefetch_result = None  # clear stale result
+
+        t = threading.Thread(target=_run, args=(query,), daemon=True)
+        self._prefetch_thread = t
+        t.start()
+
+    def pop_prefetch_result(self) -> Optional["SearchResponse"]:
+        """Consume and return the prefetched result, or None if not ready."""
+        with self._prefetch_lock:
+            result = self._prefetch_result
+            self._prefetch_result = None
+            return result
 
     def status(self) -> dict:
         """Return index statistics."""
