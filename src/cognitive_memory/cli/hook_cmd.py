@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import date as _date
 from pathlib import Path
 
 
@@ -85,6 +86,60 @@ def run_skill_gate(hook_input: dict, base_dir: str | None = None) -> None:
         pass  # Hook must never break the editor
 
 
+def run_pre_compress(hook_input: dict, logs_dir: str | None = None) -> None:
+    """Handle PreToolUse Task -- save delegation intent before context compression.
+
+    Called when Claude Code is about to spawn a subagent (Task tool).
+    Extracts the task prompt and appends it as a DELEGATION memory entry
+    to today's log file, so the intent is persisted before context may be
+    compressed by the subagent launch.
+
+    Returns None always (hook must never block the tool call).
+    """
+    # Only act on Task tool
+    tool_name = hook_input.get("tool_name", "")
+    if tool_name != "Task":
+        return None
+
+    prompt = hook_input.get("tool_input", {}).get("prompt", "").strip()
+    # Ignore trivial prompts
+    if len(prompt) < 20:
+        return None
+
+    # Resolve logs_dir
+    if logs_dir is None:
+        try:
+            from ..config import CogMemConfig
+            config = CogMemConfig.find_and_load()
+            logs_dir = str(config.logs_path)
+        except Exception:
+            return None
+
+    try:
+        logs_path = Path(logs_dir)
+        logs_path.mkdir(parents=True, exist_ok=True)
+
+        today = _date.today().isoformat()
+        log_file = logs_path / f"{today}.md"
+
+        # Truncate prompt to 200 chars to avoid log bloat
+        summary = prompt[:200].replace("\n", " ")
+
+        entry = (
+            f"\n### [DELEGATION] Task delegated to subagent\n"
+            f"*Arousal: 0.5*\n"
+            f"{summary}\n"
+        )
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(entry)
+
+    except Exception:
+        pass  # Hook must never block the tool call
+
+    return None
+
+
 def run_hook(args) -> None:
     """Entry point for cogmem hook subcommands."""
     hook_input = json.load(sys.stdin)
@@ -99,5 +154,7 @@ def run_hook(args) -> None:
         run_failure_breaker(hook_input, threshold=threshold)
     elif args.hook_command == "skill-gate":
         run_skill_gate(hook_input)
+    elif args.hook_command == "pre-compress":
+        run_pre_compress(hook_input)
     else:
         pass

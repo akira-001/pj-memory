@@ -202,6 +202,7 @@ def main(argv: list[str] | None = None):
     hook_subparsers = hook_parser.add_subparsers(dest="hook_command")
     hook_subparsers.add_parser("failure-breaker", help="Detect consecutive command failures")
     hook_subparsers.add_parser("skill-gate", help="Check skill usage for edited files")
+    hook_subparsers.add_parser("pre-compress", help="Save task delegation intent before context compression")
 
     # wrap subcommand group
     wrap_parser = subparsers.add_parser("wrap", help="Manage wrap lock for concurrent session safety")
