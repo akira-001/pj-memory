@@ -138,7 +138,9 @@ class InsightsEngine:
                 "avg_arousal": avg_arousal,
                 "date_range": date_range,
                 "arousal_buckets": arousal_buckets,
-                "category_counts": category_counts,
+                "category_counts": dict(
+                    sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+                ),
                 "daily_counts": daily_counts,
                 "top_recalled": top_recalled,
             }

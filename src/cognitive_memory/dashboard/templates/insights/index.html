@@ -39,7 +39,7 @@
         <div class="stat-label">{{ t('insights.categories', lang) }}</div>
         <div class="stat-value">{{ data.category_counts | length }}</div>
         <div class="stat-sub" style="display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.5rem;">
-            {% for cat, cnt in data.category_counts.items() | sort(attribute='1', reverse=True) %}
+            {% for cat, cnt in data.category_counts.items() %}
             <span class="badge badge-{{ cat | lower }}">{{ cat }} {{ cnt }}</span>
             {% endfor %}
         </div>
