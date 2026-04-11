@@ -1,9 +1,9 @@
 {
-  "last_checkpoint": "2026-04-04",
-  "checkpoint_count": 1,
+  "last_checkpoint": "2026-04-11",
+  "checkpoint_count": 2,
   "metrics": {
-    "active_skills": 1,
-    "error_patterns": 1,
-    "insights": 1
+    "active_skills": 2,
+    "error_patterns": 3,
+    "insights": 3
   }
 }
