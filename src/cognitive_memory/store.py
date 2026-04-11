@@ -347,7 +347,7 @@ class MemoryStore:
         # 5. Full search pipeline (bypass search() gate since we already gated above)
         response = self._execute_search(query, top_k)
 
-        # 7. Apply flashback filtering
+        # 6. Apply flashback filtering
         filtered = filter_flashbacks(
             response.results,
             self.config.context_flashback_sim,
@@ -356,14 +356,14 @@ class MemoryStore:
 
         filtered_response = SearchResponse(results=filtered, status=response.status)
 
-        # 8. Store in cache
+        # 7. Store in cache
         if cache is not None and query_vec is not None:
             cache.put(query_vec, filtered_response)
 
-        # 9. Reinforce recall for returned results
+        # 8. Reinforce recall for returned results
         self._reinforce_results(filtered_response.results)
 
-        # 10. Return
+        # 9. Return
         return filtered_response
 
     def queue_prefetch(self, query: str) -> None:
@@ -383,6 +383,7 @@ class MemoryStore:
 
         with self._prefetch_lock:
             self._prefetch_result = None  # clear stale result
+            self._prefetch_thread = None  # reset before new thread starts
 
         t = threading.Thread(target=_run, args=(query,), daemon=True)
         self._prefetch_thread = t
