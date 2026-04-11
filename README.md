@@ -22,8 +22,11 @@ Unlike traditional vector databases that treat all memories equally, Cognitive M
 - **Git history analysis**: `cogmem watch` analyzes commit patterns to detect workflow habits and protocol gaps
 - **Identity management**: Maintains and auto-updates agent personality (`soul.md`) and user profile (`user.md`)
 - **SUMMARY indexing**: Session summaries are indexed as a separate category, enabling contextual retrieval of "what was done and why" across sessions
-- **Behavior enforcement hooks**: Claude Code hooks that warn when skills are forgotten — `skill-gate` checks file-pattern → skill mapping, `failure-breaker` detects consecutive command failures
-- **Web dashboard**: FastAPI + HTMX dashboard for browsing memories, skills, logs, and personality (EN/JA)
+- **Behavior enforcement hooks**: Claude Code hooks that warn when skills are forgotten — `skill-gate`, `failure-breaker`, and `pre-compress` (saves delegation intent before subagent launch)
+- **Memory context fencing**: Recalled memories are wrapped in `<memory-context>` tags so the LLM never confuses past context with new user input
+- **Background prefetch**: Next-turn memory search runs in a daemon thread, reducing search latency for `context_search()`
+- **Usage analytics**: `cogmem insights` reports arousal distribution, category breakdown, daily counts, and top recalled memories
+- **Web dashboard**: FastAPI + HTMX dashboard for browsing memories, skills, logs, personality, and insights (EN/JA)
 
 ## Why Cognitive Memory?
 
@@ -154,12 +157,13 @@ cogmem skills suggest-summary          # Show recurring suggestions
 cogmem skills promote "deploy-pattern" # Mark as promoted (skill created)
 ```
 
-### 9. Behavior Enforcement Hooks (v0.19.0)
+### 9. Behavior Enforcement Hooks (v0.19.0–v0.23.0)
 
 Claude Code hooks that provide real-time guardrails for agent behavior:
 
 - **skill-gate** (PreToolUse): When the agent edits a file matching a `[[cogmem.skill_triggers]]` pattern, warns if the corresponding skill hasn't been loaded this session
 - **failure-breaker** (PostToolUse): Detects consecutive Bash failures and prompts the agent to stop and rethink
+- **pre-compress** (PreToolUse / Task): When Claude Code spawns a subagent, saves the task prompt as a `[DECISION]` memory entry before the subagent launch — which often triggers context compression. Preserves delegation intent even if the parent context is later compacted.
 
 Hooks are config-driven via `cogmem.toml` — no hardcoded checks:
 
@@ -173,6 +177,24 @@ skills = ["tdd-dashboard-dev"]
 ```
 
 Hooks are automatically registered during `cogmem init` and `cogmem migrate`.
+
+### 10. Usage Analytics (v0.23.0)
+
+SQLite-backed analytics engine that tracks memory usage patterns over time.
+
+```bash
+cogmem insights                        # Full analytics report
+cogmem insights --days 30              # Last 30 days
+cogmem insights --json                 # JSON output for programmatic use
+```
+
+Reports include:
+- **Arousal distribution** — buckets (0–0.4 / 0.4–0.6 / 0.6–0.8 / 0.8–1.0) showing memory emotional weight spread
+- **Category counts** — breakdown by memory tag (`[DECISION]`, `[PATTERN]`, etc.)
+- **Daily memory volume** — entry counts per day for trend analysis
+- **Top recalled** — memories with highest recall counts, surfacing frequently-accessed knowledge
+
+Also available as a dashboard tab at `http://127.0.0.1:8765/insights` with Chart.js visualizations.
 
 ### 7. Identity Management (v0.9.0)
 
@@ -322,6 +344,7 @@ cogmem search "past decisions"     # Search memories
 cogmem signals                     # Check crystallization signals
 cogmem context-search "query"      # Context-aware search with flashback filtering
 cogmem status                      # Show statistics
+cogmem insights                    # Usage analytics (arousal, categories, top recalled)
 cogmem migrate                     # Upgrade from older versions
 cogmem watch --since "8 hours ago"     # Analyze recent git history
 cogmem skills track "skill" --event skill_start  # Track skill usage
