@@ -27,15 +27,8 @@ def run_context_search(
         }
         print(json.dumps(out, ensure_ascii=False))
     else:
-        print(f"Status: {response.status}")
-        print(f"Results: {len(response.results)}")
-        print()
-        for i, r in enumerate(response.results, 1):
-            print(
-                f"--- [{i}] score={r.score} date={r.date} "
-                f"arousal={r.arousal} source={r.source} ---"
-            )
-            lines = r.content.split("\n")[:3]
-            for line in lines:
-                print(f"  {line}")
-            print()
+        fenced = response.format_fenced()
+        if fenced:
+            print(fenced)
+        else:
+            print(f"[cogmem] status={response.status} results=0")
