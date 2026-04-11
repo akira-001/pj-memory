@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import re as _re
 from collections import OrderedDict
 from typing import List, Optional
 
 from .scoring import cosine_sim, normalize
-from .types import SearchResponse, SearchResult
-
-_FENCE_TAG_RE = _re.compile(r"</?\s*memory-context\s*>", _re.IGNORECASE)
+from .types import SearchResponse, SearchResult, _FENCE_TAG_RE
 
 
 def format_memory_context_block(raw_context: str) -> str:
