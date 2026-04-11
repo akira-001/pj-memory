@@ -12,6 +12,17 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "nav.search": {"en": "Memory Search", "ja": "メモリー検索"},
     "nav.personality": {"en": "Personality", "ja": "パーソナリティ"},
     "nav.crystallization": {"en": "Memory Consolidation", "ja": "記憶の定着"},
+    "nav.insights": {"en": "Insights", "ja": "インサイト"},
+
+    # Insights page
+    "insights.title": {"en": "Memory Insights", "ja": "メモリーインサイト"},
+    "insights.subtitle": {"en": "Usage analytics and recall patterns", "ja": "使用分析と想起パターン"},
+    "insights.total_memories": {"en": "Total Memories", "ja": "総メモリー数"},
+    "insights.avg_arousal": {"en": "Avg Arousal", "ja": "平均アルーサル"},
+    "insights.categories": {"en": "Categories", "ja": "カテゴリ"},
+    "insights.arousal_dist": {"en": "Arousal Distribution", "ja": "アルーサル分布"},
+    "insights.daily_counts": {"en": "Daily Memory Count", "ja": "日別メモリー数"},
+    "insights.no_data": {"en": "No memories to analyze.", "ja": "分析対象のメモリーがありません。"},
 
     # Memory Overview
     "memory.title": {"en": "Memory Overview", "ja": "メモリー概要"},

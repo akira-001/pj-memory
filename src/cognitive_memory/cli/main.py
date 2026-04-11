@@ -186,6 +186,11 @@ def main(argv: list[str] | None = None):
     decay_parser.add_argument("--dry-run", action="store_true", help="Preview changes without modifying files")
     decay_parser.add_argument("--json", action="store_true", help="JSON output")
 
+    # insights
+    insights_parser = subparsers.add_parser("insights", help="Show usage analytics and memory patterns")
+    insights_parser.add_argument("--days", type=int, default=None, help="Lookback window in days (default: all time)")
+    insights_parser.add_argument("--json", action="store_true", help="JSON output")
+
     # recall-stats
     recall_parser = subparsers.add_parser("recall-stats", help="Show recall statistics")
     recall_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
@@ -288,6 +293,9 @@ def main(argv: list[str] | None = None):
     elif args.command == "decay":
         from .decay_cmd import run_decay
         run_decay(dry_run=args.dry_run, json_output=args.json)
+    elif args.command == "insights":
+        from .insights_cmd import run_insights
+        run_insights(days=args.days, json_output=args.json)
     elif args.command == "recall-stats":
         from .recall_cmd import run_recall_stats
         run_recall_stats(json_output=args.json_output)

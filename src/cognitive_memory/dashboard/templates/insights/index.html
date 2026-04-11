@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Insights{% endblock %}
+
+{% block content %}
+{% set lang = get_lang(request) %}
+<div class="page-header">
+    <h1>{{ t('insights.title', lang) }}</h1>
+    <p>{{ t('insights.subtitle', lang) }}</p>
+</div>
+
+<!-- Days filter -->
+<div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    {% for d in [None, 7, 30, 90] %}
+    <a href="/insights{% if d %}?days={{ d }}{% endif %}"
+       class="badge {% if selected_days == d %}badge-insight{% else %}badge-other{% endif %}"
+       style="text-decoration:none; padding: 0.25rem 0.75rem; cursor: pointer;">
+        {% if d %}{{ d }}d{% else %}All{% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+{% if data.empty %}
+<p style="color: var(--text-muted);">{{ t('insights.no_data', lang) }}</p>
+{% else %}
+
+<!-- Stats grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">{{ t('insights.total_memories', lang) }}</div>
+        <div class="stat-value">{{ data.total_memories }}</div>
+        <div class="stat-sub">{{ data.date_range.min }} — {{ data.date_range.max }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('insights.avg_arousal', lang) }}</div>
+        <div class="stat-value">{{ data.avg_arousal }}</div>
+        <div class="stat-sub">{{ t('memory.scale', lang) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">{{ t('insights.categories', lang) }}</div>
+        <div class="stat-value">{{ data.category_counts | length }}</div>
+        <div class="stat-sub" style="display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.5rem;">
+            {% for cat, cnt in data.category_counts.items() | sort(attribute='1', reverse=True) %}
+            <span class="badge badge-{{ cat | lower }}">{{ cat }} {{ cnt }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+<div class="chart-card">
+    <h3>{{ t('insights.arousal_dist', lang) }}</h3>
+    <canvas id="arousalChart" height="120"></canvas>
+</div>
+<div class="chart-card">
+    <h3>{{ t('insights.daily_counts', lang) }}</h3>
+    <canvas id="dailyChart" height="120"></canvas>
+</div>
+</div>
+
+<!-- Top recalled -->
+{% if data.top_recalled %}
+<div class="chart-card" style="margin-top:1.5rem;">
+    <h3>{{ t('memory.most_recalled', lang) }}</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+        <thead>
+            <tr>
+                <th style="text-align:left;padding:0.5rem 0.75rem;">{{ t('memory.recall_count', lang) }}</th>
+                <th style="text-align:left;padding:0.5rem 0.75rem;">Date</th>
+                <th style="text-align:left;padding:0.5rem 0.75rem;">Content</th>
+                <th style="text-align:left;padding:0.5rem 0.75rem;">Arousal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in data.top_recalled %}
+            <tr style="border-top:1px solid var(--border);">
+                <td style="padding:0.5rem 0.75rem;font-weight:bold;">{{ r.recall_count }}</td>
+                <td style="padding:0.5rem 0.75rem;color:var(--text-muted);">{{ r.date }}</td>
+                <td style="padding:0.5rem 0.75rem;">{{ r.content[:100] }}</td>
+                <td style="padding:0.5rem 0.75rem;">{{ "%.2f"|format(r.arousal) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not data.empty %}
+<script>
+const arousalData = {{ data.arousal_buckets | tojson }};
+new Chart(document.getElementById('arousalChart'), {
+    type: 'bar',
+    data: {
+        labels: arousalData.map(b => b.label),
+        datasets: [{
+            label: 'Memories',
+            data: arousalData.map(b => b.count),
+            backgroundColor: 'rgba(99,102,241,0.7)',
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+});
+
+const dailyData = {{ data.daily_counts | tojson }};
+new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+        labels: dailyData.map(d => d.date),
+        datasets: [{
+            label: 'Memories/day',
+            data: dailyData.map(d => d.count),
+            borderColor: 'rgba(99,102,241,0.9)',
+            backgroundColor: 'rgba(99,102,241,0.1)',
+            fill: true,
+            tension: 0.3,
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}
