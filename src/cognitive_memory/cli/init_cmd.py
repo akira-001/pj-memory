@@ -75,6 +75,17 @@ def setup_hooks(settings_dir: str) -> None:
             "hooks": [{"type": "command", "command": "cogmem hook skill-gate"}],
         })
 
+    # Add pre-compress hook (PreToolUse — Task tool)
+    if not any(
+        "cogmem hook pre-compress" in cmd.get("command", "")
+        for h in pre_hooks
+        for cmd in h.get("hooks", [])
+    ):
+        pre_hooks.append({
+            "matcher": "Task",
+            "hooks": [{"type": "command", "command": "cogmem hook pre-compress"}],
+        })
+
     # Add failure-breaker hook (PostToolUse)
     post_hooks = hooks.setdefault("PostToolUse", [])
     if not any(
