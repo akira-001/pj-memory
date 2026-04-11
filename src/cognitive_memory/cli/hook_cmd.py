@@ -126,8 +126,8 @@ def run_pre_compress(hook_input: dict, logs_dir: str | None = None) -> None:
         summary = prompt[:200].replace("\n", " ")
 
         entry = (
-            f"\n### [DELEGATION] Task delegated to subagent\n"
-            f"*Arousal: 0.5*\n"
+            f"\n### [DECISION] Delegated to subagent: {summary[:60]}\n"
+            f"*Arousal: 0.6*\n"
             f"{summary}\n"
         )
 

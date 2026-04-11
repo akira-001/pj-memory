@@ -41,7 +41,8 @@ class TestPreCompress:
         log_file = logs_dir / f"{today}.md"
         assert log_file.exists()
         content = log_file.read_text()
-        assert "DELEGATION" in content or "Implement the authentication" in content
+        assert "### [DECISION]" in content
+        assert "Implement the authentication" in content
 
     def test_entry_written_with_arousal(self, logs_dir):
         prompt = "Implement feature X with careful attention to edge cases and error handling"
@@ -69,3 +70,16 @@ class TestPreCompress:
     def test_no_logs_dir_does_not_raise(self, tmp_path):
         hook_input = _hook_input("Implement feature Y with full test coverage")
         run_pre_compress(hook_input, logs_dir=str(tmp_path / "nonexistent" / "logs"))
+
+    def test_boundary_prompt_length(self, logs_dir):
+        # Exactly 19 chars → ignored
+        short_prompt = "A" * 19
+        run_pre_compress(_hook_input(short_prompt), logs_dir=str(logs_dir))
+        today = date.today().isoformat()
+        log_file = logs_dir / f"{today}.md"
+        assert not log_file.exists()
+
+        # Exactly 20 chars → saved
+        exact_prompt = "A" * 20
+        run_pre_compress(_hook_input(exact_prompt), logs_dir=str(logs_dir))
+        assert log_file.exists()
