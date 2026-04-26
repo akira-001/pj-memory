@@ -98,25 +98,42 @@ def test_watch_cli_text_output(tmp_path, monkeypatch, capsys):
 
 
 def test_watch_cli_json_output(tmp_path, monkeypatch, capsys):
-    """cogmem watch --json should output valid JSON."""
+    """cogmem watch --json should output valid JSON.
+
+    Deterministic by design: commit timestamps are pinned via GIT_*_DATE so the
+    test is independent of wall-clock time (previously flaky around midnight
+    when `since="today"` straddled the day boundary).
+    """
     import subprocess as sp
     import json
+    import os
     monkeypatch.chdir(tmp_path)
     sp.run(["git", "init"], cwd=tmp_path, capture_output=True)
     sp.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
     sp.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
+
+    # Pin commit timestamps to a fixed date — both author and committer.
+    fixed_date = "2026-04-26T12:00:00"
+    base_env = os.environ.copy()
+    base_env["GIT_AUTHOR_DATE"] = fixed_date
+    base_env["GIT_COMMITTER_DATE"] = fixed_date
+
     (tmp_path / "a.txt").write_text("a")
     sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
-    sp.run(["git", "commit", "-m", "feat: init"], cwd=tmp_path, capture_output=True)
+    sp.run(["git", "commit", "-m", "feat: init"], cwd=tmp_path, capture_output=True, env=base_env)
     for i in range(3):
+        env = base_env.copy()
+        env["GIT_AUTHOR_DATE"] = f"2026-04-26T12:0{i + 1}:00"
+        env["GIT_COMMITTER_DATE"] = f"2026-04-26T12:0{i + 1}:00"
         (tmp_path / "a.txt").write_text(f"fix {i}")
         sp.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
-        sp.run(["git", "commit", "-m", f"fix: issue {i}"], cwd=tmp_path, capture_output=True)
+        sp.run(["git", "commit", "-m", f"fix: issue {i}"], cwd=tmp_path, capture_output=True, env=env)
     (tmp_path / "cogmem.toml").write_text('[cogmem]\nlogs_dir = "memory/logs"\n')
     (tmp_path / "memory" / "logs").mkdir(parents=True)
 
     from cognitive_memory.cli.watch_cmd import run_watch
-    run_watch(since="today", json_output=True)
+    # Absolute since date that always includes our pinned commits.
+    run_watch(since="2026-04-26T00:00:00", json_output=True)
     captured = capsys.readouterr()
     output = json.loads(captured.out)
     assert output["fix_count"] == 3
