@@ -352,6 +352,26 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
     target = Path(target_dir).resolve()
     target.mkdir(parents=True, exist_ok=True)
 
+    # Existing-project detection: redirect to migrate (preserves existing files,
+    # syncs templates and skill drift in one step).
+    if (target / "cogmem.toml").exists():
+        prompt_msg = (
+            "Existing cogmem project detected (cogmem.toml found). "
+            "Run `cogmem migrate` to sync templates and skill updates? [Y/n]: "
+            if lang == "en" else
+            "既存の cogmem プロジェクトを検出しました（cogmem.toml が存在）。"
+            "`cogmem migrate` でテンプレートと skill 更新を同期しますか？ [Y/n]: "
+        )
+        try:
+            answer = input(prompt_msg).strip().lower()
+        except (EOFError, KeyboardInterrupt, OSError):
+            # OSError: pytest captures stdin; treat as non-interactive → skip migrate
+            answer = "n"
+        if answer != "n":
+            from .migrate_cmd import run_migrate
+            run_migrate(target_dir, user_id=user_id, lang=lang)
+            return
+
     # Determine user_id
     logs_dir = target / "memory" / "logs"
     if user_id is None:

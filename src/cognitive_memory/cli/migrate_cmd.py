@@ -23,7 +23,13 @@ def _ensure_gitignore_entry(gitignore: Path, entry: str) -> None:
         gitignore.write_text(f"{entry}\n", encoding="utf-8")
 
 
-def run_migrate(target_dir: str = ".", user_id: str | None = None):
+def run_migrate(
+    target_dir: str = ".",
+    user_id: str | None = None,
+    lang: str = "en",
+    no_skills: bool = False,
+    auto_yes_skills: bool = False,
+):
     target = Path(target_dir).resolve()
     changes = []
 
@@ -112,6 +118,25 @@ def run_migrate(target_dir: str = ".", user_id: str | None = None):
             print(f"  - {c}")
     else:
         print("Nothing to migrate — project is up to date.")
+
+    # 7. Sync installed skill templates with packaged versions (drift detection)
+    if not no_skills:
+        try:
+            from argparse import Namespace
+            from .skills_update_cmd import detect_diffs, run_skills_update_templates
+            drift = detect_diffs(lang=lang)
+            if drift:
+                print()
+                run_skills_update_templates(Namespace(
+                    lang=lang,
+                    dry_run=False,
+                    auto_yes=auto_yes_skills,
+                    skill=None,
+                    json=False,
+                ))
+        except Exception as exc:
+            # Fail-open: skill sync should never block migration
+            print(f"  (skill template sync skipped: {exc})", file=sys.stderr)
 
 
 def _prompt_user_id_for_migrate(logs_dir: Path) -> str:

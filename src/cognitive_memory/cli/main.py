@@ -63,10 +63,16 @@ def main(argv: list[str] | None = None):
     subparsers.add_parser("checkpoint", help="Record crystallization checkpoint in cogmem.toml")
 
     # migrate
-    migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions")
+    migrate_parser = subparsers.add_parser("migrate", help="Upgrade project files from older versions (incl. skill template sync)")
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
     migrate_parser.add_argument("--user-id", type=str, default=None,
                                 help="User ID for log isolation (prompts interactively if omitted)")
+    migrate_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",
+                                help="Skill template language for the sync step (default: en)")
+    migrate_parser.add_argument("--no-skills", action="store_true",
+                                help="Skip the skill template sync step")
+    migrate_parser.add_argument("--auto-yes-skills", action="store_true",
+                                help="Apply all skill template updates without per-skill confirmation")
 
     # dashboard
     dash_parser = subparsers.add_parser("dashboard", help="Start the web dashboard")
@@ -330,7 +336,12 @@ def main(argv: list[str] | None = None):
         run_checkpoint()
     elif args.command == "migrate":
         from .migrate_cmd import run_migrate
-        run_migrate(args.dir, user_id=args.user_id)
+        run_migrate(
+            args.dir, user_id=args.user_id,
+            lang=getattr(args, "lang", "en"),
+            no_skills=getattr(args, "no_skills", False),
+            auto_yes_skills=getattr(args, "auto_yes_skills", False),
+        )
     elif args.command == "dashboard":
         from .dashboard_cmd import run_dashboard
         run_dashboard(host=args.host, port=args.port, no_browser=args.no_browser)

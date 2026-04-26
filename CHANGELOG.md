@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-04-26
+
+### Added
+
+- **`cogmem migrate` now syncs skill templates** — Step 7 of migration runs the same drift-detection-and-update flow as `cogmem skills update-templates`. Existing users upgrading via `pip install -U cogmem-agent && cogmem migrate` get template improvements (e.g. expanded triggers, new session-init steps) without remembering a separate command.
+  - `--lang en|ja` — template language for the sync step (default: en)
+  - `--no-skills` — opt out of the sync step
+  - `--auto-yes-skills` — apply all skill updates without per-skill confirmation
+  - Fail-open: errors during sync don't block migration
+- **`cogmem init` redirects to `cogmem migrate` on existing projects** — when `cogmem.toml` is detected in the target directory, init prompts: *"Existing cogmem project detected. Run `cogmem migrate` to sync templates and skill updates? [Y/n]"*. Answering `y` (default) hands off to migrate. Answering `n` proceeds with the original idempotent init flow. Treats stdin-captured environments (pytest/CI) as `n` automatically.
+
+### Why
+
+Discoverability: `pip install -U cogmem-agent && cogmem init` is the natural mental model after upgrade. Before 0.27, the init→skip-protection path silently dropped template updates; users had to remember `cogmem skills update-templates` (added in 0.26) or `cogmem init --update-skills` to actually pick up improvements. Now a single re-run of either `init` or `migrate` does the right thing.
+
+### Upgrade guide
+
+```bash
+pip install -U cogmem-agent
+cogmem migrate    # one command syncs identity files, configs, AND skill templates
+# or, equivalently:
+cogmem init       # detects existing project → prompts to run migrate
+```
+
+`cogmem init --update-skills` (added in 0.26) remains supported for compatibility but is now redundant.
+
 ## [0.26.0] - 2026-04-26
 
 ### Added
