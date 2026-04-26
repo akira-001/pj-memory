@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-04-26
+
+### Documentation
+
+- **README / README_ja sync** — Refreshed both READMEs to reflect the v0.24.0–v0.29.0 feature set:
+  - Bundled skill count: 5 → **7** (added `search` and `recall`).
+  - CLI reference: added `cogmem upgrade-check` and `cogmem skills update-templates`.
+  - `cogmem migrate`: now described as the unified upgrade entry point — identity migration + user_id migration + hooks + lang persistence + skill template sync (interactive, with backups).
+  - Replaced legacy "Upgrading from v0.2.0–0.2.1" section with version-agnostic upgrade guide covering the v0.27.0 unified flow (`pip install -U && cogmem migrate`).
+  - New subsections: **Skill template lifecycle** (why `cogmem init` is skip-protected, when to run `cogmem migrate` to pick up template improvements) and **Upgrade notifications** (`cogmem upgrade-check`, session-init Step 6, snooze/never options).
+
+No code changes in this release — documentation only.
+
 ## [0.29.0] - 2026-04-26
 
 ### Fixed

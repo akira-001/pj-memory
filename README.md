@@ -265,7 +265,7 @@ cogmem init        # Scaffolds project structure (see below)
 
 `cogmem init` automatically installs two sets of tools into your Claude Code environment:
 
-1. **Agent skills** (v0.14.0): Five required protocol skills are installed to `~/.claude/skills/` — `session-init`, `live-logging`, `skill-tracking`, `wrap`, and `crystallize`. These power the agent's behavioral protocols and work across all your projects.
+1. **Agent skills** (v0.14.0+): Seven protocol skills are installed to `~/.claude/skills/` — `session-init`, `live-logging`, `skill-tracking`, `wrap`, `crystallize`, plus `search` and `recall` (added in v0.24.0). These power the agent's behavioral protocols and cross-source memory lookup, working across all your projects. Existing skills are skip-protected on re-init; use `cogmem migrate` (or `cogmem skills update-templates`) to pull in template updates.
 2. **skill-creator plugin**: The [Anthropic official skill-creator plugin](https://github.com/anthropics/claude-plugins-official) is installed, enabling iterative skill creation and evaluation workflows.
 
 ### Project Structure
@@ -338,14 +338,15 @@ With Ollama, search upgrades from exact keyword matching to semantic understandi
 ### CLI
 
 ```bash
-cogmem init                        # Initialize project
+cogmem init                        # Initialize project (or redirect to migrate on existing projects)
 cogmem index                       # Build/update index
 cogmem search "past decisions"     # Search memories
 cogmem signals                     # Check crystallization signals
 cogmem context-search "query"      # Context-aware search with flashback filtering
 cogmem status                      # Show statistics
 cogmem insights                    # Usage analytics (arousal, categories, top recalled)
-cogmem migrate                     # Upgrade from older versions
+cogmem migrate                     # Upgrade project files + sync skill templates (lang auto-detected)
+cogmem upgrade-check               # Check PyPI for newer cogmem-agent (24h cached, fail-open)
 cogmem watch --since "8 hours ago"     # Analyze recent git history
 cogmem skills track "skill" --event skill_start  # Track skill usage
 cogmem skills audit --json --brief     # Audit skill health
@@ -353,6 +354,7 @@ cogmem skills review                   # Full skill report
 cogmem skills suggest "pattern-name"   # Record a skill suggestion
 cogmem skills suggest-summary          # Show recurring suggestions
 cogmem skills promote "pattern-name"   # Mark suggestion as promoted
+cogmem skills update-templates         # Sync ~/.claude/skills/ with packaged templates
 cogmem identity show --target user     # Show identity
 cogmem identity update --target user   # Update identity
 cogmem recall-stats                    # Memory recall statistics
@@ -526,17 +528,50 @@ cache_max_size = 20         # Session cache capacity
 cache_sim_threshold = 0.9   # Cache hit similarity threshold
 ```
 
-### Upgrading from v0.2.0–0.2.1
+### Upgrading
+
+For any version (legacy or recent):
 
 ```bash
 pip install --upgrade cogmem-agent
-cogmem migrate
+cogmem migrate                    # --lang auto-detected from cogmem.toml since v0.29.0
 ```
 
-`cogmem migrate` automatically:
-- Renames `identity/agent.md` → `identity/soul.md`
-- Creates `identity/agents.md` (behavioral protocols)
-- Updates `cogmem.toml` and `CLAUDE.md` references
+`cogmem migrate` is the single command that brings an existing project up to date. It:
+
+- **Identity migration** (legacy projects): renames `identity/agent.md` → `identity/soul.md`, creates `identity/agents.md`, updates `cogmem.toml` and `CLAUDE.md` references
+- **`user_id` migration**: writes `user_id` to `cogmem.local.toml` and moves logs/contexts into per-user subdirectories
+- **Hooks registration**: writes Claude Code hooks to `.claude/settings.json`
+- **Language persistence**: writes `[cogmem].lang` to `cogmem.toml` (v0.28.0+)
+- **Skill template sync** (v0.27.0+): diffs installed `~/.claude/skills/<name>/SKILL.md` against packaged templates, prompts per-skill `[y/N/d=show diff]`, and creates timestamped backups under `~/.claude/skills/.backup-YYYY-MM-DD/`. Use `--auto-yes-skills` for unattended updates or `--no-skills` to opt out.
+
+Equivalent shortcuts:
+
+```bash
+cogmem init                       # On an existing project: prompts "Run migrate? [Y/n]" → y triggers the full flow
+cogmem skills update-templates    # Just the skill sync step (with --dry-run to preview)
+```
+
+#### Skill template lifecycle
+
+Once a project is initialized, packaged skill templates may evolve across releases (new triggers, new steps, fixes). `cogmem init` is **skip-protected** — it never overwrites existing skills. To pick up template improvements after `pip install -U cogmem-agent`, run `cogmem migrate` (or `cogmem skills update-templates`). Drift detection respects `[cogmem].lang`, so projects initialized with `--lang ja` only compare against `templates/ja/skills/`.
+
+#### Upgrade notifications
+
+`cogmem upgrade-check` polls PyPI for newer cogmem-agent versions (24h cached via `cogmem.toml [updates].last_check`, fail-open on network errors). The `session-init` skill calls it on each session start and surfaces:
+
+```
+📦 Upgrade available: cogmem-agent X.Y.Z (current: A.B.C). Upgrade now? (y/n/later)
+📝 N skill(s) have template updates. Run `cogmem skills update-templates`? (y/n)
+```
+
+Snooze options:
+```bash
+cogmem upgrade-check --snooze-days 30   # Postpone the prompt
+# Or in cogmem.toml:
+[updates]
+auto = "never"                          # Suppress entirely
+```
 
 ## Custom Embedding Provider
 
