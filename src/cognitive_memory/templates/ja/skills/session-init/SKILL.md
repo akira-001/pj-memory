@@ -106,22 +106,31 @@ cogmem upgrade-check --json
 ```json
 {
   "status": "up_to_date" | "upgrade_available" | "skipped" | "error",
-  "current": "0.24.0",
-  "latest": "0.25.0",
+  "current": "0.25.0",
+  "latest": "0.26.0",
   "release_date": "2026-04-26",
   "upgrade_command": "pip install -U cogmem-agent",
-  "post_install": "cogmem init"
+  "post_install": "cogmem init",
+  "skill_template_updates": 3
 }
 ```
 
 `status` 別の挙動:
-- `up_to_date` / `skipped` / `error` → 通知しない（静かに通過）
-- `upgrade_available` → 応答に通知を追加（応答フォーマット参照）
+- `up_to_date` / `skipped` / `error` → 通知しない（**ただし** `skill_template_updates > 0` の場合は別途通知）
+- `upgrade_available` → 必ず応答に通知を追加（応答フォーマット参照）
 
-ユーザーに一度だけ尋ねる、3つの選択肢:
-- **y**（はい、アップグレードする）→ `pip install -U cogmem-agent && cogmem init` 実行
-- **n**（7日スヌーズ）→ `cogmem upgrade-check --snooze-days 7` 実行
-- **later**（今回だけ却下）→ 何もしない、次回の 24h キャッシュ切れで再表示
+独立した2シグナル、片方だけ・両方どちらも通知:
+
+**シグナル1: パッケージアップデート** (`upgrade_available`):
+- **y** → `pip install -U cogmem-agent && cogmem init --update-skills` 実行
+- **n** → `cogmem upgrade-check --snooze-days 7`（7日スヌーズ）
+- **later** → 何もしない、次回 24h キャッシュ切れで再表示
+
+**シグナル2: skill テンプレート差分** (`skill_template_updates > 0`):
+パッケージは同じバージョンでも、同梱 skill テンプレートが進化している場合がある
+（trigger 追加など）。次のように通知:
+- **y** → `cogmem skills update-templates`（対話的 per-skill 確認 + 自動バックアップ）
+- **n** → 今セッションは抑制
 
 自動アップグレードはしない。`[updates].auto = "never"` を尊重（CLI が処理して `skipped` を返す）。
 
@@ -136,6 +145,7 @@ cogmem upgrade-check --json
 💭 フラッシュバック: [過去エントリの抜粋]（該当時のみ）
 📊 トークン予算超過: [推奨アクション]（超過時のみ）
 📦 アップデートあり: cogmem-agent X.Y.Z（現在: A.B.C）。アップグレードしますか？ (y/n/later)
+📝 N 件の skill にテンプレート更新があります。`cogmem skills update-templates` を実行しますか？ (y/n)
 ---
 [通常の応答]
 ```

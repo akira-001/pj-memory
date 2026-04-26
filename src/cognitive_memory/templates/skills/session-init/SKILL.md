@@ -106,24 +106,33 @@ Result schema:
 ```json
 {
   "status": "up_to_date" | "upgrade_available" | "skipped" | "error",
-  "current": "0.24.0",
-  "latest": "0.25.0",
+  "current": "0.25.0",
+  "latest": "0.26.0",
   "release_date": "2026-04-26",
   "upgrade_command": "pip install -U cogmem-agent",
-  "post_install": "cogmem init"
+  "post_install": "cogmem init",
+  "skill_template_updates": 3
 }
 ```
 
 Behavior by `status`:
-- `up_to_date` / `skipped` / `error` → silent (do not surface)
-- `upgrade_available` → add notification to response (see Response Format)
+- `up_to_date` / `skipped` / `error` → silent (do not surface) **unless** `skill_template_updates > 0`
+- `upgrade_available` → always add notification (see Response Format)
 
-Ask the user once with three choices:
-- **y** (yes, upgrade now) → run `pip install -U cogmem-agent && cogmem init`
-- **n** (snooze 7 days) → run `cogmem upgrade-check --snooze-days 7`
-- **later** (just dismiss this session) → do nothing; will surface again on the next 24h cache miss
+Two independent signals; surface either or both:
 
-Never auto-upgrade. Honor `[updates].auto = "never"` (the CLI handles this and returns `skipped`).
+**Signal 1 — package upgrade available** (`upgrade_available`):
+- **y** → `pip install -U cogmem-agent && cogmem init --update-skills`
+- **n** → `cogmem upgrade-check --snooze-days 7`
+- **later** → do nothing; surfaces again after 24h cache
+
+**Signal 2 — skill template drift** (`skill_template_updates > 0`):
+Even on the same package version, packaged skill templates may have evolved
+(e.g. trigger phrases added). Surface as:
+- **y** → `cogmem skills update-templates` (interactive per-skill confirm + auto-backup)
+- **n** → suppress for this session
+
+Never auto-upgrade. Honor `[updates].auto = "never"` (CLI returns `skipped`).
 
 ---
 
@@ -136,6 +145,7 @@ Add to the beginning only if notifications exist:
 💭 Flashback: [past entry excerpt] (if applicable)
 📊 Token budget exceeded: [recommended action] (if exceeded)
 📦 Upgrade available: cogmem-agent X.Y.Z (current: A.B.C). Upgrade now? (y/n/later)
+📝 N skill(s) have template updates. Run `cogmem skills update-templates`? (y/n)
 ---
 [Normal response]
 ```

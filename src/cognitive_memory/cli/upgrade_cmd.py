@@ -166,6 +166,10 @@ def run_upgrade_check(
     updates_section = cfg.get("updates", {}) if isinstance(cfg.get("updates"), dict) else {}
 
     current = _version.__version__
+    # Skill-template drift: independent of PyPI check, helps existing users pick up
+    # template improvements that `cogmem init` skip-protects.
+    skill_template_updates = _count_skill_template_drift()
+
     result: dict[str, Any] = {
         "status": "up_to_date",
         "current": current,
@@ -175,6 +179,7 @@ def run_upgrade_check(
         "reason": None,
         "upgrade_command": None,
         "post_install": None,
+        "skill_template_updates": skill_template_updates,
     }
 
     auto = str(updates_section.get("auto", "ask")).lower()
@@ -235,6 +240,22 @@ def mark_skip_until(base_dir: Path, days: int = 7) -> None:
         })
 
 
+def _count_skill_template_drift() -> int:
+    """Count installed skills whose SKILL.md differs from the packaged template.
+
+    Returns 0 on any error (fail-open). Tries en first, then ja.
+    """
+    try:
+        from .skills_update_cmd import detect_diffs
+        # Prefer the larger diff set (en or ja) — whichever has more drift is the
+        # one the user is most likely to care about. We don't know their lang here.
+        en_drift = len(detect_diffs(lang="en"))
+        ja_drift = len(detect_diffs(lang="ja"))
+        return max(en_drift, ja_drift)
+    except Exception:
+        return 0
+
+
 def _emit(result: dict[str, Any], json_output: bool) -> None:
     if json_output:
         print(json.dumps(result, ensure_ascii=False))
@@ -256,3 +277,7 @@ def _emit(result: dict[str, Any], json_output: bool) -> None:
         print(f"  upgrade-check skipped (reason={result['reason']})")
     elif status == "error":
         print(f"  upgrade-check failed (reason={result['reason']})", file=sys.stderr)
+    drift = result.get("skill_template_updates", 0)
+    if drift > 0:
+        print(f"📝 {drift} installed skill(s) have template updates available")
+        print(f"   Run: cogmem skills update-templates  (use --dry-run first)")

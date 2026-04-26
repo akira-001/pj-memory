@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-04-26
+
+### Added
+
+- **`cogmem skills update-templates` command** — Closes the "existing-user skill drift" gap left by `cogmem init`'s skip-protection. Diffs `~/.claude/skills/<name>/SKILL.md` against packaged templates and offers per-skill update with auto-backup.
+  - `--lang en|ja` — choose template language (default: en)
+  - `--dry-run` — show drift summary without applying changes
+  - `--auto-yes` — apply all updates without confirmation
+  - `--skill NAME` — limit to a single skill
+  - `--json` — machine-readable candidate list (for session-init integration)
+  - Interactive mode: per-skill `[y/N/d=show diff]` prompt
+  - Backups under `~/.claude/skills/.backup-YYYY-MM-DD/<name>/SKILL.md`
+- **`cogmem init --update-skills` flag** — runs `update-templates` immediately after `init`. Recommended path after `pip install -U cogmem-agent`.
+- **session-init Step 6 surfaces `skill_template_updates`** — `cogmem upgrade-check --json` now includes `skill_template_updates: N`. session-init notifies the user even when the package is up to date but installed skills have drifted from packaged templates.
+
+### Why
+
+Before 0.26: `pip install -U cogmem-agent` upgraded the Python package, but `cogmem init`'s skip-protection meant existing users never received template improvements (e.g. expanded triggers in `recall`, new Step 6 in `session-init`). The package version matched, but skill files lagged.
+
+### Upgrade guide
+
+For existing users who want to pull in the latest template improvements:
+
+```bash
+pip install -U cogmem-agent
+cogmem init --update-skills
+# or, equivalently:
+cogmem skills update-templates
+```
+
+Each skill update is opt-in and creates a timestamped backup. The default interactive mode lets you preview a unified diff per skill before applying.
+
+To preview without committing:
+```bash
+cogmem skills update-templates --dry-run
+```
+
+To apply all without prompts (CI / automated environments):
+```bash
+cogmem skills update-templates --auto-yes
+```
+
 ## [0.25.0] - 2026-04-26
 
 ### Added

@@ -78,6 +78,9 @@ def run_skills(args):
             print(f"No pending suggestions found for '{args.context}'")
     elif args.skills_command == "check-updates":
         run_skills_check_updates(config, args)
+    elif args.skills_command == "update-templates":
+        from .skills_update_cmd import run_skills_update_templates
+        sys.exit(run_skills_update_templates(args))
     else:
         print(f"Unknown skills command: {args.skills_command}")
         sys.exit(1)

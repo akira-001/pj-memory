@@ -20,6 +20,9 @@ def main(argv: list[str] | None = None):
                              help="Language for templates (en/ja). Prompts interactively if omitted.")
     init_parser.add_argument("--user-id", type=str, default=None,
                              help="User ID for log isolation (prompts interactively if omitted)")
+    init_parser.add_argument("--update-skills", action="store_true",
+                             help="After init, also offer to update existing skills from packaged templates "
+                                  "(equivalent to running `cogmem skills update-templates --lang <lang>`)")
 
     # index
     index_parser = subparsers.add_parser("index", help="Build/update the memory index")
@@ -187,6 +190,22 @@ def main(argv: list[str] | None = None):
     skills_check_updates_parser = skills_subparsers.add_parser("check-updates", help="Check external skills and plugins for updates")
     skills_check_updates_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
+    # skills update-templates — diff installed skills against packaged templates and apply updates
+    skills_update_parser = skills_subparsers.add_parser(
+        "update-templates",
+        help="Update ~/.claude/skills/ from packaged templates (diff + per-skill confirm + backup)",
+    )
+    skills_update_parser.add_argument("--lang", choices=["en", "ja"], default="en",
+                                      help="Template language (default: en)")
+    skills_update_parser.add_argument("--dry-run", action="store_true",
+                                      help="Show diffs without applying any change")
+    skills_update_parser.add_argument("--auto-yes", action="store_true",
+                                      help="Apply all updates without confirmation")
+    skills_update_parser.add_argument("--skill", type=str, default=None,
+                                      help="Limit update to a single skill name")
+    skills_update_parser.add_argument("--json", action="store_true",
+                                      help="Output candidate list as JSON and exit (read-only)")
+
     # readme
     readme_parser = subparsers.add_parser("readme", help="Display the package README")
     readme_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",
@@ -271,6 +290,18 @@ def main(argv: list[str] | None = None):
     if args.command == "init":
         from .init_cmd import run_init
         run_init(args.dir, lang=args.lang, user_id=args.user_id)
+        if getattr(args, "update_skills", False):
+            from argparse import Namespace
+            from .skills_update_cmd import run_skills_update_templates
+            print()
+            print("--- Checking for skill template updates ---")
+            run_skills_update_templates(Namespace(
+                lang=args.lang or "en",
+                dry_run=False,
+                auto_yes=False,
+                skill=None,
+                json=False,
+            ))
     elif args.command == "index":
         from .index_cmd import run_index
         run_index(all_files=args.all, single_file=args.file)
