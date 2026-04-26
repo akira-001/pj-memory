@@ -94,6 +94,37 @@ cogmem search "<keywords from current context>"
 
 Target: 6k tokens total. Recommend `/compact` if exceeded.
 
+## Step 6: Upgrade check (24h cached, fail-open)
+
+Run once per session, but cached server-side for 24h via `cogmem.toml [updates]`:
+
+```bash
+cogmem upgrade-check --json
+```
+
+Result schema:
+```json
+{
+  "status": "up_to_date" | "upgrade_available" | "skipped" | "error",
+  "current": "0.24.0",
+  "latest": "0.25.0",
+  "release_date": "2026-04-26",
+  "upgrade_command": "pip install -U cogmem-agent",
+  "post_install": "cogmem init"
+}
+```
+
+Behavior by `status`:
+- `up_to_date` / `skipped` / `error` → silent (do not surface)
+- `upgrade_available` → add notification to response (see Response Format)
+
+Ask the user once with three choices:
+- **y** (yes, upgrade now) → run `pip install -U cogmem-agent && cogmem init`
+- **n** (snooze 7 days) → run `cogmem upgrade-check --snooze-days 7`
+- **later** (just dismiss this session) → do nothing; will surface again on the next 24h cache miss
+
+Never auto-upgrade. Honor `[updates].auto = "never"` (the CLI handles this and returns `skipped`).
+
 ---
 
 ## Response Format
@@ -104,6 +135,7 @@ Add to the beginning only if notifications exist:
 ⚠️ Crystallization signal detected: [condition] (if applicable)
 💭 Flashback: [past entry excerpt] (if applicable)
 📊 Token budget exceeded: [recommended action] (if exceeded)
+📦 Upgrade available: cogmem-agent X.Y.Z (current: A.B.C). Upgrade now? (y/n/later)
 ---
 [Normal response]
 ```

@@ -42,6 +42,17 @@ def main(argv: list[str] | None = None):
     # status
     subparsers.add_parser("status", help="Show index statistics")
 
+    # upgrade-check
+    upgrade_parser = subparsers.add_parser(
+        "upgrade-check",
+        help="Check PyPI for newer cogmem-agent (cached 24h, fail-open)",
+    )
+    upgrade_parser.add_argument("--json", action="store_true", help="JSON output")
+    upgrade_parser.add_argument("--force", action="store_true",
+                                help="Bypass cache and skip_until")
+    upgrade_parser.add_argument("--snooze-days", type=int, default=None,
+                                help="Mark skip_until = today + N days and exit")
+
     # signals
     subparsers.add_parser("signals", help="Check crystallization signals")
 
@@ -272,6 +283,14 @@ def main(argv: list[str] | None = None):
     elif args.command == "status":
         from .index_cmd import run_status
         run_status()
+    elif args.command == "upgrade-check":
+        from .upgrade_cmd import run_upgrade_check, mark_skip_until
+        from pathlib import Path
+        if args.snooze_days is not None:
+            mark_skip_until(Path.cwd(), days=args.snooze_days)
+            print(f"upgrade-check snoozed for {args.snooze_days} days")
+        else:
+            run_upgrade_check(json_output=args.json, force=args.force)
     elif args.command == "signals":
         from .signals_cmd import run_signals
         run_signals()

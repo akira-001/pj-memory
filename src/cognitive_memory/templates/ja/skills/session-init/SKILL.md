@@ -94,6 +94,37 @@ cogmem search "<現在の会話コンテキストのキーワード>"
 
 目標: 合計 6k tokens。超過時は `/compact` を推奨。
 
+## Step 6: アップグレード確認（24hキャッシュ、fail-open）
+
+セッション毎に1回呼び出すが、`cogmem.toml [updates]` で24hサーバーサイドキャッシュ:
+
+```bash
+cogmem upgrade-check --json
+```
+
+結果スキーマ:
+```json
+{
+  "status": "up_to_date" | "upgrade_available" | "skipped" | "error",
+  "current": "0.24.0",
+  "latest": "0.25.0",
+  "release_date": "2026-04-26",
+  "upgrade_command": "pip install -U cogmem-agent",
+  "post_install": "cogmem init"
+}
+```
+
+`status` 別の挙動:
+- `up_to_date` / `skipped` / `error` → 通知しない（静かに通過）
+- `upgrade_available` → 応答に通知を追加（応答フォーマット参照）
+
+ユーザーに一度だけ尋ねる、3つの選択肢:
+- **y**（はい、アップグレードする）→ `pip install -U cogmem-agent && cogmem init` 実行
+- **n**（7日スヌーズ）→ `cogmem upgrade-check --snooze-days 7` 実行
+- **later**（今回だけ却下）→ 何もしない、次回の 24h キャッシュ切れで再表示
+
+自動アップグレードはしない。`[updates].auto = "never"` を尊重（CLI が処理して `skipped` を返す）。
+
 ---
 
 ## 応答フォーマット
@@ -104,6 +135,7 @@ cogmem search "<現在の会話コンテキストのキーワード>"
 ⚠️ 記憶の定着シグナル検知: [条件内容]（該当時のみ）
 💭 フラッシュバック: [過去エントリの抜粋]（該当時のみ）
 📊 トークン予算超過: [推奨アクション]（超過時のみ）
+📦 アップデートあり: cogmem-agent X.Y.Z（現在: A.B.C）。アップグレードしますか？ (y/n/later)
 ---
 [通常の応答]
 ```

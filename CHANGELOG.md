@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-04-26
+
+### Added
+
+- **`cogmem upgrade-check` command** — Check PyPI for a newer cogmem-agent and surface upgrade opportunities. Cached 24h via `cogmem.toml [updates].last_check`. JSON output mode (`--json`) for programmatic consumers, human-readable mode by default. Fail-open on network errors so it never blocks the user.
+  - `--force` bypasses cache and `skip_until`
+  - `--snooze-days N` records `[updates].skip_until` and exits without checking
+  - Honors `[updates].auto = "never"` to suppress permanently
+- **session-init Step 6: upgrade prompt** — `templates/skills/session-init/SKILL.md` and `templates/ja/skills/session-init/SKILL.md` now invoke `cogmem upgrade-check --json` and surface a one-line `📦 Upgrade available: ...` notification with **y/n/later** choices. Never auto-upgrades.
+
+### Fixed
+
+- **Python 3.11+ tomllib fallback** — `cli/init_cmd.py` was unconditionally `import tomli`, which crashes on Python 3.11+ environments where only stdlib `tomllib` is installed. Now prefers stdlib `tomllib` and falls back to `tomli` only on Python ≤ 3.10. Aligns with the existing pattern in `config.py`.
+
+### Upgrade guide
+
+```bash
+pip install -U cogmem-agent
+cogmem init   # picks up updated session-init skill (skip-protected)
+```
+
+Once installed, the next session-init will run `cogmem upgrade-check` automatically. To opt out:
+
+```bash
+# In your project's cogmem.toml:
+[updates]
+auto = "never"
+```
+
+Or snooze for N days at any time:
+
+```bash
+cogmem upgrade-check --snooze-days 30
+```
+
 ## [0.24.0] - 2026-04-26
 
 ### Added

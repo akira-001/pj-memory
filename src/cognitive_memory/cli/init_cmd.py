@@ -359,9 +359,13 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
         current_user_id = None
         local_toml = target / "cogmem.local.toml"
         if local_toml.exists():
-            import tomli
+            # Prefer stdlib tomllib (Python 3.11+), fall back to tomli on older runtimes
+            if sys.version_info >= (3, 11):
+                import tomllib as _toml
+            else:
+                import tomli as _toml  # type: ignore[no-redef]
             try:
-                data = tomli.loads(local_toml.read_text(encoding="utf-8"))
+                data = _toml.loads(local_toml.read_text(encoding="utf-8"))
                 section = data.get("cogmem", data)
                 current_user_id = section.get("user_id") or data.get("user_id")
             except Exception:
