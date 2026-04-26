@@ -26,12 +26,21 @@ def _ensure_gitignore_entry(gitignore: Path, entry: str) -> None:
 def run_migrate(
     target_dir: str = ".",
     user_id: str | None = None,
-    lang: str = "en",
+    lang: str | None = None,
     no_skills: bool = False,
     auto_yes_skills: bool = False,
 ):
     target = Path(target_dir).resolve()
     changes = []
+
+    # Auto-detect lang when not explicitly given:
+    #   1. read [cogmem].lang from existing cogmem.toml (preserves user's choice)
+    #   2. fall back to "en" if nothing is persisted yet
+    # This prevents the bug where `cogmem migrate` (no flag) silently overwrites
+    # a project initialized with `--lang ja` back to "en".
+    if lang is None:
+        from .upgrade_cmd import get_user_lang
+        lang = get_user_lang(target)
 
     identity_dir = target / "identity"
     identity_dir.mkdir(parents=True, exist_ok=True)

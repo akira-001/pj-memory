@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-04-26
+
+### Fixed
+
+- **`cogmem migrate` no longer silently overwrites a persisted `lang` when `--lang` is omitted.** Before this fix, running `cogmem migrate` (no flag) on a project initialized with `--lang ja` would default to `lang="en"`, overwrite `[cogmem].lang` back to `"en"`, then run skill template sync against en templates and propose to overwrite all installed ja skills. Now `--lang` is auto-detected from `[cogmem].lang` in `cogmem.toml`, falling back to `"en"` only when nothing is persisted. Same fix applied to `cogmem skills update-templates`.
+- **`UnboundLocalError` on `Path` in `skills_update_cmd`** — caused by a function-scope `from pathlib import Path` shadowing the module-level import. Removed the redundant inline import.
+
+### Why
+
+A user running `cogmem migrate --lang ja` once, then later `cogmem migrate` (no flag) would lose their lang setting and trigger a destructive cross-language drift sweep. Auto-detect makes the no-flag form safe to repeat.
+
+### Behavior
+
+| Invocation | Resolved `lang` |
+|---|---|
+| `cogmem migrate --lang ja` | `"ja"` (explicit) |
+| `cogmem migrate` (no flag, persisted ja) | `"ja"` (auto-detected) |
+| `cogmem migrate` (no flag, no persisted lang) | `"en"` (default) |
+| `cogmem migrate --lang en` (on persisted ja) | `"en"` (explicit override — intentional language switch) |
+
+Same resolution order applies to `cogmem skills update-templates`.
+
 ## [0.28.0] - 2026-04-26
 
 ### Added

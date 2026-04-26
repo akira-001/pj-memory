@@ -105,7 +105,11 @@ def _prompt_user(name: str, old_skill: Path, new_skill: Path) -> str:
 
 def run_skills_update_templates(args: argparse.Namespace) -> int:
     """Entry point for `cogmem skills update-templates`. Returns exit code."""
-    lang = getattr(args, "lang", None) or "en"
+    lang = getattr(args, "lang", None)
+    if lang is None:
+        # Auto-detect from cogmem.toml in CWD; falls back to "en".
+        from .upgrade_cmd import get_user_lang
+        lang = get_user_lang(Path.cwd())
     dry_run = getattr(args, "dry_run", False)
     auto_yes = getattr(args, "auto_yes", False)
     target_skill = getattr(args, "skill", None)

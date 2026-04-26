@@ -67,8 +67,9 @@ def main(argv: list[str] | None = None):
     migrate_parser.add_argument("--dir", type=str, default=".", help="Target directory")
     migrate_parser.add_argument("--user-id", type=str, default=None,
                                 help="User ID for log isolation (prompts interactively if omitted)")
-    migrate_parser.add_argument("--lang", type=str, choices=["en", "ja"], default="en",
-                                help="Skill template language for the sync step (default: en)")
+    migrate_parser.add_argument("--lang", type=str, choices=["en", "ja"], default=None,
+                                help="Skill template language for the sync step. "
+                                     "If omitted, reads [cogmem].lang from cogmem.toml; falls back to 'en'.")
     migrate_parser.add_argument("--no-skills", action="store_true",
                                 help="Skip the skill template sync step")
     migrate_parser.add_argument("--auto-yes-skills", action="store_true",
@@ -201,8 +202,9 @@ def main(argv: list[str] | None = None):
         "update-templates",
         help="Update ~/.claude/skills/ from packaged templates (diff + per-skill confirm + backup)",
     )
-    skills_update_parser.add_argument("--lang", choices=["en", "ja"], default="en",
-                                      help="Template language (default: en)")
+    skills_update_parser.add_argument("--lang", choices=["en", "ja"], default=None,
+                                      help="Template language. If omitted, reads [cogmem].lang "
+                                           "from cogmem.toml; falls back to 'en'.")
     skills_update_parser.add_argument("--dry-run", action="store_true",
                                       help="Show diffs without applying any change")
     skills_update_parser.add_argument("--auto-yes", action="store_true",
@@ -338,7 +340,7 @@ def main(argv: list[str] | None = None):
         from .migrate_cmd import run_migrate
         run_migrate(
             args.dir, user_id=args.user_id,
-            lang=getattr(args, "lang", "en"),
+            lang=getattr(args, "lang", None),
             no_skills=getattr(args, "no_skills", False),
             auto_yes_skills=getattr(args, "auto_yes_skills", False),
         )
