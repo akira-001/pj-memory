@@ -402,6 +402,11 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
         toml_path.write_text(template, encoding="utf-8")
         print(msg["created"].format(toml_path))
 
+    # Persist user's chosen language so future upgrade-check / migrate know which
+    # template set the user is on (avoids cross-language drift false positives).
+    from .upgrade_cmd import set_cogmem_lang
+    set_cogmem_lang(toml_path, lang)
+
     # Write user_id to cogmem.local.toml (gitignored, per-user)
     local_toml_path = target / "cogmem.local.toml"
     local_toml_path.write_text(

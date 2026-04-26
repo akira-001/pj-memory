@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-04-26
+
+### Added
+
+- **`[cogmem].lang` persisted in `cogmem.toml`** — `cogmem init` and `cogmem migrate` now write the user's chosen template language (en / ja) into the project config. Future invocations of `upgrade-check` / `migrate` use this to scope drift detection to the actual language set, eliminating false positives.
+- **`get_user_lang()` / `set_cogmem_lang()` helpers** in `upgrade_cmd` for safe `[cogmem].lang` read/write.
+
+### Fixed
+
+- **`upgrade-check` no longer reports false skill drift on Japanese projects** — Previously `_count_skill_template_drift()` returned `max(en_drift, ja_drift)` because it didn't know the user's language. For a project that had been initialized with `--lang ja`, the en templates always differed from the installed ja skills, producing a noisy `skill_template_updates: 7` even after a clean migrate. Now the function reads `[cogmem].lang` and counts only that language's drift.
+- **`set_cogmem_lang()` does not fabricate a `[cogmem]` section** when one is absent. Existing third-party tomls are left untouched; lang persistence requires a valid section (always present in templates from `cogmem init`).
+
+### Upgrade guide
+
+Existing projects pick up the fix automatically on the first `cogmem migrate` after upgrading:
+
+```bash
+pip install -U cogmem-agent
+cogmem migrate --lang ja   # writes [cogmem].lang = "ja" into your cogmem.toml
+```
+
+After this, `cogmem upgrade-check --json` will report drift only for the language you actually use.
+
 ## [0.27.0] - 2026-04-26
 
 ### Added

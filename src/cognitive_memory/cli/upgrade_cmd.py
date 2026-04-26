@@ -13,6 +13,7 @@ the user with a single prompt, while staying out of the way otherwise:
 from __future__ import annotations
 
 import json
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -167,8 +168,9 @@ def run_upgrade_check(
 
     current = _version.__version__
     # Skill-template drift: independent of PyPI check, helps existing users pick up
-    # template improvements that `cogmem init` skip-protects.
-    skill_template_updates = _count_skill_template_drift()
+    # template improvements that `cogmem init` skip-protects. Scoped to the user's
+    # preferred language (read from cogmem.toml [cogmem].lang).
+    skill_template_updates = _count_skill_template_drift(base)
 
     result: dict[str, Any] = {
         "status": "up_to_date",
@@ -240,18 +242,66 @@ def mark_skip_until(base_dir: Path, days: int = 7) -> None:
         })
 
 
-def _count_skill_template_drift() -> int:
-    """Count installed skills whose SKILL.md differs from the packaged template.
+def get_user_lang(base_dir: Path | None = None) -> str:
+    """Read user's preferred language from `cogmem.toml [cogmem].lang`.
 
-    Returns 0 on any error (fail-open). Tries en first, then ja.
+    Falls back to 'en' if the file or key is missing. Used to scope drift detection
+    and other locale-aware operations to the user's actual installed templates.
+    """
+    base = base_dir or Path.cwd()
+    cfg = _read_toml(base / "cogmem.toml")
+    section = cfg.get("cogmem", {}) if isinstance(cfg.get("cogmem"), dict) else {}
+    lang = str(section.get("lang", "en")).lower()
+    return lang if lang in ("en", "ja") else "en"
+
+
+def set_cogmem_lang(toml_path: Path, lang: str) -> None:
+    """Set or update `[cogmem].lang` in cogmem.toml. Idempotent.
+
+    Preserves all other sections / keys; rewrites only the lang line under [cogmem].
+    """
+    if lang not in ("en", "ja"):
+        return
+    if not toml_path.exists():
+        return
+    text = toml_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    out: list[str] = []
+    in_cogmem = False
+    wrote_lang = False
+    for line in lines:
+        stripped = line.strip()
+        is_section_header = stripped.startswith("[") and stripped.endswith("]")
+        if is_section_header:
+            if in_cogmem and not wrote_lang:
+                out.append(f'lang = "{lang}"')
+                wrote_lang = True
+            in_cogmem = (stripped == "[cogmem]")
+        if in_cogmem and re.match(r'^\s*lang\s*=', line):
+            out.append(f'lang = "{lang}"')
+            wrote_lang = True
+            continue
+        out.append(line)
+    if in_cogmem and not wrote_lang:
+        out.append(f'lang = "{lang}"')
+        wrote_lang = True
+    if not wrote_lang:
+        # [cogmem] section not found — leave the file unchanged. Fabricating a
+        # section would surprise users who own the existing toml and could
+        # collide with malformed configs. Lang persistence requires a valid
+        # [cogmem] section (always present in templates from `cogmem init`).
+        return
+    toml_path.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+def _count_skill_template_drift(base_dir: Path | None = None) -> int:
+    """Count installed skills whose SKILL.md differs from the packaged template
+    in the user's preferred language. Returns 0 on any error (fail-open).
     """
     try:
         from .skills_update_cmd import detect_diffs
-        # Prefer the larger diff set (en or ja) — whichever has more drift is the
-        # one the user is most likely to care about. We don't know their lang here.
-        en_drift = len(detect_diffs(lang="en"))
-        ja_drift = len(detect_diffs(lang="ja"))
-        return max(en_drift, ja_drift)
+        lang = get_user_lang(base_dir)
+        return len(detect_diffs(lang=lang))
     except Exception:
         return 0
 

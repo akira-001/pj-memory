@@ -105,6 +105,14 @@ def run_migrate(
     # 5. Migrate user_id: add to cogmem.toml and move logs/contexts
     changes.extend(_migrate_user_id(target, user_id=user_id))
 
+    # 5.5. Persist [cogmem].lang for future upgrade-check / migrate calls
+    if toml_path.exists():
+        from .upgrade_cmd import get_user_lang, set_cogmem_lang
+        existing_lang = get_user_lang(target)
+        if existing_lang != lang:
+            set_cogmem_lang(toml_path, lang)
+            changes.append(f"Set [cogmem].lang = \"{lang}\" in cogmem.toml")
+
     # 6. Setup Claude Code hooks
     from .init_cmd import setup_hooks
     claude_dir = target / ".claude"
