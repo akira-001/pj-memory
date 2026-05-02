@@ -92,7 +92,7 @@ cogmem search "<keywords from current context>"
 
 ## Step 5: Token budget check
 
-Target: 6k tokens total. Recommend `/compact` if exceeded.
+Target: 6k tokens total. Recommend `/compact-logs` if exceeded.
 
 ## Step 6: Upgrade check (24h cached, fail-open)
 

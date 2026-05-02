@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.1] - 2026-05-02
+
+### Changed
+
+- **Rename `compact` skill to `compact-logs`** — avoids conflict with Claude Code's native `/compact` command (conversation history compression). The new `/compact-logs` skill compresses `memory/logs/` files on disk and is a distinct operation. Updated references in `session-init` templates (both `en` and `ja`) and `docs/configuration.md`.
+
+### Added
+
+- **`compact-logs` skill templates** — added `templates/skills/compact-logs/SKILL.md` and `templates/ja/skills/compact-logs/SKILL.md` so the skill is distributed to new installations via `cogmem init`.
+
 ## [0.30.0] - 2026-04-26
 
 ### Documentation

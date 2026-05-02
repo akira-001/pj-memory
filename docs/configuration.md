@@ -81,7 +81,7 @@ Controls how session initialization loads context from recent logs.
 |-----|------|---------|-------------|
 | `recent_logs` | integer | `2` | Number of recent log files to read during Session Init. |
 | `prefer_compact` | boolean | `true` | When `true`, prefer `.compact.md` files over full logs if they exist. Reduces token usage. |
-| `token_budget` | integer | `6000` | Target token budget for Session Init context. If exceeded, the agent recommends running `/compact`. |
+| `token_budget` | integer | `6000` | Target token budget for Session Init context. If exceeded, the agent recommends running `/compact-logs`. |
 
 ---
 

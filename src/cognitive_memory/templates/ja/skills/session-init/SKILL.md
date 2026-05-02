@@ -92,7 +92,7 @@ cogmem search "<現在の会話コンテキストのキーワード>"
 
 ## Step 5: トークン予算チェック
 
-目標: 合計 6k tokens。超過時は `/compact` を推奨。
+目標: 合計 6k tokens。超過時は `/compact-logs` を推奨。
 
 ## Step 6: アップグレード確認（24hキャッシュ、fail-open）
 
