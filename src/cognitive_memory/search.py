@@ -220,15 +220,21 @@ def merge_and_dedup(
     seen: set = set()
     merged: List[SearchResult] = []
 
+    # Build set of semantic content keys so we can prefer semantic over a
+    # duplicate grep hit (semantic carries cosine context).
+    sem_keys = {r.content[:100] for r in semantic_results}
+
     grep_quota = max(1, top_k // 3) if grep_results else 0
 
     # 1. Reserve top grep slots first (especially grep_uncovered which won't
-    #    survive a pure score sort against semantic results).
+    #    survive a pure score sort against semantic results). Skip grep entries
+    #    that duplicate a semantic result — the semantic version takes priority.
     for r in grep_results[:grep_quota]:
         key = r.content[:100]
-        if key not in seen:
-            seen.add(key)
-            merged.append(r)
+        if key in sem_keys or key in seen:
+            continue
+        seen.add(key)
+        merged.append(r)
 
     # 2. Fill remaining slots from combined pool, semantic-first dedup.
     pool = semantic_results + grep_results[grep_quota:]

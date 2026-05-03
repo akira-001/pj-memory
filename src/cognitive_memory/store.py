@@ -202,12 +202,24 @@ class MemoryStore:
         return stored
 
     def index_dir(self, force: bool = False) -> int:
-        """Index all log files in the configured logs directory."""
-        logs_dir = self.config.logs_path
-        if not logs_dir.exists():
+        """Index all log files across configured logs paths (per-user + root)."""
+        # Collect *.md from all configured paths, dedup by absolute path so
+        # overlapping per-user/root scopes don't index the same file twice.
+        all_files: list[Path] = []
+        seen_files: set = set()
+        for logs_dir in self.config.logs_paths:
+            if not logs_dir.exists():
+                continue
+            for fp in logs_dir.glob("*.md"):
+                key = fp.resolve()
+                if key in seen_files:
+                    continue
+                seen_files.add(key)
+                all_files.append(fp)
+        if not all_files:
             return 0
 
-        files = sorted(logs_dir.glob("*.md"))
+        files = sorted(all_files)
         # Prefer original .md over .compact.md; use compact only when
         # the original has 0 indexed entries (e.g. old format logs).
         regular = {f.stem: f for f in files if not f.name.endswith(".compact.md")}
@@ -251,6 +263,29 @@ class MemoryStore:
             if result.content_hash is not None:
                 self.reinforce_recall(result.content_hash)
 
+    def _grep_all_paths(self, query: str, top_k: int) -> List[SearchResult]:
+        """grep across all configured logs paths (per-user + root)."""
+        seen_files: set = set()
+        all_results: List[SearchResult] = []
+        for logs_dir in self.config.logs_paths:
+            # Avoid re-scanning the same file when paths overlap
+            if logs_dir in seen_files:
+                continue
+            seen_files.add(logs_dir)
+            results = grep_search(query, logs_dir, self.config, top_k)
+            all_results.extend(results)
+        # Dedup by content prefix (same entry might surface from overlapping dirs)
+        seen_content: set = set()
+        deduped: List[SearchResult] = []
+        all_results.sort(key=lambda x: x.score, reverse=True)
+        for r in all_results:
+            key = r.content[:100]
+            if key in seen_content:
+                continue
+            seen_content.add(key)
+            deduped.append(r)
+        return deduped[:top_k]
+
     def _execute_search(self, query: str, top_k: int = 5) -> SearchResponse:
         """Core search pipeline: semantic+grep → merge. FailOpen on embed failure.
 
@@ -263,9 +298,7 @@ class MemoryStore:
                 query_vec, self.config.database_path, self.config, top_k
             )
             if sem_status == "ok":
-                grep_results = grep_search(
-                    query, self.config.logs_path, self.config, top_k
-                )
+                grep_results = self._grep_all_paths(query, top_k)
                 merged = merge_and_dedup(grep_results, sem_results, top_k)
                 return SearchResponse(results=merged, status="ok")
             # Semantic partially failed (no_index, db_error) — fall through to grep
@@ -274,7 +307,7 @@ class MemoryStore:
             status_reason = "ollama_unavailable"
 
         # failOpen: fall back to grep
-        grep_results = grep_search(query, self.config.logs_path, self.config, top_k)
+        grep_results = self._grep_all_paths(query, top_k)
         return SearchResponse(
             results=grep_results, status=f"degraded ({status_reason})"
         )

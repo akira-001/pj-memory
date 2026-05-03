@@ -144,6 +144,7 @@ class CogMemConfig:
 
     @property
     def logs_path(self) -> Path:
+        """Primary logs path (per-user dir if user_id set, else root logs dir)."""
         p = Path(self.logs_dir)
         if p.is_absolute():
             base = p
@@ -152,6 +153,29 @@ class CogMemConfig:
         if self.user_id:
             return base / self.user_id
         return base
+
+    @property
+    def logs_paths(self) -> "list[Path]":
+        """All logs paths to scan (per-user dir + root dir if user_id set).
+
+        When `user_id` is configured, search/index covers BOTH the per-user
+        subdirectory AND the parent (root) logs directory. This lets queries
+        find legacy logs that pre-date per-user isolation, while still
+        respecting the per-user write target via `logs_path`.
+        """
+        p = Path(self.logs_dir)
+        if p.is_absolute():
+            base = p
+        else:
+            base = Path(self._base_dir) / self.logs_dir
+        paths: "list[Path]" = []
+        if self.user_id:
+            per_user = base / self.user_id
+            if per_user != base:
+                paths.append(per_user)
+        if base not in paths:
+            paths.append(base)
+        return paths
 
     @property
     def database_path(self) -> Path:
