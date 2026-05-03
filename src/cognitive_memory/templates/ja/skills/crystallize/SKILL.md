@@ -21,20 +21,31 @@ user-invocable: true
 
 ## 実行手順
 
-### Step 1: ログスキャン（Read）
+### Step 1: ログスキャン（本日+直近のみ、過去ログは Read しない）
 
-```
-対象ログファイルを全て読み込む
-以下のエントリを抽出:
+**対象を限定する**（全期間 Read 禁止）:
+- 本日のログ `memory/logs/YYYY-MM-DD.md` を Read
+- 前回の結晶化以降に複数日経過している場合のみ、追加で **直近2日分まで** を Read
+- それ以前のログは Read してはならない（cogmem index で indexed 済み、必要な時は `cogmem search` で検索）
+
+抽出するエントリ:
 - [PATTERN] エントリ（繰り返しテーマ）
 - [ERROR] エントリ（ミスパターン）
 - [INSIGHT] エントリ（価値ある洞察）
 - [DECISION] エントリ（重要な意思決定）
-```
 
 **【Cognitive Memory: 睡眠とスキーマ生成の準備】**
 - 各エントリの `Arousal` 値を評価し、Arousalの高い記憶断片を優先的に処理対象とする。
 - 類似度の高いエントリ群（クラスタ）を特定する。
+
+### Step 1.5: 既存ファイルの重複チェック（tail / grep のみ、全 Read 禁止）
+
+重複検出と次の番号取得が目的。過去エントリを **全 Read してはならない**:
+- `memory/knowledge/error-patterns.md` の末尾 30行のみ Read → 直近 EP-N 番号と最新パターン名を確認
+- `memory/insights.md` の末尾 20行のみ Read → 直近 INS-N 番号を確認
+- 重複候補があるキーワードのみ `grep -n "<keyword>" memory/knowledge/error-patterns.md` で該当部分のみ確認
+
+これにより crystallize の Read 量を削減し、wrap の所要時間を短縮する（過去ファイル全 Read = 数百行 → 末尾 30〜50行）。
 
 ### Step 2: パターン統合（再固定化とスキーマ化）
 

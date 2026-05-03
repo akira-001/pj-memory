@@ -13,15 +13,29 @@ user-invocable: true
 
 ## Steps
 
-### Step 1: Scan logs
+### Step 1: Scan logs (today + recent only — DO NOT read full history)
 
-Scan all log files and extract entries by category:
+**Limit scope** (full-history Read is forbidden):
+- Read today's log `memory/logs/YYYY-MM-DD.md`
+- If multiple days have passed since last crystallization, also Read **up to 2 most recent days**
+- Older logs MUST NOT be Read (they are already indexed by `cogmem index`; use `cogmem search` if needed)
+
+Extract entries by category:
 - `[PATTERN]` — recurring themes
 - `[ERROR]` — judgment errors, broken assumptions
 - `[INSIGHT]` — valuable realizations
 - `[DECISION]` — important decisions
 
 Prioritize high-Arousal memory fragments.
+
+### Step 1.5: Duplicate check on existing files (tail / grep only — DO NOT full-read)
+
+Goal: detect duplicates and get next sequence number. Past entries MUST NOT be fully Read:
+- Read only the **last 30 lines** of `memory/error-patterns.md` → confirm latest EP-N number and recent pattern names
+- Read only the **last 20 lines** of `memory/insights.md` → confirm latest INS-N number
+- For potential duplicates, run `grep -n "<keyword>" memory/error-patterns.md` to inspect the relevant section only
+
+This drastically reduces Read tokens during wrap (full history = hundreds of lines → tail of 30〜50 lines).
 
 ### Step 2: Pattern integration
 
