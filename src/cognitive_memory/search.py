@@ -82,7 +82,15 @@ def grep_search(
     config: CogMemConfig,
     top_k: int = 5,
 ) -> List[SearchResult]:
-    """Keyword search over raw log files (grep-equivalent)."""
+    """Keyword search over raw log files (grep-equivalent).
+
+    Two-pass strategy:
+      1. Entry-level: parse_entries で得た [TYPE] エントリ単位でマッチ。
+         既存の content_hash 紐付けと arousal 維持。
+      2. Uncovered-line rescue: parse_entries が拾えなかった行（エントリ境界外の
+         地の文）を救済。マッチ行の前後3行を context として返す。これで parser の
+         取りこぼし（subsection、説明文、bullet 等）も検索可能になる。
+    """
     results: List[SearchResult] = []
     keywords = [k.strip() for k in query.split() if k.strip()]
     if not keywords:
@@ -112,6 +120,8 @@ def grep_search(
         md_text = fp.read_text(encoding="utf-8")
         parsed = list(parse_entries(md_text, date, config.handover_delimiter))
 
+        # Pass 1: entry-level grep
+        matched_contents: set = set()
         for entry in parsed:
             if any(k.lower() in entry.content.lower() for k in keywords):
                 # Reverse lookup content_hash from DB
@@ -143,6 +153,49 @@ def grep_search(
                         content_hash=found_hash,
                     )
                 )
+                matched_contents.add(entry.content)
+
+        # Pass 2: rescue lines that parse_entries did NOT cover
+        # parser miss patterns: subsections, free text between entries, etc.
+        covered_text = "\n".join(e.content for e in parsed)
+        lines = md_text.split("\n")
+        seen_ctx: set = set()
+        for line_idx, line in enumerate(lines):
+            if not any(k.lower() in line.lower() for k in keywords):
+                continue
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Already covered by an entry → skip
+            if stripped and stripped in covered_text:
+                continue
+            # Build ±3 line context
+            start = max(0, line_idx - 3)
+            end = min(len(lines), line_idx + 4)
+            ctx = "\n".join(lines[start:end]).strip()
+            if not ctx or ctx in seen_ctx or ctx in matched_contents:
+                continue
+            seen_ctx.add(ctx)
+            # Use default arousal (0.5) for uncovered lines — no entry header
+            uncovered_arousal = 0.5
+            decay = time_decay(
+                date,
+                uncovered_arousal,
+                base_half_life=config.base_half_life,
+                floor=config.decay_floor,
+            )
+            # Penalize uncovered context slightly so entry-level matches rank higher
+            score = config.arousal_weight * uncovered_arousal * decay * 0.7
+            results.append(
+                SearchResult(
+                    score=round(score, 4),
+                    date=date,
+                    content=ctx,
+                    arousal=uncovered_arousal,
+                    source="grep_uncovered",
+                    content_hash=None,
+                )
+            )
 
     if db_conn is not None:
         db_conn.close()
@@ -156,16 +209,36 @@ def merge_and_dedup(
     semantic_results: List[SearchResult],
     top_k: int = 5,
 ) -> List[SearchResult]:
-    """Merge grep and semantic results, dedup by content prefix."""
+    """Merge grep and semantic results with quota guarantee + dedup.
+
+    Score systems differ between semantic (cosine 0–1) and grep (arousal*decay,
+    typically 0.05–0.3). Pure score sort lets semantic always win, hiding grep
+    matches that are exact-keyword hits. To preserve recall on short keyword
+    queries, reserve at least ⌈top_k/3⌉ slots for grep results (esp. uncovered
+    rescue lines that the parser missed).
+    """
     seen: set = set()
     merged: List[SearchResult] = []
 
-    # semantic results have priority
-    for r in semantic_results + grep_results:
+    grep_quota = max(1, top_k // 3) if grep_results else 0
+
+    # 1. Reserve top grep slots first (especially grep_uncovered which won't
+    #    survive a pure score sort against semantic results).
+    for r in grep_results[:grep_quota]:
         key = r.content[:100]
         if key not in seen:
             seen.add(key)
             merged.append(r)
 
-    merged.sort(key=lambda x: x.score, reverse=True)
+    # 2. Fill remaining slots from combined pool, semantic-first dedup.
+    pool = semantic_results + grep_results[grep_quota:]
+    pool.sort(key=lambda x: x.score, reverse=True)
+    for r in pool:
+        if len(merged) >= top_k:
+            break
+        key = r.content[:100]
+        if key not in seen:
+            seen.add(key)
+            merged.append(r)
+
     return merged[:top_k]
