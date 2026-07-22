@@ -69,6 +69,7 @@ cogmem skills track-summary --date YYYY-MM-DD --json
 
 - If `signals` conditions are met → read `crystallize` skill and execute (no confirmation needed)
 - Record "crystallization completed" in handoff if executed
+- Keep the `summary_health` field from the `signals` output for Step 4
 
 ## Step 3.5: Ingest skill-creator benchmarks
 
@@ -112,7 +113,19 @@ d. If candidates exist (2+ occurrences from `cogmem skills suggest` + `--auto-su
    - YAML frontmatter (name, description) required for new skills
    - Record in handoff: "New skill created: [name] (suggest Nx)"
 
-## Step 4: Update memory/knowledge/summary.md (if changes exist)
+## Step 4: Update memory/knowledge/summary.md (index only — pruning guard)
+
+summary.md is loaded in full every session. It is an **index of durable knowledge, not a session archive**. When updating it:
+
+- **Never copy session summaries into summary.md.** They already live in `memory/logs/` (Step 1) and `memory/contexts/` (Step 2.5).
+- **Never demote the previous summary to a `*[prior]*` block.** Keep at most `summary_prior_sessions` (cogmem.toml, default 0) prior blocks; delete the excess — the content is preserved in logs.
+- **Never inline INS/EP full text.** Durable knowledge goes to `insights.md` / `error-patterns.md` via crystallize; summary.md holds 1-line pointers only.
+- Update only: Established Principles (cross-cutting rules), Infrastructure/Stack facts, and pointers.
+
+**Pruning guard**: check `summary_health` in the Step 3 `cogmem signals` output. If `needs_pruning` is true (size > `summary_max_kb` or prior blocks over cap):
+1. Rescue any knowledge that exists only in summary.md into `insights.md` / `error-patterns.md`
+2. Delete old `*[prior]*` blocks and stale Active Projects entries
+3. Record "summary.md pruned: NNkB → NNkB" in the handoff
 
 ## Step 4.5: Identity update
 

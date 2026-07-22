@@ -12,6 +12,9 @@ user = "identity/user.md"
 [cogmem.knowledge]
 summary = "memory/knowledge/summary.md"
 error_patterns = "memory/knowledge/error-patterns.md"
+insights = "memory/knowledge/insights.md"
+summary_max_kb = 60         # wrap warns when summary.md exceeds this size (0 = disable)
+summary_prior_sessions = 0  # max *[prior]* session summaries kept in summary.md
 
 [cogmem.session]
 recent_logs = 2

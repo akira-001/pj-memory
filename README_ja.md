@@ -265,8 +265,9 @@ your-project/
     ├── contexts/                # デイリーコンテキストファイル
     ├── skills.db                # スキル使用データと学習データ
     └── knowledge/
-        ├── summary.md           # 結晶化された知識
-        └── error-patterns.md    # 繰り返すエラーパターン
+        ├── summary.md           # 結晶化知識の索引（サイズ guard 付き）
+        ├── insights.md          # 恒久インサイト（INS-NNN、本文の正本）
+        └── error-patterns.md    # 繰り返すエラーパターン（EP-NNN、本文の正本）
 ```
 
 CLAUDE.md は最小限 — identity と knowledge ファイルへの `@参照` のみ。すべての行動プロトコルは `identity/agents.md` にあるため、フレームワークに触れずにカスタマイズできます。
@@ -319,7 +320,7 @@ Ollama を導入すると、検索が「完全一致のキーワード検索」�
 cogmem init                                  # プロジェクト初期化（既存プロジェクトでは migrate に誘導）
 cogmem index                                 # インデックスの構築・更新
 cogmem search "過去の意思決定"                # 記憶を検索
-cogmem signals                               # 結晶化シグナルのチェック
+cogmem signals                               # 結晶化シグナル + summary.md 健全性チェック（サイズ / prior 肥大）
 cogmem context-search "クエリ"               # コンテキスト検索（フラッシュバックフィルタ付き）
 cogmem status                                # 統計情報を表示
 cogmem migrate                               # プロジェクトファイル + skill template を同期（lang は自動検出）

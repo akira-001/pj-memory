@@ -6,10 +6,11 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .config import CogMemConfig
 from .parser import parse_entries
+from .summary_health import check_summary_health
 
 
 @dataclass
@@ -29,9 +30,12 @@ class CrystallizationSignals:
     log_days_threshold: int = 10
     checkpoint_interval_days: int = 21
 
+    # Knowledge summary.md bloat check (wrap reads this to decide pruning)
+    summary_health: Optional[dict] = None
+
     def to_dict(self) -> dict:
         """Serialize to a plain dict for JSON output."""
-        return {
+        result = {
             "should_crystallize": self.should_crystallize,
             "pattern_count": self.pattern_count,
             "error_count": self.error_count,
@@ -45,6 +49,9 @@ class CrystallizationSignals:
                 "checkpoint_interval_days": self.checkpoint_interval_days,
             },
         }
+        if self.summary_health is not None:
+            result["summary_health"] = self.summary_health
+        return result
 
 
 def check_signals(config: CogMemConfig) -> CrystallizationSignals:
@@ -90,6 +97,7 @@ def check_signals(config: CogMemConfig) -> CrystallizationSignals:
         error_threshold=config.error_threshold,
         log_days_threshold=config.log_days_threshold,
         checkpoint_interval_days=config.checkpoint_interval_days,
+        summary_health=check_summary_health(config).to_dict(),
     )
 
     # Check conditions

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from datetime import date
 
 import pytest
 
@@ -17,9 +18,12 @@ requires_ollama = pytest.mark.skipif(
     reason="Ollama not running",
 )
 
+# ログ日付は実行日にする。固定日付だと time_decay がカレンダー進行とともに
+# スコアを下げ続け、閾値アサーションがいずれ必ず腐るため。
+TODAY = date.today().isoformat()
 
-VIVID_MILESTONE = """\
-# 2026-03-26 セッションログ
+VIVID_MILESTONE = f"""\
+# {TODAY} セッションログ
 
 ## セッション概要
 
@@ -38,8 +42,8 @@ TDD で21テスト、シグナル表・チェックポイント・エラーパ�
 """
 
 # 比較用: 鮮明でない記録（旧名なし）
-FLAT_MILESTONE = """\
-# 2026-03-26 セッションログ
+FLAT_MILESTONE = f"""\
+# {TODAY} セッションログ
 
 ## セッション概要
 
@@ -62,7 +66,7 @@ class TestDejaVuSearch:
     def _build_store(self, tmp_path, log_content):
         logs_dir = tmp_path / "memory" / "logs"
         logs_dir.mkdir(parents=True)
-        log_file = logs_dir / "2026-03-26.md"
+        log_file = logs_dir / f"{TODAY}.md"
         log_file.write_text(log_content, encoding="utf-8")
         (tmp_path / "cogmem.toml").write_text(
             '[cogmem]\nlogs_dir = "memory/logs"\ndb_path = "memory/vectors.db"\n',

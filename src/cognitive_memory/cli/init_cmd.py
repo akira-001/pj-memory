@@ -453,7 +453,7 @@ def run_init(target_dir: str = ".", lang: str | None = None, user_id: str | None
     knowledge_dir = target / "memory" / "knowledge"
     knowledge_dir.mkdir(parents=True, exist_ok=True)
 
-    for fname in ("summary.md", "error-patterns.md"):
+    for fname in ("summary.md", "error-patterns.md", "insights.md"):
         dest = knowledge_dir / fname
         if not dest.exists():
             src = tmpl_dir / fname

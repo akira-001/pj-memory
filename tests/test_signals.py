@@ -138,3 +138,27 @@ class TestCrystallizationSignalsDict:
         assert "conditions" in d
         assert d["should_crystallize"] is True
         assert d["conditions"]["pattern_threshold"] == 3
+
+
+class TestSummaryHealthInSignals:
+    """summary_health is included in check_signals output for wrap."""
+
+    def test_signals_include_summary_health(self, tmp_path):
+        logs = tmp_path / "memory" / "logs"
+        logs.mkdir(parents=True)
+        summary = tmp_path / "memory" / "knowledge" / "summary.md"
+        summary.parent.mkdir(parents=True)
+        summary.write_text("# Summary\n\n## 2026-07-01 *[prior]*\nold\n")
+        config = CogMemConfig(
+            logs_dir=str(logs), _base_dir=str(tmp_path),
+            last_checkpoint=date.today().isoformat(),
+        )
+        result = check_signals(config)
+        d = result.to_dict()
+        assert "summary_health" in d
+        assert d["summary_health"]["prior_count"] == 1
+        assert d["summary_health"]["needs_pruning"] is True
+
+    def test_to_dict_omits_summary_health_when_unset(self):
+        d = CrystallizationSignals().to_dict()
+        assert "summary_health" not in d

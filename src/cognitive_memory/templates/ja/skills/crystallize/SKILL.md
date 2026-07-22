@@ -41,13 +41,15 @@ user-invocable: true
 ### Step 1.5: 既存ファイルの重複チェック（tail / grep のみ、全 Read 禁止）
 
 重複検出と次の番号取得が目的。過去エントリを **全 Read してはならない**:
-- `memory/knowledge/error-patterns.md` の末尾 30行のみ Read → 直近 EP-N 番号と最新パターン名を確認
-- `memory/insights.md` の末尾 20行のみ Read → 直近 INS-N 番号を確認
-- 重複候補があるキーワードのみ `grep -n "<keyword>" memory/knowledge/error-patterns.md` で該当部分のみ確認
+- `error-patterns.md` の末尾 30行のみ Read → 直近 EP-N 番号と最新パターン名を確認
+- `insights.md` の末尾 20行のみ Read → 直近 INS-N 番号を確認
+- 重複候補があるキーワードのみ `grep -n "<keyword>" <ファイル>` で該当部分のみ確認
+
+ファイルパスは cogmem.toml の `[cogmem.knowledge]` に従う（既定: `memory/knowledge/insights.md`、`memory/knowledge/error-patterns.md`）。ファイルが未作成なら新規作成する。
 
 これにより crystallize の Read 量を削減し、wrap の所要時間を短縮する（過去ファイル全 Read = 数百行 → 末尾 30〜50行）。
 
-### Step 2: パターン統合（再固定化とスキーマ化）
+### Step 2: パターン統合（再固定化とスキーマ化）— 本文はアーカイブへ、summary への畳込み禁止
 
 **[PATTERN] の処理 (Schema Generation)**:
 - 同一テーマのエントリ（完全部分グラフを形成する記憶クラスタ）をグルーピング
@@ -55,13 +57,14 @@ user-invocable: true
 - スキルレベルの知識として昇格候補を選定（出現3回以上）
 
 **[ERROR] の処理 (Reconsolidation / Interference Forgetting)**:
-- `memory/error-patterns.md` に EP-NNN フォーマットで追記
+- `error-patterns.md` に EP-NNN フォーマットで追記
 - 既存パターンとの重複チェック（重複なら出現回数を更新）
 - **干渉忘却**: 新しい[ERROR]パターンによって古い仮説が完全に否定された場合、古い知識の重要度を意図的に下げる（または打ち消し線を引く）。
 
-**[INSIGHT] の処理**:
-- `memory/insights.md` に INS-NNN フォーマットで追記
+**[INSIGHT] / [DECISION] の処理**:
+- `insights.md` に INS-NNN フォーマットで追記
 - ドメインタグによりカテゴリ分類
+- 既存エントリとの重複チェック（重複なら更新・マージ）
 
 ### Step 3: スキル更新
 
@@ -70,13 +73,18 @@ user-invocable: true
 - 仮説レベルの知識は「Hypothesis」セクションへ
 - アンチパターンは「Avoid」セクションへ
 
-### Step 4: MEMORY.md 更新
+### Step 4: MEMORY.md / summary.md 更新（索引限定）
 
 `memory/MEMORY.md` を更新:
 - 「確立された判断原則」セクションに新原則を追記
 - 「Akiraの評価軸」を観察から更新
 - 「繰り返すミスのパターン」のサマリーを更新
 - 「活性化されたスキル」の状態を更新
+
+`memory/knowledge/summary.md` は毎セッション全文ロードされる**索引**であり、アーカイブではない:
+- 横断的な原則のみ「確立された判断原則」に追記（各 1〜2 行）
+- 新規 INS/EP には **1 行ポインタまで**（例: `INS-042: <タイトル> → insights.md`）
+- **禁止**: INS/EP 本文の summary.md へのインライン畳込み、セッション経緯や `*[prior]*` ブロックの追記。本文は上記アーカイブファイルが正本。
 
 ### Step 5: チェックポイント記録
 

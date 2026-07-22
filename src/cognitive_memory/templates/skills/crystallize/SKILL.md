@@ -31,13 +31,15 @@ Prioritize high-Arousal memory fragments.
 ### Step 1.5: Duplicate check on existing files (tail / grep only — DO NOT full-read)
 
 Goal: detect duplicates and get next sequence number. Past entries MUST NOT be fully Read:
-- Read only the **last 30 lines** of `memory/error-patterns.md` → confirm latest EP-N number and recent pattern names
-- Read only the **last 20 lines** of `memory/insights.md` → confirm latest INS-N number
-- For potential duplicates, run `grep -n "<keyword>" memory/error-patterns.md` to inspect the relevant section only
+- Read only the **last 30 lines** of `error-patterns.md` → confirm latest EP-N number and recent pattern names
+- Read only the **last 20 lines** of `insights.md` → confirm latest INS-N number
+- For potential duplicates, run `grep -n "<keyword>" <file>` to inspect the relevant section only
+
+File paths follow `[cogmem.knowledge]` in cogmem.toml (default: `memory/knowledge/insights.md`, `memory/knowledge/error-patterns.md`). If a file does not exist yet, create it.
 
 This drastically reduces Read tokens during wrap (full history = hundreds of lines → tail of 30〜50 lines).
 
-### Step 2: Pattern integration
+### Step 2: Archive integration (full text goes to archive files — NEVER to summary.md)
 
 **[PATTERN] processing:**
 - Group entries on the same theme (3+ occurrences)
@@ -45,13 +47,20 @@ This drastically reduces Read tokens during wrap (full history = hundreds of lin
 - Select candidates for promotion to skill-level knowledge
 
 **[ERROR] processing:**
-- Append to `memory/error-patterns.md` in EP-NNN format
+- Append to `error-patterns.md` in EP-NNN format
 - Check for duplicates with existing patterns (update count if duplicate)
 
-### Step 3: Update memory/knowledge/summary.md
+**[INSIGHT] / [DECISION] processing:**
+- Append durable insights and decisions to `insights.md` in INS-NNN format
+- Check for duplicates with existing entries (update/merge if duplicate)
 
-Add new principles to "Established Judgment Principles" section.
-Update error pattern summary.
+### Step 3: Update memory/knowledge/summary.md (index only)
+
+summary.md is loaded in full every session — it is an **index**, not an archive:
+- Add genuinely cross-cutting rules to "Established Principles" (1-2 lines each)
+- For new INS/EP entries, add a **1-line pointer at most** (e.g. `INS-042: <title> → insights.md`)
+- **FORBIDDEN**: inlining full INS/EP text into summary.md, or appending session
+  narrative / `*[prior]*` blocks. The full text lives in the archive files above.
 
 ### Step 4: Record checkpoint
 
@@ -82,7 +91,8 @@ Applied automatically to consolidated logs:
 **Entries**: N total
 **Updates**:
   - error-patterns.md: +N entries (total N)
-  - summary.md: N principles added
+  - insights.md: +N entries (total N)
+  - summary.md: N principles / pointers added
 **Next checkpoint**: when conditions are met again
 ```
 

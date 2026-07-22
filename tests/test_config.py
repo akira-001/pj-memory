@@ -425,3 +425,35 @@ skills = ["cron-automation"]
         assert len(config.skill_triggers) == 2
         assert config.skill_triggers[0]["pattern"] == "src/dashboard/**"
         assert config.skill_triggers[0]["skills"] == ["tdd-dashboard-dev"]
+
+
+class TestKnowledgeSummaryConfig:
+    def test_defaults(self):
+        """Default knowledge insights / summary-limit values are correct."""
+        cfg = CogMemConfig()
+        assert cfg.knowledge_insights == "memory/knowledge/insights.md"
+        assert cfg.summary_max_kb == 60
+        assert cfg.summary_prior_sessions == 0
+
+    def test_from_toml_knowledge_section(self, tmp_path):
+        """[cogmem.knowledge] insights / summary limits are parsed."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text(
+            """
+[cogmem.knowledge]
+insights = "memory/insights.md"
+summary_max_kb = 40
+summary_prior_sessions = 3
+"""
+        )
+        config = CogMemConfig.from_toml(toml_file)
+        assert config.knowledge_insights == "memory/insights.md"
+        assert config.summary_max_kb == 40
+        assert config.summary_prior_sessions == 3
+
+    def test_insights_path_property(self, tmp_path):
+        """knowledge_insights_path resolves relative to base dir."""
+        toml_file = tmp_path / "cogmem.toml"
+        toml_file.write_text("[cogmem]\n")
+        config = CogMemConfig.from_toml(toml_file)
+        assert config.knowledge_insights_path == tmp_path / "memory" / "knowledge" / "insights.md"

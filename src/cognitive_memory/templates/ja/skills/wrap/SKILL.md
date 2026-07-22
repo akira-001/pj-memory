@@ -69,6 +69,7 @@ cogmem skills track-summary --date YYYY-MM-DD --json  # スキル改善判定
 
 - `signals` が条件を満たす場合 → `crystallize` スキルを読んで実行（確認不要）
 - 実行した場合、引き継ぎに「記憶の定着実施済み」と記録
+- `signals` 出力の `summary_health` フィールドは Step 4 で使うため保持しておく
 
 ## Step 3.5: skill-creator benchmark 取り込み
 
@@ -116,7 +117,19 @@ d. 候補がある場合（2回以上の繰り返しパターン — `cogmem ski
    - スキル作成時は YAML frontmatter（name, description）必須
    - 引き継ぎに「スキル新規作成: [名前]（suggest N回）」と記録
 
-## Step 4: memory/knowledge/summary.md を更新（変化があれば）
+## Step 4: memory/knowledge/summary.md を更新（索引限定 — 剪定 guard）
+
+summary.md は毎セッション全文ロードされる。**恒久知識の索引であり、セッションアーカイブではない**。更新時のルール:
+
+- **セッション要約を summary.md にコピーしない。** 正本は `memory/logs/`（Step 1）と `memory/contexts/`（Step 2.5）。
+- **旧要約を `*[prior]*` ブロックとして残さない。** prior は `summary_prior_sessions`（cogmem.toml、既定 0）件まで。超過分は削除する — 内容は logs に保存済み。
+- **INS/EP の本文をインライン畳込みしない。** 恒久知識は crystallize 経由で `insights.md` / `error-patterns.md` へ。summary.md には 1 行ポインタのみ。
+- 更新してよいのは: 確立された判断原則（横断ルール）、インフラ/スタック情報、ポインタのみ。
+
+**剪定 guard**: Step 3 の `cogmem signals` 出力の `summary_health` を確認。`needs_pruning` が true（サイズ > `summary_max_kb` または prior 件数超過）の場合:
+1. summary.md にしか存在しない知識を `insights.md` / `error-patterns.md` へ救出
+2. 古い `*[prior]*` ブロックと陳腐化したアクティブプロジェクト項目を削除
+3. 引き継ぎに「summary.md 剪定: NNkB → NNkB」と記録
 
 ## Step 4.5: Identity 更新
 

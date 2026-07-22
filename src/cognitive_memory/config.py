@@ -35,6 +35,9 @@ _DEFAULTS = {
     # Knowledge
     "knowledge_summary": "memory/knowledge/summary.md",
     "knowledge_error_patterns": "memory/knowledge/error-patterns.md",
+    "knowledge_insights": "memory/knowledge/insights.md",
+    "summary_max_kb": 60,
+    "summary_prior_sessions": 0,
     # Session
     "contexts_dir": "memory/contexts",
     "recent_logs": 2,
@@ -100,6 +103,9 @@ class CogMemConfig:
     # Knowledge paths
     knowledge_summary: str = _DEFAULTS["knowledge_summary"]
     knowledge_error_patterns: str = _DEFAULTS["knowledge_error_patterns"]
+    knowledge_insights: str = _DEFAULTS["knowledge_insights"]
+    summary_max_kb: int = _DEFAULTS["summary_max_kb"]
+    summary_prior_sessions: int = _DEFAULTS["summary_prior_sessions"]
 
     # Session
     contexts_dir: str = _DEFAULTS["contexts_dir"]
@@ -229,6 +235,13 @@ class CogMemConfig:
             return p
         return Path(self._base_dir) / self.knowledge_error_patterns
 
+    @property
+    def knowledge_insights_path(self) -> Path:
+        p = Path(self.knowledge_insights)
+        if p.is_absolute():
+            return p
+        return Path(self._base_dir) / self.knowledge_insights
+
     @staticmethod
     def _resolve_identity_soul(identity: dict) -> str:
         """Resolve soul path with backward compat for 'agent' key."""
@@ -314,6 +327,15 @@ class CogMemConfig:
             ),
             knowledge_error_patterns=knowledge.get(
                 "error_patterns", _DEFAULTS["knowledge_error_patterns"]
+            ),
+            knowledge_insights=knowledge.get(
+                "insights", _DEFAULTS["knowledge_insights"]
+            ),
+            summary_max_kb=knowledge.get(
+                "summary_max_kb", _DEFAULTS["summary_max_kb"]
+            ),
+            summary_prior_sessions=knowledge.get(
+                "summary_prior_sessions", _DEFAULTS["summary_prior_sessions"]
             ),
             contexts_dir=session.get("contexts_dir", _DEFAULTS["contexts_dir"]),
             recent_logs=session.get("recent_logs", _DEFAULTS["recent_logs"]),

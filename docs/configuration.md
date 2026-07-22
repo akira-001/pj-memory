@@ -68,8 +68,11 @@ Paths to accumulated knowledge files updated during memory crystallization.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `summary` | string | `"memory/knowledge/summary.md"` | Path to the knowledge summary file (established principles, active projects). |
+| `summary` | string | `"memory/knowledge/summary.md"` | Path to the knowledge summary file. Loaded in full every session — it is an index of durable knowledge, not a session archive. |
 | `error_patterns` | string | `"memory/knowledge/error-patterns.md"` | Path to the error patterns file (EP-NNN entries extracted from past mistakes). |
+| `insights` | string | `"memory/knowledge/insights.md"` | Path to the insights file (INS-NNN entries). Full text of durable insights lives here; the summary holds 1-line pointers only. |
+| `summary_max_kb` | integer | `60` | Size threshold for the summary file. `cogmem signals` reports a `summary_health` warning when exceeded, prompting the wrap skill to prune. `0` disables the check. |
+| `summary_prior_sessions` | integer | `0` | Maximum number of `*[prior]*` session-summary blocks allowed in the summary file. Excess blocks trigger a `summary_health` warning (session summaries belong in `memory/logs/`). |
 
 ---
 
@@ -173,6 +176,9 @@ user = "identity/user.md"
 [cogmem.knowledge]
 summary = "memory/knowledge/summary.md"
 error_patterns = "memory/knowledge/error-patterns.md"
+insights = "memory/knowledge/insights.md"
+summary_max_kb = 60
+summary_prior_sessions = 0
 
 [cogmem.session]
 recent_logs = 2

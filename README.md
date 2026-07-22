@@ -287,8 +287,9 @@ your-project/
     ├── contexts/                # Daily context files
     ├── skills.db                # Skill usage and learning data
     └── knowledge/
-        ├── summary.md           # Crystallized knowledge
-        └── error-patterns.md    # Recurring error patterns
+        ├── summary.md           # Index of crystallized knowledge (size-guarded)
+        ├── insights.md          # Durable insights (INS-NNN, full text)
+        └── error-patterns.md    # Recurring error patterns (EP-NNN, full text)
 ```
 
 CLAUDE.md is kept minimal — it only contains `@` references to the identity and knowledge files. All behavioral protocols live in `identity/agents.md`, making it easy to customize without touching the framework.
@@ -341,7 +342,7 @@ With Ollama, search upgrades from exact keyword matching to semantic understandi
 cogmem init                        # Initialize project (or redirect to migrate on existing projects)
 cogmem index                       # Build/update index
 cogmem search "past decisions"     # Search memories
-cogmem signals                     # Check crystallization signals
+cogmem signals                     # Check crystallization signals + summary.md health (size / prior bloat)
 cogmem context-search "query"      # Context-aware search with flashback filtering
 cogmem status                      # Show statistics
 cogmem insights                    # Usage analytics (arousal, categories, top recalled)
