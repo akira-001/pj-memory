@@ -196,7 +196,13 @@ cogmem migrate-knowledge [--kind insights|error-patterns|principles|all] [--dry-
 ```
 
 フラットファイルを読んでエントリに分割し、分野を割り当てて各シャードへ振り分ける。
-分野の割り当ては **Ollama のローカルモデルで分類**する（外部 API を使わない）。
+
+分野の割り当ては **既存の埋め込みモデル（Ollama ローカル）による最近傍分類**で行う。
+各分野のシード文は `summary-{分野}.md` の本文とし、エントリの埋め込みとの cosine が最大の分野に割り当て、
+しきい値未満は `_unsorted.md` へ送る。
+
+生成 LLM のクライアントは新設しない（`embeddings/ollama.py` は埋め込み専用で、生成経路は既存コードに無い）。
+埋め込みだけで済ませることで、外部 API を使わず、`MockEmbedder` で決定的にテストできる。
 
 ### 論文からの意図的な逸脱
 
