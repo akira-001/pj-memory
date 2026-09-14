@@ -10,3 +10,6 @@ build/
 .coverage
 memory/logs/
 memory/contexts/
+
+# git worktree 作業ディレクトリ
+/.worktrees/
