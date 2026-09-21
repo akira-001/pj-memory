@@ -1,6 +1,6 @@
 ---
 name: skill-tracking
-description: Tracking and learning protocol for skill usage. Detailed steps for skill_start/end/deviation event logging, cogmem track, Skill Feedback, and Identity Auto-Update.
+description: Tracking and learning protocol for skill usage. Detailed steps for start/completed/deviation event logging, cogmem track, Skill Feedback, and Identity Auto-Update.
 user-invocable: false
 ---
 
@@ -10,7 +10,7 @@ user-invocable: false
 
 ## Skill Usage Start
 
-When you begin following a SKILL.md, record in both the log and DB:
+When you begin following a SKILL.md, record in the log:
 
 **Log:**
 ```
@@ -21,10 +21,7 @@ When you begin following a SKILL.md, record in both the log and DB:
 ---
 ```
 
-**DB:**
-```bash
-cogmem skills track "<skill-name>" --event skill_start --description "<task summary>"
-```
+**DB:** none (`skills track` accepts only the 4 deviation events below; start is log-only)
 
 ## Skill Usage Complete
 
@@ -38,10 +35,7 @@ track events: N (extra_step: X, skipped_step: Y, error_recovery: Z, user_correct
 ---
 ```
 
-**DB:**
-```bash
-cogmem skills track "<skill-name>" --event skill_end --description "<result summary>"
-```
+**DB:** none (completion is recorded via `skills learn` in Skill Feedback below)
 
 ## Deviation Events (real-time)
 
@@ -63,19 +57,21 @@ cogmem skills track "<skill-name>" \
 
 **Parallel execution rules:**
 - Deviation events: can run in background parallel to main task
-- skill_start / skill_end: synchronous (flow markers)
+- start / completed log entries: synchronous (flow markers)
 - cogmem skills learn (after task): can run in background
 
-**When NOT to record:** Smooth execution → no deviation events (only skill_start/end)
+**When NOT to record:** Smooth execution → no deviation events (only the start/completed log entries)
 
 ---
 
 ## Skill Feedback (after task completion)
 
-After completing work that referenced a skill:
+After completing work that referenced a skill, run from the project root (where cogmem.toml lives):
 
 ```bash
-cogmem skills learn --context "<task summary>" --outcome "<result summary>" --effectiveness 0.0-1.0
+cogmem skills learn "<task summary>" \
+  --effectiveness 0.0-1.0 --user-satisfaction 0.0-1.0 \
+  [--feedback "<improvement suggestion for the skill>"]
 ```
 
 ### Creating/Improving Skills

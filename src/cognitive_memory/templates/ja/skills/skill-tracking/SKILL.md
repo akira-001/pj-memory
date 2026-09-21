@@ -21,10 +21,7 @@ user-invocable: false
 ---
 ```
 
-**DB:**
-```bash
-cogmem skills track "<skill-name>" --event skill_start --description "<タスクの概要>"
-```
+**DB:** なし（`skills track` の event は逸脱4種のみ。開始はログ記録だけでよい）
 
 ## スキル使用完了
 
@@ -37,9 +34,7 @@ track イベント: N件（extra_step: X, skipped_step: Y, error_recovery: Z, us
 ---
 ```
 
-```bash
-cogmem skills track "<skill-name>" --event skill_end --description "<結果の概要>"
-```
+**DB:** なし（完了は下記 Skill Feedback の `skills learn` で記録する）
 
 ## 逸脱イベント（リアルタイム記録）
 
@@ -70,11 +65,12 @@ cogmem skills track "<skill-name>" \
 
 ## Skill Feedback（タスク完了後）
 
-スキルを参照して作業した場合、完了後に実行:
+スキルを参照して作業した場合、完了後にプロジェクトルート（cogmem.toml のある場所）で実行:
 
 ```bash
-cd /Users/akira/workspace/open-claude && \
-cogmem skills learn --context "<タスクの概要>" --outcome "<結果の概要>" --effectiveness 0.0-1.0
+cogmem skills learn "<タスクの概要>" \
+  --effectiveness 0.0-1.0 --user-satisfaction 0.0-1.0 \
+  [--feedback "<スキルへの改善提案>"]
 ```
 
 ### スキルの作成・改善
@@ -83,8 +79,7 @@ cogmem skills learn --context "<タスクの概要>" --outcome "<結果の概要
 
 ### eval 結果の取り込み
 ```bash
-cd /Users/akira/workspace/open-claude && cogmem skills ingest \
-  --benchmark <workspace-path> --skill-name <skill-name>
+cogmem skills ingest --benchmark <workspace-path> --skill-name <skill-name>
 ```
 
 ### スキル改善ループ
